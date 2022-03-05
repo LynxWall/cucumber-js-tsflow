@@ -1,7 +1,7 @@
 {
   "name": "cucumber-tsflow",
   "description": "Provides 'specflow' like bindings for CucumberJS 7.0.0+ in TypeScript 1.7+.",
-  "version": "4.0.0",
+  "version": "6.0.0",
   "author": "Tim Roberts <tim@timjroberts.com>",
   "license": "MIT",
   "main": "./dist",
@@ -20,8 +20,8 @@
   },
   "dependencies": {
     "callsites": "^3.1.0",
-    "log4js": "^6.3.0",
-    "source-map-support": "^0.5.19",
-    "underscore": "^1.8.3"
+    "log4js": "^6.4.2",
+    "source-map-support": "^0.5.21",
+    "underscore": "^1.13.2"
   }
 }

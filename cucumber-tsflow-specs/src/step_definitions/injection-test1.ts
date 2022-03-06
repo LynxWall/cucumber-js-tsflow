@@ -1,5 +1,5 @@
-import { binding, when } from '../../../cucumber-tsflow';
-import { Workspace } from './workspace';
+import { binding, when } from "cucumber-tsflow";
+import { Workspace } from "./workspace";
 
 @binding([Workspace])
 export default class InjectionTestSteps2 {
@@ -7,6 +7,6 @@ export default class InjectionTestSteps2 {
 
 	@when(/^I change the workspace in one step definition class$/)
 	public whenIChangeTheWorkspaceInOneStep() {
-		this.workspace.someValue = 'value changed';
+		this.workspace.someValue = "value changed";
 	}
 }

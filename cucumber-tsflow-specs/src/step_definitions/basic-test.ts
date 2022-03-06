@@ -1,5 +1,5 @@
-import { after, before, binding, given, then, when } from '../../../cucumber-tsflow';
-import * as expect from 'expect';
+import { after, before, binding, given, then, when } from "cucumber-tsflow";
+import * as expect from "expect";
 
 @binding()
 export default class TestSteps {
@@ -14,23 +14,23 @@ export default class TestSteps {
 		this.beforeWithNoTagIsCalled = true;
 	}
 
-	@before('@basic')
-	public before() {
+	@before("@basic")
+	public beforeBasic() {
 		this.beforeIsCalled = true;
 	}
 
-	@after('@basic')
-	public after() {
+	@after("@basic")
+	public afterBasic() {
 		expect(this.beforeWithNoTagIsCalled).toBe(true);
 		expect(this.beforeIsCalled).toBe(true);
 		expect(this.whenIsCalled).toBe(true);
 		expect(this.givenIsCalled).toBe(true);
 		expect(this.thenIsCalled).toBe(true);
 		// tslint:disable-next-line:no-console
-		console.log('@basic after hook is called.');
+		console.log("@basic after hook is called.");
 	}
 
-	@after('@tag1')
+	@after("@tag1")
 	public afterForTagging() {
 		// this is not called by tagging feature.
 		expect(this.beforeIsCalled).toBe(false);
@@ -39,7 +39,7 @@ export default class TestSteps {
 		expect(this.givenIsCalled).toBe(true);
 		expect(this.thenIsCalled).toBe(true);
 		// tslint:disable-next-line:no-console
-		console.log('@tags1 after hook is called.');
+		console.log("@tags1 after hook is called.");
 	}
 
 	@given(/^some step to be executed$/)

@@ -5,7 +5,7 @@
 			"name": "Specs",
 			"type": "node",
 			"request": "launch",
-			"program": "${workspaceRoot}/node_modules/cucumber/bin/cucumber-js",
+			"program": "${workspaceRoot}/node_modules/@cucumber/cucumber/bin/cucumber-js",
 			"stopOnEntry": true,
 			"args": [ "--require", "./cucumber-tsflow-specs/dist" ],
 			"cwd": "${workspaceRoot}",

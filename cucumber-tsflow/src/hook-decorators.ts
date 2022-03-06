@@ -9,28 +9,16 @@ import { StepBinding, StepBindingFlags } from "./step-binding";
  * @param tag An optional tag.
  */
 export function before(tag?: string, timeout?: number): MethodDecorator {
-  const callsite = Callsite.capture();
-
-  return <T>(
-    target: any,
-    propertyKey: string | symbol,
-    descriptor: TypedPropertyDescriptor<T>
-  ) => {
-    const stepBinding: StepBinding = {
-      stepPattern: "",
-      bindingType: StepBindingFlags.before,
-      targetPrototype: target,
-      targetPropertyKey: propertyKey,
-      argsLength: target[propertyKey].length,
-      callsite: callsite,
-      tag: tag,
-      timeout: timeout
-    };
-
-    BindingRegistry.instance.registerStepBinding(stepBinding);
-
-    return descriptor;
-  };
+	return createDecoratorFactory(StepBindingFlags.before, tag, timeout);
+}
+/**
+ * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
+ * executed before all scenarios are executed.
+ *
+ * @param tag An optional tag.
+ */
+export function beforeAll(tag?: string, timeout?: number): MethodDecorator {
+	return createDecoratorFactory(StepBindingFlags.beforeAll, tag, timeout);
 }
 
 /**
@@ -40,26 +28,50 @@ export function before(tag?: string, timeout?: number): MethodDecorator {
  * @param tag An optional tag.
  */
 export function after(tag?: string, timeout?: number): MethodDecorator {
-  const callsite = Callsite.capture();
+	return createDecoratorFactory(StepBindingFlags.after, tag, timeout);
+}
+/**
+ * A method decorator that marks the associated function as an 'After All Scenario' step. The function is
+ * executed after all scenarios are executed.
+ *
+ * @param tag An optional tag.
+ */
+export function afterAll(tag?: string, timeout?: number): MethodDecorator {
+	return createDecoratorFactory(StepBindingFlags.afterAll, tag, timeout);
+}
 
-  return <T>(
-    target: any,
-    propertyKey: string | symbol,
-    descriptor: TypedPropertyDescriptor<T>
-  ) => {
-    const stepBinding: StepBinding = {
-      stepPattern: "",
-      bindingType: StepBindingFlags.after,
-      targetPrototype: target,
-      targetPropertyKey: propertyKey,
-      argsLength: target[propertyKey].length,
-      callsite: callsite,
-      tag: tag,
-      timeout: timeout
-    };
+function checkTag(tag: string): string {
+	return tag;
+}
 
-    BindingRegistry.instance.registerStepBinding(stepBinding);
+function createDecoratorFactory(
+	flag: StepBindingFlags,
+	tag?: string,
+	timeout?: number
+) {
+	const callSite = Callsite.capture();
 
-    return descriptor;
-  };
+	return <T>(
+		target: any,
+		propertyKey: string | symbol,
+		descriptor: TypedPropertyDescriptor<T>
+	) => {
+		const stepBinding: StepBinding = {
+			stepPattern: "",
+			bindingType: flag,
+			targetPrototype: target,
+			targetPropertyKey: propertyKey,
+			argsLength: target[propertyKey].length,
+			callsite: callSite,
+			timeout: timeout
+		};
+
+		if (tag) {
+			stepBinding.tag = checkTag(tag);
+		}
+
+		BindingRegistry.instance.registerStepBinding(stepBinding);
+
+		return descriptor;
+	};
 }

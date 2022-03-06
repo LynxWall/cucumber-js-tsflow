@@ -1,7 +1,7 @@
-import * as _ from 'underscore';
+import * as _ from "underscore";
 
-import { StepBinding } from './step-binding';
-import { ContextType, StepPattern, TagName } from './types';
+import { StepBinding } from "./step-binding";
+import { ContextType, StepPattern, TagName } from "./types";
 
 /**
  * Describes the binding metadata that is associated with a binding class.
@@ -21,12 +21,12 @@ interface TargetBinding {
 /**
  * Represents the default step pattern.
  */
-export const DEFAULT_STEP_PATTERN: string = '/.*/';
+export const DEFAULT_STEP_PATTERN: string = "/.*/";
 
 /**
  * Represents the default tag.
  */
-export const DEFAULT_TAG: string = '*';
+export const DEFAULT_TAG: string = "*";
 
 /**
  * A metadata registry that captures information about bindings and their bound step bindings.
@@ -41,7 +41,8 @@ export class BindingRegistry {
 	 * @returns A [[BindingRegistry]].
 	 */
 	public static get instance(): BindingRegistry {
-		const BINDING_REGISTRY_SLOTNAME: string = '__CUCUMBER_TSFLOW_BINDINGREGISTRY';
+		const BINDING_REGISTRY_SLOTNAME: string =
+			"__CUCUMBER_TSFLOW_BINDINGREGISTRY";
 
 		const registry = (global as any)[BINDING_REGISTRY_SLOTNAME];
 
@@ -60,7 +61,10 @@ export class BindingRegistry {
 	 * @param contextTypes An array of [[ContextType]] that define the types of objects that
 	 * should be injected into the binding class during a scenario execution.
 	 */
-	public registerContextTypesForTarget(targetPrototype: any, contextTypes?: ContextType[]): void {
+	public registerContextTypesForTarget(
+		targetPrototype: any,
+		contextTypes?: ContextType[]
+	): void {
 		if (!contextTypes) {
 			return;
 		}
@@ -107,9 +111,11 @@ export class BindingRegistry {
 			stepBinding.tag = DEFAULT_TAG;
 		}
 
-		if (stepBinding.tag !== DEFAULT_TAG && !stepBinding.tag.startsWith('@')) {
+		if (stepBinding.tag !== DEFAULT_TAG && !stepBinding.tag.startsWith("@")) {
 			// tslint:disable-next-line:no-console
-			console.log('tag should start with @; tsflow has stopped to automatically prepend @ for you.');
+			console.log(
+				"tag should start with @; tsflow has stopped to automatically prepend @ for you."
+			);
 		}
 
 		const stepPattern: StepPattern = stepBinding.stepPattern
@@ -149,14 +155,15 @@ export class BindingRegistry {
 			this._targetBindings.set(stepBinding.targetPrototype, targetBinding);
 		}
 
-		if (!targetBinding.stepBindings.some(b => isSameStepBinding(stepBinding, b))) {
+		if (
+			!targetBinding.stepBindings.some(b => isSameStepBinding(stepBinding, b))
+		) {
 			targetBinding.stepBindings.push(stepBinding);
 		}
 
 		function isSameStepBinding(a: StepBinding, b: StepBinding) {
 			return (
-				a.callsite.filename === b.callsite.filename &&
-				a.callsite.lineNumber === b.callsite.lineNumber &&
+				String(a.tag) === String(b.tag) &&
 				String(a.stepPattern) === String(b.stepPattern)
 			);
 		}
@@ -188,7 +195,10 @@ export class BindingRegistry {
 	 *
 	 * @returns An array of [[StepBinding]] that map to the given step pattern and set of tag names.
 	 */
-	public getStepBindings(stepPattern: StepPattern, tags: TagName[]): StepBinding[] {
+	public getStepBindings(
+		stepPattern: StepPattern,
+		tags: TagName[]
+	): StepBinding[] {
 		const tagMap = this._bindings.get(stepPattern);
 
 		if (!tagMap) {
@@ -201,7 +211,7 @@ export class BindingRegistry {
 			return matchingStepBindings;
 		}
 
-		return this.mapTagNamesToStepBindings(['*'], tagMap);
+		return this.mapTagNamesToStepBindings(["*"], tagMap);
 	}
 
 	/**
@@ -212,9 +222,17 @@ export class BindingRegistry {
 	 *
 	 * @returns An array of [[StepBinding]].
 	 */
-	private mapTagNamesToStepBindings(tags: TagName[], tagMap: Map<TagName, StepBinding[]>): StepBinding[] {
-		const matchingStepBindings: (StepBinding | undefined)[] = _.flatten(_.map(tags, tag => tagMap.get(tag)));
+	private mapTagNamesToStepBindings(
+		tags: TagName[],
+		tagMap: Map<TagName, StepBinding[]>
+	): StepBinding[] {
+		const matchingStepBindings: (StepBinding | undefined)[] = _.flatten(
+			_.map(tags, tag => tagMap.get(tag))
+		);
 
-		return _.reject(matchingStepBindings, stepBinding => stepBinding === undefined) as StepBinding[];
+		return _.reject(
+			matchingStepBindings,
+			stepBinding => stepBinding === undefined
+		) as StepBinding[];
 	}
 }

@@ -1,6 +1,6 @@
-import { binding, when } from '../../../cucumber-tsflow';
-import * as expect from 'expect';
-import { Workspace } from './workspace';
+import { binding, when } from "cucumber-tsflow";
+import * as expect from "expect";
+import { Workspace } from "./workspace";
 
 @binding([Workspace])
 export default class InjectionTestSteps2 {
@@ -8,6 +8,6 @@ export default class InjectionTestSteps2 {
 
 	@when(/^I can see changed state in another step definition class$/)
 	public whenIChangeTheWorkspaceInOneStep() {
-		expect(this.workspace.someValue).toBe('value changed');
+		expect(this.workspace.someValue).toBe("value changed");
 	}
 }

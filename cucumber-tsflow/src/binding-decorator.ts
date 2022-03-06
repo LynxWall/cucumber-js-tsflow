@@ -1,13 +1,22 @@
-import { After, Before, Given, Then, When, World } from '@cucumber/cucumber';
-import * as messages from '@cucumber/messages';
+import {
+	After,
+	AfterAll,
+	Before,
+	BeforeAll,
+	Given,
+	Then,
+	When,
+	World
+} from "@cucumber/cucumber";
+import * as messages from "@cucumber/messages";
 
-import * as _ from 'underscore';
-import logger from './logger';
+import * as _ from "underscore";
+import logger from "./logger";
 
-import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
-import { ManagedScenarioContext } from './managed-scenario-context';
-import { StepBinding, StepBindingFlags } from './step-binding';
-import { ContextType, StepPattern, TypeDecorator } from './types';
+import { BindingRegistry, DEFAULT_TAG } from "./binding-registry";
+import { ManagedScenarioContext } from "./managed-scenario-context";
+import { StepBinding, StepBindingFlags } from "./step-binding";
+import { ContextType, StepPattern, TypeDecorator } from "./types";
 
 interface WritableWorld extends World {
 	[key: string]: any;
@@ -17,7 +26,7 @@ interface WritableWorld extends World {
  * The property name of the current scenario context that will be attached to the Cucumber
  * world object.
  */
-const SCENARIO_CONTEXT_SLOTNAME: string = '__SCENARIO_CONTEXT';
+const SCENARIO_CONTEXT_SLOTNAME: string = "__SCENARIO_CONTEXT";
 
 /**
  * A set of step patterns that have been registered with Cucumber.
@@ -43,10 +52,21 @@ export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
 	return <T>(target: { new (...args: any[]): T }) => {
 		ensureSystemBindings();
 		const bindingRegistry = BindingRegistry.instance;
-		bindingRegistry.registerContextTypesForTarget(target.prototype, requiredContextTypes);
-		bindingRegistry.getStepBindingsForTarget(target.prototype).forEach(stepBinding => {
+		bindingRegistry.registerContextTypesForTarget(
+			target.prototype,
+			requiredContextTypes
+		);
+		const allBindings: StepBinding[] = [];
+		allBindings.push(...bindingRegistry.getStepBindingsForTarget(target));
+		allBindings.push(
+			...bindingRegistry.getStepBindingsForTarget(target.prototype)
+		);
+
+		allBindings.forEach(stepBinding => {
 			if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
-				let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
+				let stepBindingFlags = stepPatternRegistrations.get(
+					stepBinding.stepPattern.toString()
+				);
 				if (stepBindingFlags === undefined) {
 					stepBindingFlags = StepBindingFlags.none;
 				}
@@ -54,7 +74,10 @@ export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
 					return;
 				}
 				bindStepDefinition(stepBinding);
-				stepPatternRegistrations.set(stepBinding.stepPattern.toString(), stepBindingFlags | stepBinding.bindingType);
+				stepPatternRegistrations.set(
+					stepBinding.stepPattern.toString(),
+					stepBindingFlags | stepBinding.bindingType
+				);
 			} else if (stepBinding.bindingType & StepBindingFlags.Hooks) {
 				bindHook(stepBinding);
 			}
@@ -72,7 +95,10 @@ export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
  */
 const ensureSystemBindings = _.once(() => {
 	Before(function(this: WritableWorld, scenario) {
-		logger.trace('Setting up scenario context for scenario:', JSON.stringify(scenario));
+		logger.trace(
+			"Setting up scenario context for scenario:",
+			JSON.stringify(scenario)
+		);
 
 		this[SCENARIO_CONTEXT_SLOTNAME] = new ManagedScenarioContext(
 			scenario.pickle.name!,
@@ -81,7 +107,9 @@ const ensureSystemBindings = _.once(() => {
 	});
 
 	After(function(this: WritableWorld) {
-		const scenarioContext = this[SCENARIO_CONTEXT_SLOTNAME] as ManagedScenarioContext;
+		const scenarioContext = this[
+			SCENARIO_CONTEXT_SLOTNAME
+		] as ManagedScenarioContext;
 
 		if (scenarioContext) {
 			scenarioContext.dispose();
@@ -110,14 +138,15 @@ const ensureSystemBindings = _.once(() => {
 /**
  * Binds a step definition to Cucumber.
  *
- * @param cucumber The cucumber object.
  * @param stepBinding The [[StepBinding]] that represents a 'given', 'when', or 'then' step definition.
  */
 function bindStepDefinition(stepBinding: StepBinding): void {
 	const bindingFunc = function(this: WritableWorld): any {
 		const bindingRegistry = BindingRegistry.instance;
 
-		const scenarioContext = this[SCENARIO_CONTEXT_SLOTNAME] as ManagedScenarioContext;
+		const scenarioContext = this[
+			SCENARIO_CONTEXT_SLOTNAME
+		] as ManagedScenarioContext;
 
 		const matchingStepBindings = bindingRegistry.getStepBindings(
 			stepBinding.stepPattern.toString(),
@@ -130,7 +159,9 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 			matchingStepBindings.forEach(matchingStepBinding => {
 				message =
 					message +
-					`\t\t${String(matchingStepBinding.targetPropertyKey)} (${matchingStepBinding.callsite.toString()})\n`;
+					`\t\t${String(
+						matchingStepBinding.targetPropertyKey
+					)} (${matchingStepBinding.callsite.toString()})\n`;
 			});
 
 			throw new Error(message);
@@ -142,7 +173,9 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 			);
 		}
 
-		const contextTypes = bindingRegistry.getContextTypesForTarget(matchingStepBindings[0].targetPrototype);
+		const contextTypes = bindingRegistry.getContextTypesForTarget(
+			matchingStepBindings[0].targetPrototype
+		);
 		const bindingObject = scenarioContext.getOrActivateBindingClass(
 			matchingStepBindings[0].targetPrototype,
 			contextTypes
@@ -150,13 +183,12 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 
 		bindingObject._worldObj = this;
 
-		return (bindingObject[matchingStepBindings[0].targetPropertyKey] as () => void).apply(
-			bindingObject,
-			arguments as any
-		);
+		return (bindingObject[
+			matchingStepBindings[0].targetPropertyKey
+		] as () => void).apply(bindingObject, arguments as any);
 	};
 
-	Object.defineProperty(bindingFunc, 'length', {
+	Object.defineProperty(bindingFunc, "length", {
 		value: stepBinding.argsLength
 	});
 
@@ -198,36 +230,60 @@ function bindStepDefinition(stepBinding: StepBinding): void {
  */
 function bindHook(stepBinding: StepBinding): void {
 	const bindingFunc = function(this: any): any {
-		const scenarioContext = this[SCENARIO_CONTEXT_SLOTNAME] as ManagedScenarioContext;
-		const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
-		const bindingObject = scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes);
+		const scenarioContext = this[
+			SCENARIO_CONTEXT_SLOTNAME
+		] as ManagedScenarioContext;
+		const contextTypes = BindingRegistry.instance.getContextTypesForTarget(
+			stepBinding.targetPrototype
+		);
+		const bindingObject = scenarioContext.getOrActivateBindingClass(
+			stepBinding.targetPrototype,
+			contextTypes
+		);
 
 		bindingObject._worldObj = this;
 
-		return (bindingObject[stepBinding.targetPropertyKey] as () => void).apply(bindingObject, arguments as any);
+		return (bindingObject[stepBinding.targetPropertyKey] as () => void).apply(
+			bindingObject,
+			arguments as any
+		);
 	};
 
-	Object.defineProperty(bindingFunc, 'length', {
+	const globalBindFunc = () => {
+		const targetPrototype = stepBinding.targetPrototype;
+		const targetPropertyKey = stepBinding.targetPropertyKey;
+		return targetPrototype[targetPropertyKey].apply();
+	};
+
+	Object.defineProperty(bindingFunc, "length", {
 		value: stepBinding.argsLength
 	});
 
-	const tags = stepBinding.tag === DEFAULT_TAG ? undefined : stepBinding.tag;
+	function bindToCucumberHook(HookFunc: any) {
+		// HookFunc can be: Before, After, BeforeAll, AfterAll
+		if (stepBinding.tag === DEFAULT_TAG) {
+			HookFunc(bindingFunc);
+		} else {
+			HookFunc({ tags: String(stepBinding.tag), name: "" }, bindingFunc);
+		}
+	}
 
-	if (stepBinding.bindingType & StepBindingFlags.before) {
-		Before(
-			{
-				tags: tags,
-				timeout: stepBinding.timeout
-			},
-			bindingFunc
-		);
-	} else if (stepBinding.bindingType & StepBindingFlags.after) {
-		After(
-			{
-				tags: tags,
-				timeout: stepBinding.timeout
-			},
-			bindingFunc
-		);
+	switch (stepBinding.bindingType) {
+		case StepBindingFlags.before: {
+			bindToCucumberHook(Before);
+			break;
+		}
+		case StepBindingFlags.after: {
+			bindToCucumberHook(After);
+			break;
+		}
+		case StepBindingFlags.beforeAll: {
+			BeforeAll(globalBindFunc);
+			break;
+		}
+		case StepBindingFlags.afterAll: {
+			AfterAll(globalBindFunc);
+			break;
+		}
 	}
 }

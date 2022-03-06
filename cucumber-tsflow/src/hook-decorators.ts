@@ -1,6 +1,6 @@
-import { BindingRegistry } from "./binding-registry";
-import { Callsite } from "./our-callsite";
-import { StepBinding, StepBindingFlags } from "./step-binding";
+import { BindingRegistry } from './binding-registry';
+import { Callsite } from './our-callsite';
+import { StepBinding, StepBindingFlags } from './step-binding';
 
 /**
  * A method decorator that marks the associated function as a 'Before Scenario' step. The function is
@@ -44,26 +44,18 @@ function checkTag(tag: string): string {
 	return tag;
 }
 
-function createDecoratorFactory(
-	flag: StepBindingFlags,
-	tag?: string,
-	timeout?: number
-) {
+function createDecoratorFactory(flag: StepBindingFlags, tag?: string, timeout?: number) {
 	const callSite = Callsite.capture();
 
-	return <T>(
-		target: any,
-		propertyKey: string | symbol,
-		descriptor: TypedPropertyDescriptor<T>
-	) => {
+	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
 		const stepBinding: StepBinding = {
-			stepPattern: "",
+			stepPattern: '',
 			bindingType: flag,
 			targetPrototype: target,
 			targetPropertyKey: propertyKey,
 			argsLength: target[propertyKey].length,
-			callsite: callSite,
-			timeout: timeout
+			timeout: timeout,
+			callsite: callSite
 		};
 
 		if (tag) {

@@ -36,13 +36,17 @@
 		"**/wwwroot": true
 	},
 
+	// keep space befor function parens
+	"typescript.format.insertSpaceBeforeFunctionParenthesis": true,
+	"javascript.format.insertSpaceBeforeFunctionParenthesis": true,
+
 	// File type editor settings
 	"[feature]": {
 		"editor.tabSize": 2
 	},
 	"[javascript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode",
-		"editor.tabSize": 2
+		"editor.tabSize": 2,
 	},
 	"[json]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode",

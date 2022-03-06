@@ -13,10 +13,10 @@ export type TagName = string;
  * during the execution of a Cucumber scenario.
  */
 export interface ContextType {
-  /**
-   * A default constructor.
-   */
-  new (): any;
+	/**
+	 * A default constructor.
+	 */
+	new (): any;
 }
 
 export type TypeDecorator = <T>(target: { new (...args: any[]): T }) => void;

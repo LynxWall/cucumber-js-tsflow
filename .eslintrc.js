@@ -7,9 +7,16 @@ module.exports = {
 		defineProps: 'readonly',
 		defineEmits: 'readonly'
 	},
-	extends: ['eslint:recommended', 'prettier'],
+	parser: "@typescript-eslint/parser",
+	plugins: [
+    "@typescript-eslint"
+  ],
+	extends: ['eslint:recommended',
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended", 'prettier'],
 	rules: {
 		'@typescript-eslint/no-var-requires': 'off',
+		 '@typescript-eslint/no-explicit-any': 'off',
 		'no-unused-vars': 'off',
 		'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'off',
 		// allow paren-less arrow functions

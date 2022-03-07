@@ -1,6 +1,6 @@
-import { BindingRegistry } from "./binding-registry";
-import { Callsite } from "./our-callsite";
-import { StepBinding, StepBindingFlags } from "./step-binding";
+import { BindingRegistry } from './binding-registry';
+import { Callsite } from './our-callsite';
+import { StepBinding, StepBindingFlags } from './step-binding';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.
@@ -10,38 +10,30 @@ import { StepBinding, StepBindingFlags } from "./step-binding";
  * @param timeout An optional timeout.
  */
 export function given(
-  stepPattern: RegExp | string,
-  tag?: string,
-  timeout?: number
+	stepPattern: RegExp | string,
+	tag?: string,
+	timeout?: number,
+	wrapperOption?: any
 ): MethodDecorator {
-  const callsite = Callsite.capture();
+	const callsite = Callsite.capture();
 
-  return <T>(
-    target: any,
-    propertyKey: string | symbol,
-    descriptor: TypedPropertyDescriptor<T>
-  ) => {
-    const stepBinding: StepBinding = {
-      stepPattern: stepPattern,
-      bindingType: StepBindingFlags.given,
-      targetPrototype: target,
-      targetPropertyKey: propertyKey,
-      argsLength: target[propertyKey].length,
-      callsite: callsite
-    };
+	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+		const stepBinding: StepBinding = {
+			stepPattern: stepPattern,
+			bindingType: StepBindingFlags.given,
+			targetPrototype: target,
+			targetPropertyKey: propertyKey,
+			argsLength: target[propertyKey].length,
+			tag: tag,
+			timeout: timeout,
+			wrapperOption: wrapperOption,
+			callsite: callsite
+		};
 
-    if (tag) {
-      stepBinding.tag = tag[0] === "@" ? tag : `@${tag}`;
-    }
+		BindingRegistry.instance.registerStepBinding(stepBinding);
 
-    if (timeout) {
-      stepBinding.timeout = timeout;
-    }
-
-    BindingRegistry.instance.registerStepBinding(stepBinding);
-
-    return descriptor;
-  };
+		return descriptor;
+	};
 }
 
 /**
@@ -52,38 +44,30 @@ export function given(
  * @param timeout An optional timeout.
  */
 export function when(
-  stepPattern: RegExp | string,
-  tag?: string,
-  timeout?: number
+	stepPattern: RegExp | string,
+	tag?: string,
+	timeout?: number,
+	wrapperOption?: any
 ): MethodDecorator {
-  const callsite = Callsite.capture();
+	const callsite = Callsite.capture();
 
-  return <T>(
-    target: any,
-    propertyKey: string | symbol,
-    descriptor: TypedPropertyDescriptor<T>
-  ) => {
-    const stepBinding: StepBinding = {
-      stepPattern: stepPattern,
-      bindingType: StepBindingFlags.when,
-      targetPrototype: target,
-      targetPropertyKey: propertyKey,
-      argsLength: target[propertyKey].length,
-      callsite: callsite
-    };
+	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+		const stepBinding: StepBinding = {
+			stepPattern: stepPattern,
+			bindingType: StepBindingFlags.when,
+			targetPrototype: target,
+			targetPropertyKey: propertyKey,
+			argsLength: target[propertyKey].length,
+			tag: tag,
+			timeout: timeout,
+			wrapperOption: wrapperOption,
+			callsite: callsite
+		};
 
-    if (tag) {
-      stepBinding.tag = tag[0] === "@" ? tag : `@${tag}`;
-    }
+		BindingRegistry.instance.registerStepBinding(stepBinding);
 
-    if (timeout) {
-      stepBinding.timeout = timeout;
-    }
-
-    BindingRegistry.instance.registerStepBinding(stepBinding);
-
-    return descriptor;
-  };
+		return descriptor;
+	};
 }
 
 /**
@@ -94,36 +78,28 @@ export function when(
  * @param timeout An optional timeout.
  */
 export function then(
-  stepPattern: RegExp | string,
-  tag?: string,
-  timeout?: number
+	stepPattern: RegExp | string,
+	tag?: string,
+	timeout?: number,
+	wrapperOption?: any
 ): MethodDecorator {
-  const callsite = Callsite.capture();
+	const callsite = Callsite.capture();
 
-  return <T>(
-    target: any,
-    propertyKey: string | symbol,
-    descriptor: TypedPropertyDescriptor<T>
-  ) => {
-    const stepBinding: StepBinding = {
-      stepPattern: stepPattern,
-      bindingType: StepBindingFlags.then,
-      targetPrototype: target,
-      targetPropertyKey: propertyKey,
-      argsLength: target[propertyKey].length,
-      callsite: callsite
-    };
+	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+		const stepBinding: StepBinding = {
+			stepPattern: stepPattern,
+			bindingType: StepBindingFlags.then,
+			targetPrototype: target,
+			targetPropertyKey: propertyKey,
+			argsLength: target[propertyKey].length,
+			tag: tag,
+			timeout: timeout,
+			wrapperOption: wrapperOption,
+			callsite: callsite
+		};
 
-    if (tag) {
-      stepBinding.tag = tag[0] === "@" ? tag : `@${tag}`;
-    }
+		BindingRegistry.instance.registerStepBinding(stepBinding);
 
-    if (timeout) {
-      stepBinding.timeout = timeout;
-    }
-
-    BindingRegistry.instance.registerStepBinding(stepBinding);
-
-    return descriptor;
-  };
+		return descriptor;
+	};
 }

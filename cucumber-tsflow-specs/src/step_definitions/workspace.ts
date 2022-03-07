@@ -1,3 +1,3 @@
 export class Workspace {
-  public someValue: string = "";
+	public someValue = '';
 }

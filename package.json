@@ -19,7 +19,7 @@
 		"postinstall": "lerna bootstrap",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
 		"lint": "eslint --fix --ext .js,.ts,.vue --ignore-path .eslintignore cucumber-tsflow/src",
-		"pretest": "yarn build",
+		"pretest": "npm run build",
 		"test": "cucumber-js -p default",
 		"set-packageversion": "node .build/setPackageVersion.js"
 	},

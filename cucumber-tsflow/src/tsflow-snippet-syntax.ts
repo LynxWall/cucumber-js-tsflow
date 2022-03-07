@@ -51,7 +51,7 @@ export function TsflowSnippetSyntax(snippetInterface: SnippetInterface): ISnippe
 				}
 				const pattern = generatedExpression.source.replace(/'/g, "\\'");
 				const methodName = toCamelCase(pattern);
-				const parametersStr = allParameterNames.length > 0 ? allParameterNames.join(', ') : '';
+				const parametersStr = allParameterNames.length > 0 ? allParameterNames.join(': any, ') + ': any' : '';
 				return (
 					prefix +
 					'@' +

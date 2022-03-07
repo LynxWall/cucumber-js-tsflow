@@ -8,13 +8,14 @@ This is a fork of the original cucumber-tsflow found here: [cucumber-tsflow](htt
 
 This fork contains the following updates:
 
-- Updated to use latest version of Cucumber (@cucumber/cucumber)
+- Updated to use latest version of Cucumber (@cucumber/cucumber).
 - Bug fixes related to tags.
 - Added Timeout in step definition and hooks.
 - Added WrapperOptions in step definitions.
-- Added BeforeAll and AfterAll Hooks
-- Added a behave-json-formatter that fixes json so it can be used with Behave Pro
-- Added tsflow-snippet-syntax used to format snippet examples
+- Added BeforeAll and AfterAll Hooks.
+- Added a behave-json-formatter that fixes json so it can be used with Behave Pro.
+- Added tsflow-snippet-syntax used to format snippet examples.
+  - examples use the [Cucumber Syntax](https://github.com/cucumber/cucumber-expressions#readme) for parameters.
 
 ### Quick Start
 
@@ -22,8 +23,16 @@ cucumber-tsflow uses TypeScript Decorators to create SpecFlow like bindings for 
 
 ##### Install @cucumber/cucumber and @lynxwall/cucumber-tsflow
 
+###### npm
+
 ```bash
-npm install @cucumber/cucumber and @lynxwall/cucumber-tsflow
+npm install @cucumber/cucumber @lynxwall/cucumber-tsflow --save-dev
+```
+
+###### yarn
+
+```bash
+yarn add --dev @cucumber/cucumber @lynxwall/cucumber-tsflow
 ```
 
 ###### Create .feature files to describe your specifications
@@ -32,7 +41,7 @@ By default, CucumberJS looks for .feature files in a folder called 'features', s
 
 ```gherkin
 # features/my_feature.feature
-S
+
 Feature: Example Feature
    This is an example feature
 

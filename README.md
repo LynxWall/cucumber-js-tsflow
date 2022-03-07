@@ -26,13 +26,13 @@ cucumber-tsflow uses TypeScript Decorators to create SpecFlow like bindings for 
 ###### npm
 
 ```bash
-npm install @cucumber/cucumber and @lynxwall/cucumber-tsflow --save-dev
+npm install @cucumber/cucumber @lynxwall/cucumber-tsflow --save-dev
 ```
 
 ###### yarn
 
 ```bash
-yarn add --dev @cucumber/cucumber and @lynxwall/cucumber-tsflow
+yarn add --dev @cucumber/cucumber @lynxwall/cucumber-tsflow
 ```
 
 ###### Create .feature files to describe your specifications

@@ -64,6 +64,6 @@ jobs:
           VER=`cat versioninfo.txt`
           echo "::set-output name=package_version::$VER"
       - name: Publish npm package
-        run: npm publish @lynxwall/cucumber-tsflow-${{ steps.get_package_version.outputs.package_version }}.tgz
+        run: npm publish --@lynxwall --access public @lynxwall/cucumber-tsflow-${{ steps.get_package_version.outputs.package_version }}.tgz
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

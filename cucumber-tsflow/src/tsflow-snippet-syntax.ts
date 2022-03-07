@@ -53,21 +53,12 @@ export function TsflowSnippetSyntax(snippetInterface: SnippetInterface): ISnippe
 				const methodName = toCamelCase(pattern);
 				const parametersStr = allParameterNames.length > 0 ? allParameterNames.join(': any, ') + ': any' : '';
 				return (
-					prefix +
-					'@' +
-					functionName.toLowerCase() +
-					"('" +
-					pattern +
-					"')\n" +
-					functionKeyword +
-					methodName +
-					'(' +
-					parametersStr +
-					'): any {\n'
+					`${prefix}@${functionName.toLowerCase()}('${pattern}')\n` +
+					`${functionKeyword}${methodName}(${parametersStr}): any {\n`
 				);
 			});
 
-			return definitionChoices.join('') + '  // ' + comment + '\n' + '  ' + implementation + '\n}';
+			return definitionChoices.join('') + '  // ' + comment + '\n  ' + implementation + '\n}';
 		}
 	};
 }

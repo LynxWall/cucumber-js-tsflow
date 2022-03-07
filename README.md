@@ -15,7 +15,7 @@ This fork contains the following updates:
 - Added BeforeAll and AfterAll Hooks.
 - Added a behave-json-formatter that fixes json so it can be used with Behave Pro.
 - Added tsflow-snippet-syntax used to format snippet examples.
-  - examples use the [Cucumber Syntax](https://github.com/cucumber/cucumber-expressions#readme) for parameters.
+  - examples use [Cucumber Expressions](https://github.com/cucumber/cucumber-expressions#readme) for parameters.
 
 ### Quick Start
 

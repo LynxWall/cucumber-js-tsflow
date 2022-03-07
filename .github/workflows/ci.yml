@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [ master, release/** ]
+    branches: [master, release/**]
   pull_request:
-    branches: [ master, release/** ]
+    branches: [master, release/**]
 
 jobs:
   # Build and Test the 'cucumber-tsflow' package
@@ -12,14 +12,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v1 
-      with:
-        node-version: '12.x'
-        registry-url: 'https://registry.npmjs.org'
-    - name: Install npm packages
-      run: npm ci
-    - name: Build
-      run: npm run build
-    - name: Run specification tests
-      run: npm test
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # avoid shallow clone (required by Nerbank GitVersioning)
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "16.x"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install npm packages
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run specification tests
+        run: npm test

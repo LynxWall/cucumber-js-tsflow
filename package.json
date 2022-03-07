@@ -3,7 +3,7 @@
 	"name": "@lynxwall/cucumber-tsflow-workspace",
 	"description": "Workspace for cucumber-tsflow",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
-	"version": "3.0.0",
+	"version": "4.0.0",
 	"license": "MIT",
 	"workspaces": [
 		"cucumber-tsflow",
@@ -22,17 +22,6 @@
 		"pretest": "npm run build",
 		"test": "cucumber-js -p default",
 		"set-packageversion": "node .build/setPackageVersion.js"
-	},
-	"lint-staged": {
-		"*.ts": [
-			"prettier --write",
-			"tslint --fix",
-			"git add"
-		],
-		"*.json": [
-			"prettier --write",
-			"git add"
-		]
 	},
 	"devDependencies": {
 		"@cucumber/cucumber": "^7.3.2",

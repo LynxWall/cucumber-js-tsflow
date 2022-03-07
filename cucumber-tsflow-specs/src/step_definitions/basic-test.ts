@@ -1,4 +1,4 @@
-import { after, before, binding, given, then, when } from 'cucumber-tsflow';
+import { after, before, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
 import * as expect from 'expect';
 
 @binding()
@@ -8,6 +8,7 @@ export default class TestSteps {
 	private whenIsCalled = false;
 	private thenIsCalled = false;
 	private beforeWithNoTagIsCalled = false;
+	private computedResult = 0;
 
 	@before()
 	beforeWithNoTag() {
@@ -54,6 +55,25 @@ export default class TestSteps {
 
 	@then('we can see the result correctly')
 	thenWeCanSeeTheResult() {
+		this.thenIsCalled = true;
+	}
+
+	@given('I enter {string} and {string}')
+	iEnterstringAndstring(num1: string, num2: string): any {
+		this.computedResult = parseInt(num1) + parseInt(num2);
+		this.givenIsCalled = true;
+	}
+
+	@when('checking the results')
+	checkingTheResults(): any {
+		this.whenIsCalled = true;
+	}
+
+	@then('I receive the result {string}')
+	iReceiveTheResultstring(expectedResult: string): any {
+		if (parseInt(expectedResult) !== this.computedResult) {
+			throw new Error('Arithmetic Error');
+		}
 		this.thenIsCalled = true;
 	}
 }

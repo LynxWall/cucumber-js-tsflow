@@ -204,22 +204,27 @@ function bindHook(stepBinding: StepBinding): void {
 		value: stepBinding.argsLength
 	});
 
-	function bindToCucumberHook(HookFunc: any) {
-		// HookFunc can be: Before, After, BeforeAll, AfterAll
-		if (stepBinding.tag === DEFAULT_TAG) {
-			HookFunc(bindingFunc);
-		} else {
-			HookFunc({ tags: String(stepBinding.tag) }, bindingFunc);
-		}
-	}
+	const tags = stepBinding.tag === DEFAULT_TAG ? undefined : stepBinding.tag;
 
 	switch (stepBinding.bindingType) {
 		case StepBindingFlags.before: {
-			bindToCucumberHook(Before);
+			Before(
+				{
+					tags: tags,
+					timeout: stepBinding.timeout
+				},
+				bindingFunc
+			);
 			break;
 		}
 		case StepBindingFlags.after: {
-			bindToCucumberHook(After);
+			After(
+				{
+					tags: tags,
+					timeout: stepBinding.timeout
+				},
+				bindingFunc
+			);
 			break;
 		}
 		case StepBindingFlags.beforeAll: {

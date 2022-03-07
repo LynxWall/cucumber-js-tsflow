@@ -1,56 +1,57 @@
 {
-  "private": true,
-  "name": "cucumber-tsflow-workspace",
-  "description": "Workspace for cucumber-tsflow",
-  "version": "2.0.0",
-  "license": "MIT",
-  "workspaces": [
-    "cucumber-tsflow",
-    "cucumber-tsflow-specs"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/timjroberts/cucumber-js-tsflow.git"
-  },
-  "scripts": {
-    "build": "tsc --build",
-    "build:watch": "tsc --build --watch",
-    "postinstall": "lerna bootstrap",
+	"private": true,
+	"name": "@lynxwall/cucumber-tsflow-workspace",
+	"description": "Workspace for cucumber-tsflow",
+	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
+	"version": "3.0.0",
+	"license": "MIT",
+	"workspaces": [
+		"cucumber-tsflow",
+		"cucumber-tsflow-specs"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
+	},
+	"scripts": {
+		"build": "tsc --build",
+		"build:watch": "tsc --build --watch",
+		"postinstall": "lerna bootstrap",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
-    "lint": "eslint --fix --ext .js,.ts,.vue --ignore-path .eslintignore cucumber-tsflow/src",
-    "pretest": "yarn build",
-    "test": "cucumber-js -p default",
-    "set-packageversion": "node .build/setPackageVersion.js"
-  },
-  "lint-staged": {
-    "*.ts": [
-      "prettier --write",
-      "tslint --fix",
-      "git add"
-    ],
-    "*.json": [
-      "prettier --write",
-      "git add"
-    ]
-  },
-  "devDependencies": {
-    "@cucumber/cucumber": "^7.3.2",
-    "@cucumber/messages": "^16.0.1",
-    "@types/node": "17.0.21",
-    "@types/underscore": "1.11.4",
-    "@typescript-eslint/eslint-plugin": "^5.13.0",
-    "@typescript-eslint/parser": "^5.13.0",
-    "eslint": "^8.10.0",
-    "eslint-config-prettier": "^8.5.0",
-    "husky": "^7.0.4",
-    "jest": "^27.5.1",
-    "lerna": "^4.0.0",
-    "lint-staged": "^12.3.5",
-    "log4js": "^6.4.2",
-    "nerdbank-gitversioning": "^3.5.85-alpha",
-    "prettier": "^2.5.1",
-    "ts-node": "^10.6.0",
-    "tsconfig-paths": "^3.13.0",
-    "typescript": "~4.5.5"
-  }
+		"lint": "eslint --fix --ext .js,.ts,.vue --ignore-path .eslintignore cucumber-tsflow/src",
+		"pretest": "yarn build",
+		"test": "cucumber-js -p default",
+		"set-packageversion": "node .build/setPackageVersion.js"
+	},
+	"lint-staged": {
+		"*.ts": [
+			"prettier --write",
+			"tslint --fix",
+			"git add"
+		],
+		"*.json": [
+			"prettier --write",
+			"git add"
+		]
+	},
+	"devDependencies": {
+		"@cucumber/cucumber": "^7.3.2",
+		"@cucumber/messages": "^16.0.1",
+		"@types/node": "17.0.21",
+		"@types/underscore": "1.11.4",
+		"@typescript-eslint/eslint-plugin": "^5.13.0",
+		"@typescript-eslint/parser": "^5.13.0",
+		"eslint": "^8.10.0",
+		"eslint-config-prettier": "^8.5.0",
+		"husky": "^7.0.4",
+		"jest": "^27.5.1",
+		"lerna": "^4.0.0",
+		"lint-staged": "^12.3.5",
+		"log4js": "^6.4.2",
+		"nerdbank-gitversioning": "^3.5.85-alpha",
+		"prettier": "^2.5.1",
+		"ts-node": "^10.6.0",
+		"tsconfig-paths": "^3.13.0",
+		"typescript": "~4.5.5"
+	}
 }

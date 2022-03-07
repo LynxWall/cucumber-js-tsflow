@@ -1,4 +1,4 @@
-import { after, binding, beforeAll, given, then, when } from 'cucumber-tsflow';
+import { after, binding, beforeAll, given, then, when } from '@lynxwall/cucumber-tsflow';
 import * as expect from 'expect';
 
 let beforeAllCalled = false;

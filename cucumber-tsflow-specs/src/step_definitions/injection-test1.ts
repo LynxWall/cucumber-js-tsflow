@@ -1,4 +1,4 @@
-import { binding, when } from 'cucumber-tsflow';
+import { binding, when } from '@lynxwall/cucumber-tsflow';
 import { Workspace } from './workspace';
 
 @binding([Workspace])

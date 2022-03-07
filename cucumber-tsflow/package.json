@@ -1,30 +1,30 @@
 {
-  "name": "cucumber-tsflow",
-  "description": "Provides 'specflow' like bindings for CucumberJS 7.0.0+ in TypeScript 1.7+.",
-  "version": "6.0.0",
-  "author": "Tim Roberts <tim@timjroberts.com>",
-  "license": "MIT",
-  "main": "./dist",
-  "keywords": [
-    "testing",
-    "bdd",
-    "cucumber",
-    "gherkin",
-    "tests",
-    "typescript",
-    "specflow"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/timjroberts/cucumber-js-tsflow.git"
-  },
-  "dependencies": {
-    "callsites": "^3.1.0",
-    "log4js": "^6.4.2",
-    "source-map-support": "^0.5.21",
-    "underscore": "^1.13.2"
-  },
-  "devDependencies": {
-    "@types/source-map-support": "^0.5.4"
-  }
+	"name": "@lynxwall/cucumber-tsflow",
+	"description": "Provides 'specflow' like bindings for CucumberJS 7.0.0+ in TypeScript 1.7+.",
+	"version": "6.0.0",
+	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
+	"license": "MIT",
+	"main": "./dist",
+	"keywords": [
+		"testing",
+		"bdd",
+		"cucumber",
+		"gherkin",
+		"tests",
+		"typescript",
+		"specflow"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
+	},
+	"dependencies": {
+		"callsites": "^3.1.0",
+		"log4js": "^6.4.2",
+		"source-map-support": "^0.5.21",
+		"underscore": "^1.13.2"
+	},
+	"devDependencies": {
+		"@types/source-map-support": "^0.5.4"
+	}
 }

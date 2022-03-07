@@ -1,13 +1,13 @@
 {
-  "private": true,
-  "name": "cucumber-tsflow-specs",
-  "description": "Specification for 'cucumber-tsflow'.",
-  "version": "6.0.0",
-  "author": "Tim Roberts <tim@timjroberts.com>",
-  "license": "MIT",
-  "main": "./index.js",
-  "typings": "./dist/index.d.ts",
-  "dependencies": {
-    "cucumber-tsflow": "^6.0.0"
-  }
+	"private": true,
+	"name": "@lynxwall/cucumber-tsflow-specs",
+	"description": "Specification for 'cucumber-tsflow'.",
+	"version": "6.0.0",
+	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
+	"license": "MIT",
+	"main": "./index.js",
+	"typings": "./dist/index.d.ts",
+	"dependencies": {
+		"@lynxwall/cucumber-tsflow": "^6.0.0"
+	}
 }

@@ -9,7 +9,8 @@ import { StepBinding, StepBindingFlags } from './step-binding';
  * @param tag An optional tag.
  */
 export function before(tag?: string, timeout?: number): MethodDecorator {
-	return createDecoratorFactory(StepBindingFlags.before, tag, timeout);
+	const callSite = Callsite.capture();
+	return createDecoratorFactory(StepBindingFlags.before, callSite, tag, timeout);
 }
 /**
  * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
@@ -18,7 +19,8 @@ export function before(tag?: string, timeout?: number): MethodDecorator {
  * @param tag An optional tag.
  */
 export function beforeAll(tag?: string, timeout?: number): MethodDecorator {
-	return createDecoratorFactory(StepBindingFlags.beforeAll, tag, timeout);
+	const callSite = Callsite.capture();
+	return createDecoratorFactory(StepBindingFlags.beforeAll, callSite, tag, timeout);
 }
 
 /**
@@ -28,7 +30,8 @@ export function beforeAll(tag?: string, timeout?: number): MethodDecorator {
  * @param tag An optional tag.
  */
 export function after(tag?: string, timeout?: number): MethodDecorator {
-	return createDecoratorFactory(StepBindingFlags.after, tag, timeout);
+	const callSite = Callsite.capture();
+	return createDecoratorFactory(StepBindingFlags.after, callSite, tag, timeout);
 }
 /**
  * A method decorator that marks the associated function as an 'After All Scenario' step. The function is
@@ -37,16 +40,15 @@ export function after(tag?: string, timeout?: number): MethodDecorator {
  * @param tag An optional tag.
  */
 export function afterAll(tag?: string, timeout?: number): MethodDecorator {
-	return createDecoratorFactory(StepBindingFlags.afterAll, tag, timeout);
+	const callSite = Callsite.capture();
+	return createDecoratorFactory(StepBindingFlags.afterAll, callSite, tag, timeout);
 }
 
 function checkTag(tag: string): string {
 	return tag;
 }
 
-function createDecoratorFactory(flag: StepBindingFlags, tag?: string, timeout?: number) {
-	const callSite = Callsite.capture();
-
+function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?: string, timeout?: number) {
 	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
 		const stepBinding: StepBinding = {
 			stepPattern: '',

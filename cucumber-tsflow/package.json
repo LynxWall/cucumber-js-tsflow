@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 7.0.0+ in TypeScript 1.7+.",
-	"version": "4.0.0",
+	"version": "4.1.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./dist",
@@ -19,10 +19,17 @@
 		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
 	"dependencies": {
+		"@babel/core": "^7.17.8",
+		"@happy-dom/global-registrator": "^2.49.0",
+		"@vue/vue3-jest": "^27.0.0-alpha.4",
+		"babel-jest": "^27.5.1",
 		"callsites": "^3.1.0",
+		"jest": "^27.5.1",
 		"log4js": "^6.4.2",
+		"require-extension-hooks": "^0.3.3",
 		"source-map-support": "^0.5.21",
-		"underscore": "^1.13.2"
+		"underscore": "^1.13.2",
+		"vue": "^3.2.31"
 	},
 	"devDependencies": {
 		"@types/source-map-support": "^0.5.4"

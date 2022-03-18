@@ -1,5 +1,5 @@
 import { after, before, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
-import * as expect from 'expect';
+import { expect } from 'chai';
 
 @binding()
 export default class TestSteps {
@@ -22,11 +22,11 @@ export default class TestSteps {
 
 	@after('@basic')
 	afterBasic() {
-		expect(this.beforeWithNoTagIsCalled).toBe(true);
-		expect(this.beforeIsCalled).toBe(true);
-		expect(this.whenIsCalled).toBe(true);
-		expect(this.givenIsCalled).toBe(true);
-		expect(this.thenIsCalled).toBe(true);
+		expect(this.beforeWithNoTagIsCalled).to.be.true;
+		expect(this.beforeIsCalled).to.be.true;
+		expect(this.whenIsCalled).to.be.true;
+		expect(this.givenIsCalled).to.be.true;
+		expect(this.thenIsCalled).to.be.true;
 		// tslint:disable-next-line:no-console
 		console.log('@basic after hook is called.');
 	}
@@ -34,11 +34,11 @@ export default class TestSteps {
 	@after('@tag1')
 	afterForTagging() {
 		// this is not called by tagging feature.
-		expect(this.beforeIsCalled).toBe(false);
-		expect(this.beforeWithNoTagIsCalled).toBe(true);
-		expect(this.whenIsCalled).toBe(true);
-		expect(this.givenIsCalled).toBe(true);
-		expect(this.thenIsCalled).toBe(true);
+		expect(this.beforeIsCalled).to.be.false;
+		expect(this.beforeWithNoTagIsCalled).to.be.true;
+		expect(this.whenIsCalled).to.be.true;
+		expect(this.givenIsCalled).to.be.true;
+		expect(this.thenIsCalled).to.be.true;
 		// tslint:disable-next-line:no-console
 		console.log('@tags1 after hook is called.');
 	}

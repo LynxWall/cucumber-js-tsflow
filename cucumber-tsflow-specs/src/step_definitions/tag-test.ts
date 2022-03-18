@@ -1,5 +1,5 @@
 import { after, binding, beforeAll, given, then, when } from '@lynxwall/cucumber-tsflow';
-import * as expect from 'expect';
+import { expect } from 'chai';
 
 let beforeAllCalled = false;
 
@@ -16,7 +16,7 @@ export default class TestSteps {
 	@given('some step to be executed with tag', '@tag2')
 	givenSomeStepTobeExecuted() {
 		this.givenIsCalled = true;
-		expect(beforeAllCalled).toBe(true);
+		expect(beforeAllCalled).to.be.true;
 	}
 
 	@when('the condition is right with tag', '@tag2')
@@ -31,9 +31,9 @@ export default class TestSteps {
 
 	@after('@tag2')
 	afterTag() {
-		expect(this.whenIsCalled).toBe(true);
-		expect(this.givenIsCalled).toBe(true);
-		expect(this.thenIsCalled).toBe(true);
+		expect(this.whenIsCalled).to.be.true;
+		expect(this.givenIsCalled).to.be.true;
+		expect(this.thenIsCalled).to.be.true;
 		// tslint:disable-next-line:no-console
 		console.log('@tagging afterTag method is called');
 	}

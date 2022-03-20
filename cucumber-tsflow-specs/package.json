@@ -8,6 +8,11 @@
 	"main": "./index.js",
 	"typings": "./index.d.ts",
 	"dependencies": {
-		"@lynxwall/cucumber-tsflow": "workspace:*"
+		"vue": "^3.2.31"
+	},
+	"devDependencies": {
+		"@lynxwall/cucumber-tsflow": "workspace:*",
+		"@vue/test-utils": "^2.0.0-rc.17",
+		"chai": "^4.3.6"
 	}
 }

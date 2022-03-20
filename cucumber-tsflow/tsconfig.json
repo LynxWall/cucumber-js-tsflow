@@ -11,9 +11,11 @@
 		"noUnusedParameters": true,
 		"removeComments": false,
 		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
 		"inlineSourceMap": true,
+		"esModuleInterop": false,
 		"outDir": "dist",
 		"rootDir": "src"
 	},
-	"include": ["./src/**/*.ts", "src/plugins/cucumber-ts-vue.cjs"]
+	"include": ["./src/**/*.ts"]
 }

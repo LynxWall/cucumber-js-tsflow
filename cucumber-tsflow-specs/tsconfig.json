@@ -1,20 +1,22 @@
 {
 	"compilerOptions": {
-		"composite": true,
-		"moduleResolution": "node",
-		"module": "umd",
+		"baseUrl": ".",
 		"target": "es6",
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
+		"module": "umd",
 		"strict": true,
+		"jsx": "preserve",
+		"importHelpers": true,
+		"moduleResolution": "node",
 		"skipLibCheck": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"useDefineForClassFields": true,
+		"sourceMap": true,
+		"allowJs": true,
 		"removeComments": false,
 		"experimentalDecorators": true,
-		"outDir": "./dist",
-		"rootDir": "./src"
+		"typeRoots": ["../node_modules/@types"]
 	},
-	"include": ["./src/**/*.ts"]
+	"include": ["./src/**/*.ts", "./**/*.vue"]
 }

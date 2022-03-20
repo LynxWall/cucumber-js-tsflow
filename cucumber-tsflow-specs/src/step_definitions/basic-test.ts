@@ -43,10 +43,10 @@ export default class TestSteps {
 		console.log('@tags1 after hook is called.');
 	}
 
-	@given('some step to be executed')
-	someStepToBeExecuted(): any {
-		this.givenIsCalled = true;
-	}
+	// @given('some step to be executed')
+	// someStepToBeExecuted(): any {
+	// 	this.givenIsCalled = true;
+	// }
 
 	@when('the condition is right')
 	whenTheConditionIsRight() {

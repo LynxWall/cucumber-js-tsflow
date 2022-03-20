@@ -77,6 +77,10 @@ export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
  * function.
  */
 const ensureSystemBindings = _.once(() => {
+	BeforeAll(() => {
+		// TODO: register our custom formatters
+	});
+
 	Before(function (this: WritableWorld, scenario) {
 		logger.trace('Setting up scenario context for scenario:', JSON.stringify(scenario));
 

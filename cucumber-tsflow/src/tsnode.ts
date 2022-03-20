@@ -10,7 +10,11 @@ require('ts-node').register({
 		noUnusedParameters: true,
 		removeComments: false,
 		experimentalDecorators: true,
-		inlineSourceMap: true
+		inlineSourceMap: true,
+		resolveJsonModule: true,
+		esModuleInterop: true
 	},
 	transpileOnly: true
 });
+
+require('tsconfig-paths').register();

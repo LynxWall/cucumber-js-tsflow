@@ -3,7 +3,8 @@ node_modules
 wwwroot
 dist
 dist-ssr
-
+lib
+lib-ssr
 # local env files
 .env.local
 .env.*.local

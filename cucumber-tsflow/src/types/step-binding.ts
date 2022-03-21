@@ -1,4 +1,4 @@
-import { Callsite } from './our-callsite';
+import { Callsite } from '../utils/our-callsite';
 import { StepBindingFlags } from './step-binding-flags';
 
 /**

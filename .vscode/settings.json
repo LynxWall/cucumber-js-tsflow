@@ -1,5 +1,5 @@
 {
-  "typescript.tsdk": "node_modules\\typescript\\lib",
+	"typescript.tsdk": "node_modules\\typescript\\lib",
 	"npm.packageManager": "yarn",
 	"eslint.packageManager": "yarn",
 	"editor.formatOnPaste": true,
@@ -29,7 +29,7 @@
 		"**/.nyc_output": true,
 		"**/.yarn": true,
 		"**/coverage": true,
-		"**/bin": true,
+		"**/bin": false,
 		"**/node_modules": true,
 		"**/obj": true,
 		"**/site": true,
@@ -46,7 +46,7 @@
 	},
 	"[javascript]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode",
-		"editor.tabSize": 2,
+		"editor.tabSize": 2
 	},
 	"[json]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode",
@@ -101,11 +101,8 @@
 		"titleBar.inactiveForeground": "#15202b99"
 	},
 	"peacock.color": "#61dafb",
-	"cucumberautocomplete.steps": [
-		"cucumber-tsflow-specs/src/step_definitions/**/*.ts"
-	],
+	"cucumberautocomplete.steps": ["cucumber-tsflow-specs/src/step_definitions/**/*.ts"],
 	"cucumberautocomplete.strictGherkinCompletion": true,
 	"cucumberautocomplete.syncfeatures": "cucumber-tsflow-specs/features/*feature",
 	"cucumberautocomplete.strictGherkinValidation": false
-
 }

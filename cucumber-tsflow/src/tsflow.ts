@@ -1,3 +1,3 @@
-import * as tsflow from './plugins/tsflow-snippet-syntax';
+import * as tsflow from './formatters/tsflow-snippet-syntax';
 
 module.exports = tsflow;

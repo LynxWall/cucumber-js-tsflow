@@ -921,6 +921,8 @@ __metadata:
     typescript: ~4.6.2
     underscore: ^1.13.2
     vue: ^3.2.31
+  bin:
+    cucumber-tsflow: ./bin/cucumber-tsflow
   languageName: unknown
   linkType: soft
 

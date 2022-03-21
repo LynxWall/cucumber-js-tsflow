@@ -1,3 +1,3 @@
-import * as behave from './plugins/behave-json-formatter';
+import * as behave from './formatters/behave-json-formatter';
 
 module.exports = behave;

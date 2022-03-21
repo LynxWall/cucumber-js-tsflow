@@ -4,4 +4,4 @@ typings.json
 typings
 .npmignore
 *.tsbuildinfo
-!dist/**/*.d.ts
+!lib/**/*.d.ts

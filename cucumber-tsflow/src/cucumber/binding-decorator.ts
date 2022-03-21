@@ -3,12 +3,12 @@ import { After, AfterAll, Before, BeforeAll, Given, Then, When, World } from '@c
 import * as messages from '@cucumber/messages';
 
 import * as _ from 'underscore';
-import logger from './logger';
+import logger from '../utils/logger';
 
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { ManagedScenarioContext } from './managed-scenario-context';
-import { StepBinding, StepBindingFlags } from './step-binding';
-import { ContextType, StepPattern, TypeDecorator } from './types';
+import { StepBinding, StepBindingFlags } from '../types/step-binding';
+import { ContextType, StepPattern, TypeDecorator } from '../types/types';
 import { PickleTag } from '@cucumber/messages';
 
 interface WritableWorld extends World {
@@ -77,10 +77,6 @@ export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
  * function.
  */
 const ensureSystemBindings = _.once(() => {
-	BeforeAll(() => {
-		// TODO: register our custom formatters
-	});
-
 	Before(function (this: WritableWorld, scenario) {
 		logger.trace('Setting up scenario context for scenario:', JSON.stringify(scenario));
 

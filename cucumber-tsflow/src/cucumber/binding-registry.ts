@@ -1,7 +1,7 @@
 import * as _ from 'underscore';
 
-import { StepBinding } from './step-binding';
-import { ContextType, StepPattern, TagName } from './types';
+import { StepBinding } from '../types/step-binding';
+import { ContextType, StepPattern, TagName } from '../types/types';
 
 /**
  * Describes the binding metadata that is associated with a binding class.

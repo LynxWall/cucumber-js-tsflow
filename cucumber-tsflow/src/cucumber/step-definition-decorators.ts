@@ -1,6 +1,6 @@
 import { BindingRegistry } from './binding-registry';
-import { Callsite } from './our-callsite';
-import { StepBinding, StepBindingFlags } from './step-binding';
+import { Callsite } from '../utils/our-callsite';
+import { StepBinding, StepBindingFlags } from '../types/step-binding';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.

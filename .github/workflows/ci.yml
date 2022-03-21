@@ -19,9 +19,9 @@ jobs:
         with:
           node-version: "16.x"
           registry-url: "https://registry.npmjs.org"
-      - name: Install npm packages
-        run: npm ci
+      - name: Install packages
+        run: yarn
       - name: Build
-        run: npm run build
+        run: yarn build
       - name: Run specification tests
-        run: npm test
+        run: yarn test

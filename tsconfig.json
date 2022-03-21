@@ -1,15 +1,13 @@
 {
-  "compilerOptions": {
+	"compilerOptions": {
 		"baseUrl": ".",
-  },
-  "files": [],
-  "include": [],
-  "references": [
-    {
-      "path": "./cucumber-tsflow"
-    },
-    {
-      "path": "./cucumber-tsflow-specs"
-    }
-  ]
+		"esModuleInterop": true
+	},
+	"files": [],
+	"include": [],
+	"references": [
+		{
+			"path": "./cucumber-tsflow"
+		}
+	]
 }

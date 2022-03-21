@@ -237,8 +237,8 @@ The following example shows how to configure the formatter and snippet syntax:
 ```javascript
 module.exports = {
  default: [
-  '--format node_modules/@lynxwall/cucumber-tsflow/dist/behave-json-formatter:cucumber_report.json',
-  '--format-options \'{"snippetSyntax": "node_modules/@lynxwall/cucumber-tsflow/dist/tsflow-snippet-syntax"}\'',
+  '--format node_modules/@lynxwall/cucumber-tsflow/lib/behave-json-formatter:cucumber_report.json',
+  '--format-options \'{"snippetSyntax": "node_modules/@lynxwall/cucumber-tsflow/lib/tsflow-snippet-syntax"}\'',
   '--publish-quiet'
  ].join(' ')
 };

@@ -24,14 +24,14 @@ jobs:
           node-version: "16.x"
           registry-url: "https://registry.npmjs.org"
       - name: Install npm packages
-        run: npm ci
+        run: yarn
       - name: Update package version
         id: set_package_version
-        run: npm run set-packageversion
+        run: yarn set-packageversion
       - name: Build
-        run: npm run build
+        run: yarn build
       - name: Run specification tests
-        run: npm test
+        run: yarn test
       - name: Create npm package
         run: npm pack ./cucumber-tsflow
       - name: Create version info file

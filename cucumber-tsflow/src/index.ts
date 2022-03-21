@@ -1,5 +1,4 @@
-export * from './binding-decorator';
-export * from './hook-decorators';
-export * from './step-definition-decorators';
-export * from './behave-json-formatter';
-export { ScenarioContext, ScenarioInfo } from './scenario-context';
+export * from './cucumber/binding-decorator';
+export * from './cucumber/hook-decorators';
+export * from './cucumber/step-definition-decorators';
+export { ScenarioContext, ScenarioInfo } from './types/scenario-context';

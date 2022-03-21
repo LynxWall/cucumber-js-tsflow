@@ -3,18 +3,21 @@
 		"composite": true,
 		"module": "umd",
 		"moduleResolution": "node",
-		"target": "es6",
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true,
+		"target": "es2018",
 		"strict": true,
+		"jsx": "preserve",
 		"skipLibCheck": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
 		"removeComments": false,
 		"experimentalDecorators": true,
-		"outDir": "./dist",
-		"rootDir": "./src"
-	},
-	"include": ["./src/**/*.ts"]
+		"emitDecoratorMetadata": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"inlineSourceMap": true,
+		"esModuleInterop": false,
+		"lib": ["es2019"],
+		"typeRoots": ["../node_modules/@types", "./src/types"],
+		"outDir": "lib",
+		"rootDir": "src"
+	}
 }

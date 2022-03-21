@@ -7,16 +7,15 @@
 			"request": "launch",
 			"program": "${workspaceRoot}/node_modules/@cucumber/cucumber/bin/cucumber-js",
 			"stopOnEntry": true,
-			"args": [ "--require", "./cucumber-tsflow-specs/dist" ],
+			"args": ["-p", "default"],
 			"cwd": "${workspaceRoot}",
 			"runtimeExecutable": null,
-			"runtimeArgs": [
-				"--nolazy"
-			],
+			"runtimeArgs": ["--nolazy"],
 			"env": {
 				"NODE_ENV": "development"
 			},
 			"externalConsole": false,
+			"console": "integratedTerminal",
 			"sourceMaps": true,
 			"outDir": null
 		},

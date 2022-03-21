@@ -1,10 +1,11 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 7.0.0+ in TypeScript 1.7+.",
-	"version": "4.0.0",
+	"version": "4.1.2-gebe4903f9b",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
-	"main": "./dist",
+	"main": "./lib/index.js",
+	"typings": "./lib/types",
 	"keywords": [
 		"testing",
 		"bdd",
@@ -12,19 +13,33 @@
 		"gherkin",
 		"tests",
 		"typescript",
-		"specflow"
+		"specflow",
+		"vue3"
 	],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
 	"dependencies": {
+		"@babel/core": "^7.17.8",
+		"@happy-dom/global-registrator": "^2.49.0",
+		"@vue/vue3-jest": "^27.0.0-alpha.4",
+		"babel-jest": "^27.5.1",
 		"callsites": "^3.1.0",
-		"log4js": "^6.4.2",
+		"jest": "^27.5.1",
+		"log4js": "^6.4.3",
+		"require-extension-hooks": "^0.3.3",
 		"source-map-support": "^0.5.21",
-		"underscore": "^1.13.2"
+		"ts-jest": "^27.1.3",
+		"ts-node": "^10.6.0",
+		"tsconfig-paths": "^3.14.0",
+		"typescript": "~4.6.2",
+		"underscore": "^1.13.2",
+		"vue": "^3.2.31"
 	},
 	"devDependencies": {
+		"@types/node": "17.0.21",
 		"@types/source-map-support": "^0.5.4"
-	}
+	},
+	"bin": "./bin/cucumber-tsflow"
 }

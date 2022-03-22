@@ -48,7 +48,7 @@ jobs:
         uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_TOKEN }}
-          package: ./cucumber-tsflow/package.json
+          package: $GITHUB_WORKSPACE/cucumber-tsflow/package.json
           access: public
       - if: steps.publish.outputs.type != 'none'
         run: |

@@ -21,6 +21,23 @@ const config = {
 	moduleFileExtensions: ['js', 'vue', 'ts'],
 	config: {
 		cwd: process.cwd()
+	},
+	globals: {
+		'@vue/vue3-jest': {
+			babelConfig: {
+				presets: [
+					[
+						'@babel/preset-env',
+						{
+							modules: 'commonjs',
+							targets: {
+								node: 'current'
+							}
+						}
+					]
+				]
+			}
+		}
 	}
 };
 

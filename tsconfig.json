@@ -1,7 +1,17 @@
 {
 	"compilerOptions": {
 		"baseUrl": ".",
-		"esModuleInterop": true
+		"target": "es6",
+		"module": "es2020",
+		"strict": true,
+		"jsx": "preserve",
+		"moduleResolution": "node",
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"allowJs": true,
+		"experimentalDecorators": true,
+		"typeRoots": ["node_modules/@types"]
 	},
 	"files": [],
 	"include": [],

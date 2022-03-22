@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const props = defineProps<{ promise: Promise<void> }>()
+	const props = defineProps<{ promise: Promise<void> }>();
 
-await props.promise
+	await props.promise;
 </script>
 
 <template>
-  <div>resolved</div>
+	<div>resolved</div>
 </template>

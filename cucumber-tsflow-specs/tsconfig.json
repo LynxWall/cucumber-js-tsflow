@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"target": "es6",
-		"module": "umd",
+		"module": "es2020",
 		"strict": true,
 		"jsx": "preserve",
 		"importHelpers": true,
@@ -12,11 +12,11 @@
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"useDefineForClassFields": true,
-		"sourceMap": true,
+		"inlineSourceMap": true,
 		"allowJs": true,
 		"removeComments": false,
 		"experimentalDecorators": true,
 		"typeRoots": ["../node_modules/@types"]
 	},
-	"include": ["./src/**/*.ts", "./**/*.vue"]
+	"include": ["./src/**/*.ts", "./src/**/*.vue"]
 }

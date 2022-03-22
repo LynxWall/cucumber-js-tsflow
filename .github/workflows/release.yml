@@ -26,22 +26,11 @@ jobs:
       - name: Install npm packages
         run: yarn
       - name: Update package version
-        id: set_package_version
         run: yarn set-packageversion
       - name: Build
         run: yarn build
       - name: Run specification tests
         run: yarn test
-      - name: Create npm package
-        run: npm pack ./cucumber-tsflow
-      - name: Create version info file
-        run: echo "${{ steps.set_package_version.outputs.package_version }}" > versioninfo.txt
-      - uses: actions/upload-artifact@v2
-        with:
-          name: npm-package
-          path: |
-            versioninfo.txt
-            @lynxwall/cucumber-tsflow-${{ steps.set_package_version.outputs.package_version }}.tgz
 
   # Publish the 'cucumber-tsflow' package to npm
   publish:
@@ -52,18 +41,15 @@ jobs:
     steps:
       - uses: actions/setup-node@v1
         with:
-          node-version: "16.x"
+          node-version: "16"
           registry-url: "https://registry.npmjs.org"
-      - uses: actions/download-artifact@v2
-        name: Download npm package
-        with:
-          name: npm-package
-      - name: Read version info file
-        id: get_package_version
-        run: |
-          VER=`cat versioninfo.txt`
-          echo "::set-output name=package_version::$VER"
       - name: Publish npm package
-        run: npm publish --@lynxwall --access public @lynxwall/cucumber-tsflow-${{ steps.get_package_version.outputs.package_version }}.tgz
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        id: publish
+        uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          package: ./cucumber-tsflow/package.json
+          access: public
+      - if: steps.publish.outputs.type != 'none'
+        run: |
+          echo "Version changed: ${{ steps.publish.outputs.old-version }} => ${{ steps.publish.outputs.version }}"

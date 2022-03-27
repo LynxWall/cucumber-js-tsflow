@@ -1,6 +1,5 @@
 const hooks = require('require-extension-hooks');
 const jestVue = require('@vue/vue3-jest');
-const { GlobalRegistrator } = require('@happy-dom/global-registrator');
 
 require('ts-node').register({
 	compilerOptions: {
@@ -14,30 +13,13 @@ require('ts-node').register({
 
 require('tsconfig-paths').register();
 
-// Register happy-dom globally
-GlobalRegistrator.register();
+// Register jsdom globally and set SVGElement on global
+require('jsdom-global')();
+(global as any).SVGElement = (global as any).window.SVGElement;
 
 const config = {
-	moduleFileExtensions: ['js', 'vue', 'ts'],
 	config: {
 		cwd: process.cwd()
-	},
-	globals: {
-		'@vue/vue3-jest': {
-			babelConfig: {
-				presets: [
-					[
-						'@babel/preset-env',
-						{
-							modules: 'commonjs',
-							targets: {
-								node: 'current'
-							}
-						}
-					]
-				]
-			}
-		}
 	}
 };
 

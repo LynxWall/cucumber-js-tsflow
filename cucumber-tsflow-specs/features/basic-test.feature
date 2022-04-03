@@ -7,8 +7,8 @@ Feature: Basic Test Feature
 		Then we can see the result correctly
 
 	Scenario: Adding two numbers
-		Given I enter "2" and "8"
+		Given I enter 2 and 8
 		When checking the results
-		Then I receive the result "10"
+		Then I receive the result 10
 
 

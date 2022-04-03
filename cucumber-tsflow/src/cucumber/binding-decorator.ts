@@ -1,15 +1,12 @@
-/* eslint-disable prefer-rest-params */
 import { After, AfterAll, Before, BeforeAll, Given, Then, When, World } from '@cucumber/cucumber';
 import * as messages from '@cucumber/messages';
 
-import * as _ from 'underscore';
+import _ from 'underscore';
 import logger from '../utils/logger';
-
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TypeDecorator } from '../types/types';
-import { PickleTag } from '@cucumber/messages';
 
 interface WritableWorld extends World {
 	[key: string]: any;
@@ -82,7 +79,7 @@ const ensureSystemBindings = _.once(() => {
 
 		this[SCENARIO_CONTEXT_SLOTNAME] = new ManagedScenarioContext(
 			scenario.pickle?.name ?? '',
-			_.map(scenario.pickle?.tags ?? new Array<PickleTag>(), (tag: messages.PickleTag) => tag?.name ?? '')
+			_.map(scenario.pickle?.tags ?? new Array<messages.PickleTag>(), (tag: messages.PickleTag) => tag?.name ?? '')
 		);
 	});
 
@@ -147,33 +144,19 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 		value: stepBinding.argsLength
 	});
 
+	// initialize options used on all step bindings
+	const options = {
+		cucumberKey: stepBinding.cucumberKey,
+		timeout: stepBinding.timeout,
+		wrapperOptions: stepBinding.wrapperOption
+	};
+	// call appropriate step
 	if (stepBinding.bindingType & StepBindingFlags.given) {
-		Given(
-			stepBinding.stepPattern,
-			{
-				timeout: stepBinding.timeout,
-				wrapperOptions: stepBinding.wrapperOption
-			},
-			bindingFunc
-		);
+		Given(stepBinding.stepPattern, options, bindingFunc);
 	} else if (stepBinding.bindingType & StepBindingFlags.when) {
-		When(
-			stepBinding.stepPattern,
-			{
-				timeout: stepBinding.timeout,
-				wrapperOptions: stepBinding.wrapperOption
-			},
-			bindingFunc
-		);
+		When(stepBinding.stepPattern, options, bindingFunc);
 	} else if (stepBinding.bindingType & StepBindingFlags.then) {
-		Then(
-			stepBinding.stepPattern,
-			{
-				timeout: stepBinding.timeout,
-				wrapperOptions: stepBinding.wrapperOption
-			},
-			bindingFunc
-		);
+		Then(stepBinding.stepPattern, options, bindingFunc);
 	}
 }
 
@@ -184,21 +167,18 @@ function bindStepDefinition(stepBinding: StepBinding): void {
  * @param stepBinding The [[StepBinding]] that represents a 'before', or 'after', step definition.
  */
 function bindHook(stepBinding: StepBinding): void {
-	const bindingFunc = function (this: any): any {
-		const scenarioContext = this[SCENARIO_CONTEXT_SLOTNAME] as ManagedScenarioContext;
-		const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
-		const bindingObject = scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes);
-
-		bindingObject._worldObj = this;
-
-		return (bindingObject[stepBinding.targetPropertyKey] as () => void).apply(bindingObject, arguments as any);
-	};
-
-	const globalBindFunc = () => {
-		const targetPrototype = stepBinding.targetPrototype;
-		const targetPropertyKey = stepBinding.targetPropertyKey;
-		return targetPrototype[targetPropertyKey].apply();
-	};
+	const bindingFunc =
+		stepBinding.bindingType == StepBindingFlags.beforeAll || stepBinding.bindingType == StepBindingFlags.afterAll
+			? function (this: any): any {
+					return stepBinding.targetPrototype[stepBinding.targetPropertyKey].apply() as () => void;
+			  }
+			: function (this: any): any {
+					const scenarioContext = this[SCENARIO_CONTEXT_SLOTNAME] as ManagedScenarioContext;
+					const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
+					const bindingObject = scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes);
+					bindingObject._worldObj = this;
+					return (bindingObject[stepBinding.targetPropertyKey] as () => void).apply(bindingObject, arguments as any);
+			  };
 
 	Object.defineProperty(bindingFunc, 'length', {
 		value: stepBinding.argsLength
@@ -208,31 +188,23 @@ function bindHook(stepBinding: StepBinding): void {
 
 	switch (stepBinding.bindingType) {
 		case StepBindingFlags.before: {
-			Before(
-				{
-					tags: tags,
-					timeout: stepBinding.timeout
-				},
-				bindingFunc
-			);
+			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
+			Before(options, bindingFunc);
 			break;
 		}
 		case StepBindingFlags.after: {
-			After(
-				{
-					tags: tags,
-					timeout: stepBinding.timeout
-				},
-				bindingFunc
-			);
+			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
+			After(options, bindingFunc);
 			break;
 		}
 		case StepBindingFlags.beforeAll: {
-			BeforeAll(globalBindFunc);
+			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
+			BeforeAll(options, bindingFunc);
 			break;
 		}
 		case StepBindingFlags.afterAll: {
-			AfterAll(globalBindFunc);
+			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
+			AfterAll(options, bindingFunc);
 			break;
 		}
 	}

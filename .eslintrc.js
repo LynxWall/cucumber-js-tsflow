@@ -10,8 +10,12 @@ module.exports = {
 	extends: ['plugin:vue/vue3-strongly-recommended', 'eslint:recommended', '@vue/typescript', 'prettier'],
 	rules: {
 		'@typescript-eslint/no-var-requires': 'off',
+		'@typescript-eslint/strict-boolean-expressions': 'off',
 		'@typescript-eslint/no-explicit-any': 'off',
-		'no-unused-vars': 'off',
+		'@typescript-eslint/no-inferrable-types': 'off',
+		'@typescript-eslint/no-empty-function': 'off',
+		'@typescript-eslint/ban-types': 'off',
+		'@typescript-eslint/no-unused-vars': [error, { argsIgnorePattern: '^_' }],
 		'no-unused-vars': 'off',
 		'vue/no-useless-template-attributes': 'off',
 		'vue/multi-word-component-names': 'off',

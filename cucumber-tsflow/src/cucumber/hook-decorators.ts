@@ -1,6 +1,7 @@
 import { BindingRegistry } from './binding-registry';
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
+import shortUuid from 'short-uuid';
 
 /**
  * A method decorator that marks the associated function as a 'Before Scenario' step. The function is
@@ -57,7 +58,8 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 			targetPropertyKey: propertyKey,
 			argsLength: target[propertyKey].length,
 			timeout: timeout,
-			callsite: callSite
+			callsite: callSite,
+			cucumberKey: shortUuid().new()
 		};
 
 		if (tag) {

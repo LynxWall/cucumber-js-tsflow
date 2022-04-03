@@ -1,11 +1,47 @@
-import JsonFormatter, { IJsonStep } from '@cucumber/cucumber/lib/formatter/json_formatter';
+import { formatLocation, PickleParser } from '@cucumber/cucumber/lib/formatter/helpers/index';
 import * as messages from '@cucumber/messages';
 import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';
-import { formatLocation, PickleParser } from '@cucumber/cucumber/lib/formatter/helpers';
+import JsonFormatter from '@cucumber/cucumber/lib/formatter/json_formatter';
 import { ILineAndUri } from '@cucumber/cucumber/lib/types';
-import { PickleStepArgument } from '@cucumber/messages';
 const { getStepKeyword } = PickleParser;
 
+export interface IJsonFeature {
+	description: string;
+	elements: IJsonScenario[];
+	id: string;
+	keyword: string;
+	line: number;
+	name: string;
+	tags: IJsonTag[];
+	uri: string;
+}
+
+export interface IJsonScenario {
+	description: string;
+	id: string;
+	keyword: string;
+	line: number;
+	name: string;
+	steps: IJsonStep[];
+	tags: IJsonTag[];
+	type: string;
+}
+
+export interface IJsonStep {
+	arguments?: any; // TODO
+	embeddings?: any; // TODO
+	hidden?: boolean;
+	keyword?: string; // TODO, not optional
+	line?: number;
+	match?: any; // TODO
+	name?: string;
+	result?: any; // TODO
+}
+
+export interface IJsonTag {
+	name: string;
+	line: number;
+}
 interface IBuildJsonStepOptions {
 	isBeforeHook: boolean;
 	gherkinStepMap: Record<string, messages.Step>;
@@ -14,12 +50,9 @@ interface IBuildJsonStepOptions {
 	testStepAttachments: messages.Attachment[];
 	testStepResult: messages.TestStepResult;
 }
-
-/**
- * Extending JsonFormatter.getStepData to add a name field to 	before
- * and After steps so that json can be exported to Behave Pro (name on steps required)
- */
 export default class BehaveJsonFormatter extends JsonFormatter {
+	public static readonly documentation: string = 'Prints the feature as JSON that can be used with Behave Pro';
+
 	getStepData({
 		isBeforeHook,
 		gherkinStepMap,
@@ -32,7 +65,7 @@ export default class BehaveJsonFormatter extends JsonFormatter {
 		if (doesHaveValue(testStep.pickleStepId)) {
 			const pickleStep = pickleStepMap[testStep.pickleStepId as string];
 			data.arguments = this.formatStepArgument(
-				pickleStep.argument as PickleStepArgument,
+				pickleStep.argument as messages.PickleStepArgument,
 				gherkinStepMap[pickleStep.astNodeIds[0]]
 			);
 			data.keyword = getStepKeyword({ pickleStep, gherkinStepMap });
@@ -44,9 +77,8 @@ export default class BehaveJsonFormatter extends JsonFormatter {
 			data.name = '';
 		}
 		if (doesHaveValue(testStep.stepDefinitionIds) && testStep.stepDefinitionIds?.length === 1) {
-			const stepDefinition = this.supportCodeLibrary.stepDefinitions.find(
-				s => s.id === (testStep.stepDefinitionIds as string[])[0]
-			);
+			const stepDefinitionId = testStep.stepDefinitionIds[0];
+			const stepDefinition = this.supportCodeLibrary.stepDefinitions.find(s => s.id === stepDefinitionId);
 			data.match = { location: formatLocation(stepDefinition as ILineAndUri) };
 		}
 		const { message, status } = testStepResult;

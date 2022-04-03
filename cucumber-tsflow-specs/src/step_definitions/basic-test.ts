@@ -58,9 +58,9 @@ export default class TestSteps {
 		this.thenIsCalled = true;
 	}
 
-	@given('I enter {string} and {string}')
-	iEnterstringAndstring(num1: string, num2: string): any {
-		this.computedResult = parseInt(num1) + parseInt(num2);
+	@given('I enter {int} and {int}')
+	iEnterintAndint(int: number, int2: number): any {
+		this.computedResult = int + int2;
 		this.givenIsCalled = true;
 	}
 
@@ -69,9 +69,9 @@ export default class TestSteps {
 		this.whenIsCalled = true;
 	}
 
-	@then('I receive the result {string}')
-	iReceiveTheResultstring(expectedResult: string): any {
-		if (parseInt(expectedResult) !== this.computedResult) {
+	@then('I receive the result {int}')
+	iReceiveTheResultint(int: number): any {
+		if (int !== this.computedResult) {
 			throw new Error('Arithmetic Error');
 		}
 		this.thenIsCalled = true;

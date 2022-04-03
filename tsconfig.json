@@ -11,7 +11,7 @@
 		"allowSyntheticDefaultImports": true,
 		"allowJs": true,
 		"experimentalDecorators": true,
-		"typeRoots": ["node_modules/@types"]
+		"typeRoots": ["./node_modules/@types", "./node_modules/@cucumber/cucumber/lib/types"]
 	},
 	"files": [],
 	"include": [],
@@ -21,3 +21,4 @@
 		}
 	]
 }
+

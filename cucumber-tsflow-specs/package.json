@@ -2,7 +2,7 @@
 	"private": true,
 	"name": "@lynxwall/cucumber-tsflow-specs",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "4.1.7",
+	"version": "5.0.0-g5cfe5937bd",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",

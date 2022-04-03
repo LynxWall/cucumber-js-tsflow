@@ -3,10 +3,16 @@ const jestVue = require('@vue/vue3-jest');
 
 require('ts-node').register({
 	compilerOptions: {
-		module: 'commonjs',
+		module: 'umd',
 		moduleResolution: 'node',
-		target: 'es6',
-		strict: true
+		target: 'es2018',
+		strict: true,
+		experimentalDecorators: true,
+		typeRoots: [
+			'node_modules/@types',
+			'node_modules/@cucumber/cucumber/lib/types',
+			'node_modules/@lynxwall/cucumber-tsflow/lib/types'
+		]
 	},
 	transpileOnly: true
 });

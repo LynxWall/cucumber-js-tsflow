@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-console.log('Hello!');
+require('../lib/cli/run.js').default();

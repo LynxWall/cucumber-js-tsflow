@@ -49,6 +49,13 @@ export interface StepBinding {
 	 * The callsite of the step binding.
 	 */
 	callsite: Callsite;
+
+	/**
+	 * Key passed in with options in cucumber step bindings.
+	 * This property is used to match tsflow step definitions
+	 * with cucumber step definitions.
+	 */
+	cucumberKey: string;
 }
 
 export * from './step-binding-flags';

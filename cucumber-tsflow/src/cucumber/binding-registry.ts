@@ -1,7 +1,8 @@
-import * as _ from 'underscore';
-
-import { StepBinding } from '../types/step-binding';
+import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
+import _ from 'underscore';
+import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TagName } from '../types/types';
+import { ParsedFeature } from '../gherkin/models';
 
 /**
  * Describes the binding metadata that is associated with a binding class.
@@ -204,6 +205,93 @@ export class BindingRegistry {
 
 		return this.mapTagNamesToStepBindings(['*'], tagMap);
 	}
+
+	/**
+	 * Updates the SupportCodeLibrary from Cucumber with
+	 * callsite information from tsflow bindings
+	 * @param library
+	 * @returns
+	 */
+	public updateSupportCodeLibrary = (library: ISupportCodeLibrary): ISupportCodeLibrary => {
+		this._targetBindings.forEach(binding => {
+			binding.stepBindings.forEach(stepBinding => {
+				let cucumberDefinition: any | undefined = undefined;
+				switch (stepBinding.bindingType) {
+					case StepBindingFlags.beforeAll:
+						cucumberDefinition = library.beforeTestRunHookDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.before:
+						cucumberDefinition = library.beforeTestCaseHookDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.given:
+						cucumberDefinition = library.stepDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.when:
+						cucumberDefinition = library.stepDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.then:
+						cucumberDefinition = library.stepDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.after:
+						cucumberDefinition = library.afterTestCaseHookDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.afterAll:
+						cucumberDefinition = library.afterTestRunHookDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+				}
+				if (cucumberDefinition) {
+					cucumberDefinition.line = stepBinding.callsite.lineNumber;
+					cucumberDefinition.uri = stepBinding.callsite.filename;
+				}
+			});
+		});
+		return library;
+	};
+
+	/**
+	 * Uses the step file name passed in to find a step
+	 * binding that can be matched to a feature in the
+	 * array of features passed in
+	 * @param features
+	 * @param tsFile
+	 * @returns
+	 */
+	public findFeaturePath = (features: ParsedFeature[], tsFile: string): string => {
+		const filename = tsFile.split(/[\\\/]/).pop() as string;
+		let tsStep: StepBinding | undefined;
+		[...this._targetBindings.values()].find(binding => {
+			tsStep = [...binding.stepBindings.values()].find(step => {
+				return step.callsite.filename.indexOf(filename) >= 0 && step.stepPattern.toString().length > 0;
+			});
+			return tsStep !== undefined;
+		});
+		let found = false;
+		const feature = features.find(feature => {
+			feature.scenarios.find(scenario => {
+				scenario.steps.find(step => {
+					found = step.stepText == tsStep?.stepPattern;
+					return found;
+				});
+				return found;
+			});
+			return found;
+		});
+		return feature?.featureFile ?? '';
+	};
 
 	/**
 	 * Maps an array of tag names to an array of associated step bindings.

@@ -16,7 +16,6 @@ export interface IParsedArgvOptions {
 export interface ITsflowConfiguration extends IConfiguration {
 	environment: string;
 	debugFile: string;
-	snippetExpressions: string;
 }
 
 export interface IParsedArgv {
@@ -79,7 +78,7 @@ const ArgvParser = {
 			.option('-b, --backtrace', 'show full backtrace for errors')
 			.option('-c, --config <PATH>', 'specify configuration file')
 			.option('-d, --dry-run', 'invoke formatters without executing steps')
-			.option('--debug-file <STRING>', 'name of a file with steps for debugging')
+			.option('--debug-file <STRING>', 'path to a file with steps for debugging')
 			.option('-e, --environment <NODE|VUEDOM>', 'test environment: node or vuedom. Default: node')
 			.option(
 				'--exit, --force-exit',
@@ -110,7 +109,6 @@ const ArgvParser = {
 				'only execute the scenarios with name matching the expression (repeatable)',
 				(ArgvParser as any).collect
 			)
-
 			.option('--order <TYPE[:SEED]>', 'run scenarios in the specified order. Type should be `defined` or `random`')
 			.option('-p, --profile <NAME>', 'specify the profile to use (repeatable)', (ArgvParser as any).collect, [])
 			.option('--parallel <NUMBER_OF_WORKERS>', 'run in parallel with the given number of workers', val =>
@@ -141,10 +139,6 @@ const ArgvParser = {
 			)
 			.option('--strict', 'fail if there are pending steps')
 			.option('--no-strict', 'succeed even if there are pending steps')
-			.option(
-				'--snippet-expressions <CUCUMBER|REGEX>',
-				'type of expressions to use for generated steps: cucumber or regex. Default: cucumber'
-			)
 			.option(
 				'-t, --tags <EXPRESSION>',
 				'only execute the features or scenarios with tags matching the expression (repeatable)',

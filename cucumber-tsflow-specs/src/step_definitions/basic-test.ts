@@ -1,4 +1,4 @@
-import { after, before, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
+import { after, afterStep, before, beforeStep, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
 
 @binding()
@@ -7,6 +7,8 @@ export default class TestSteps {
 	private beforeIsCalled = false;
 	private whenIsCalled = false;
 	private thenIsCalled = false;
+	private beforeStepIsCalled = false;
+	private stepIsCalled = false;
 	private beforeWithNoTagIsCalled = false;
 	private computedResult = 0;
 
@@ -18,6 +20,19 @@ export default class TestSteps {
 	@before('@basic')
 	beforeBasic() {
 		this.beforeIsCalled = true;
+	}
+
+	@beforeStep('@addNumbers')
+	beforeStep() {
+		this.beforeStepIsCalled = true;
+	}
+
+	@afterStep('@addNumbers')
+	afterStep() {
+		expect(this.beforeStepIsCalled).to.be.true;
+		expect(this.stepIsCalled).to.be.true;
+		this.stepIsCalled = false;
+		this.beforeStepIsCalled = false;
 	}
 
 	@after('@basic')
@@ -61,11 +76,15 @@ export default class TestSteps {
 	@given('I enter {int} and {int}')
 	iEnterintAndint(int: number, int2: number): any {
 		this.computedResult = int + int2;
+		expect(this.beforeStepIsCalled).to.be.true;
+		this.stepIsCalled = true;
 		this.givenIsCalled = true;
 	}
 
 	@when('checking the results')
 	checkingTheResults(): any {
+		expect(this.beforeStepIsCalled).to.be.true;
+		this.stepIsCalled = true;
 		this.whenIsCalled = true;
 	}
 
@@ -74,6 +93,8 @@ export default class TestSteps {
 		if (int !== this.computedResult) {
 			throw new Error('Arithmetic Error');
 		}
+		expect(this.beforeStepIsCalled).to.be.true;
+		this.stepIsCalled = true;
 		this.thenIsCalled = true;
 	}
 }

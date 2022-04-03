@@ -13,6 +13,7 @@ import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { ITsflowConfiguration } from './argv-parser';
 import GherkinFeature from '../gherkin/gherkin-feature';
 import { readFileSync } from 'fs';
+import chalk from 'chalk';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -27,7 +28,7 @@ export interface ITsflowResolvedConfiguration {
 
 class StepInfo {
 	text: string = '';
-	tags: string = '';
+	tag: string = '';
 }
 
 /**
@@ -94,9 +95,19 @@ export const loadConfiguration = async (
 						if (['given', 'when', 'then'].find(x => x === step.keyword)) {
 							const fileStep = fileSteps.find(s => s.text == step.stepText);
 							if (fileStep) {
-								if (fileStep.tags.length > 0 && scenario.tags.length > 0) {
-									const tag = scenario.tags.find(t => fileStep.tags.indexOf(t) >= 0);
-									found = tag && tag.length > 0 ? true : false;
+								// if we have a tag check to see if it matches one in the current scenario
+								// or in the current feature
+								if (fileStep.tag.length > 0) {
+									// check to see if it's associated with the scenario
+									if (scenario.tags.length > 0) {
+										const tag = scenario.tags.find(t => fileStep.tag.indexOf(t) >= 0);
+										found = tag && tag.length > 0 ? true : false;
+									}
+									// if not a scenario tag check to see if we have one associated with the feature
+									else if (!found && feature.tags.length > 0) {
+										const tag = feature.tags.find(t => fileStep.tag.indexOf(t) >= 0);
+										found = tag && tag.length > 0 ? true : false;
+									}
 								} else {
 									found = true;
 								}
@@ -118,8 +129,8 @@ export const loadConfiguration = async (
 			original.paths.push(featurePath);
 		} else {
 			// log a message if the feature path is not found
-			logger.warn(`Unable to find feature for debugFile: ${original.debugFile}`);
-			logger.warn('All tests will be executed\n');
+			logger.warn(chalk.yellow(`\nUnable to find feature for debugFile: ${original.debugFile}`));
+			logger.warn(chalk.yellow('All tests will be executed\n'));
 		}
 	}
 
@@ -147,13 +158,24 @@ const parseSteps = (filePath: string): StepInfo[] => {
 		const txt = x.match(/["']\s*([^"']+?)\s*["']/g);
 		if (txt && txt.length > 0) {
 			const stepInfo = new StepInfo();
+			// steps support four parameters with last three optional
+			// first is the pattern and second is a tag, which are the
+			// two peices of information we need to make a match
 			stepInfo.text = txt[0].substring(1, txt[0].length - 1);
-			if (txt.length > 1) {
-				stepInfo.tags = txt[1].substring(1, txt[1].length - 1);
+			if (txt.length > 1 && isValidString(txt[1])) {
+				stepInfo.tag = txt[1].substring(1, txt[1].length - 1);
 			}
 			steps.push(stepInfo);
 		}
 	});
 
 	return steps;
+};
+
+const isValidString = (text: any) => {
+	const isString = typeof text === 'string' || text instanceof String;
+	if (isString && text.length > 0) {
+		return true;
+	}
+	return false;
 };

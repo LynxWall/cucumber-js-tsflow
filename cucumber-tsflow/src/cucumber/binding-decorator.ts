@@ -1,4 +1,15 @@
-import { After, AfterAll, Before, BeforeAll, Given, Then, When, World } from '@cucumber/cucumber';
+import {
+	After,
+	AfterStep,
+	AfterAll,
+	Before,
+	BeforeStep,
+	BeforeAll,
+	Given,
+	Then,
+	When,
+	World
+} from '@cucumber/cucumber';
 import * as messages from '@cucumber/messages';
 
 import _ from 'underscore';
@@ -163,7 +174,6 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 /**
  * Binds a hook to Cucumber.
  *
- * @param cucumber The cucumber object.
  * @param stepBinding The [[StepBinding]] that represents a 'before', or 'after', step definition.
  */
 function bindHook(stepBinding: StepBinding): void {
@@ -187,9 +197,24 @@ function bindHook(stepBinding: StepBinding): void {
 	const tags = stepBinding.tag === DEFAULT_TAG ? undefined : stepBinding.tag;
 
 	switch (stepBinding.bindingType) {
+		case StepBindingFlags.beforeAll: {
+			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
+			BeforeAll(options, bindingFunc);
+			break;
+		}
 		case StepBindingFlags.before: {
 			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
 			Before(options, bindingFunc);
+			break;
+		}
+		case StepBindingFlags.beforeStep: {
+			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
+			BeforeStep(options, bindingFunc);
+			break;
+		}
+		case StepBindingFlags.afterAll: {
+			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
+			AfterAll(options, bindingFunc);
 			break;
 		}
 		case StepBindingFlags.after: {
@@ -197,14 +222,9 @@ function bindHook(stepBinding: StepBinding): void {
 			After(options, bindingFunc);
 			break;
 		}
-		case StepBindingFlags.beforeAll: {
-			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
-			BeforeAll(options, bindingFunc);
-			break;
-		}
-		case StepBindingFlags.afterAll: {
-			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
-			AfterAll(options, bindingFunc);
+		case StepBindingFlags.afterStep: {
+			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
+			AfterStep(options, bindingFunc);
 			break;
 		}
 	}

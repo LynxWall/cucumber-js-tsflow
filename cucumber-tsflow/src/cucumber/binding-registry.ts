@@ -2,7 +2,6 @@ import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library
 import _ from 'underscore';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TagName } from '../types/types';
-import { ParsedFeature } from '../gherkin/models';
 
 /**
  * Describes the binding metadata that is associated with a binding class.
@@ -260,37 +259,6 @@ export class BindingRegistry {
 			});
 		});
 		return library;
-	};
-
-	/**
-	 * Uses the step file name passed in to find a step
-	 * binding that can be matched to a feature in the
-	 * array of features passed in
-	 * @param features
-	 * @param tsFile
-	 * @returns
-	 */
-	public findFeaturePath = (features: ParsedFeature[], tsFile: string): string => {
-		const filename = tsFile.split(/[\\\/]/).pop() as string;
-		let tsStep: StepBinding | undefined;
-		[...this._targetBindings.values()].find(binding => {
-			tsStep = [...binding.stepBindings.values()].find(step => {
-				return step.callsite.filename.indexOf(filename) >= 0 && step.stepPattern.toString().length > 0;
-			});
-			return tsStep !== undefined;
-		});
-		let found = false;
-		const feature = features.find(feature => {
-			feature.scenarios.find(scenario => {
-				scenario.steps.find(step => {
-					found = step.stepText == tsStep?.stepPattern;
-					return found;
-				});
-				return found;
-			});
-			return found;
-		});
-		return feature?.featureFile ?? '';
 	};
 
 	/**

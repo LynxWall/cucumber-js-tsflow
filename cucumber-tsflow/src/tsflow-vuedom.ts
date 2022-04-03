@@ -3,11 +3,15 @@ const jestVue = require('@vue/vue3-jest');
 
 require('ts-node').register({
 	compilerOptions: {
-		module: 'umd',
+		module: 'commonjs',
 		moduleResolution: 'node',
-		target: 'es2018',
+		target: 'es2021',
 		strict: true,
 		experimentalDecorators: true,
+		resolveJsonModule: true,
+		esModuleInterop: true,
+		skipLibCheck: true,
+		lib: ['es2021'],
 		typeRoots: [
 			'node_modules/@types',
 			'node_modules/@cucumber/cucumber/lib/types',

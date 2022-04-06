@@ -1,4 +1,3 @@
-import { defineParameterType } from '@cucumber/cucumber/lib/index';
 import * as messages from '@cucumber/messages';
 import { isTruthyString } from '@cucumber/cucumber/lib/configuration/index';
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter';
@@ -11,6 +10,7 @@ import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { BindingRegistry } from '../cucumber/binding-registry';
 import ArgvParser from './argv-parser';
+import { ParameterType } from '@cucumber/cucumber-expressions';
 
 export interface ICliRunResult {
 	shouldAdvertisePublish: boolean;
@@ -105,11 +105,8 @@ export default class Cli {
 
 		// define a custom boolean type this has to be done
 		// after all of the definitions have been loaded
-		defineParameterType({
-			name: 'boolean',
-			regexp: /true|false/,
-			transformer: s => (s === 'true' ? true : false)
-		});
+		const boolParam = new ParameterType('boolean', /true|false/, null, s => (s === 'true' ? true : false), true, false);
+		supportCodeLibrary.parameterTypeRegistry.defineParameterType(boolParam);
 
 		// now we can run cucumber
 		const { success } = await runCucumber(runOptions, environment);

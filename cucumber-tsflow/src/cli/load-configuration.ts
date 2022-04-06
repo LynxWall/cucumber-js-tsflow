@@ -14,6 +14,7 @@ import { ITsflowConfiguration } from './argv-parser';
 import GherkinFeature from '../gherkin/gherkin-feature';
 import { readFileSync } from 'fs';
 import chalk from 'chalk';
+import { hasStringValue } from '../utils/helpers';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -61,12 +62,19 @@ export const loadConfiguration = async (
 		options.provided as Partial<IConfiguration>
 	) as ITsflowConfiguration;
 
-	switch (original.environment) {
-		case 'vuedom':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/tsflow-vuedom');
+	switch (original.transpiler) {
+		case 'esvue':
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-esvue');
+			break;
+		case 'tsvue':
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-tsvue');
+			break;
+		case 'tsnode':
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-tsnode');
 			break;
 		default:
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/tsflow-node');
+			// defaulting to esbuild
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-esnode');
 			break;
 	}
 	// set the snippet syntax
@@ -82,31 +90,31 @@ export const loadConfiguration = async (
 		);
 	}
 	// check to see if a debugFile was passed in
-	if (original.debugFile?.length > 0) {
+	if (hasStringValue(original.debugFile)) {
 		const fileSteps = parseSteps(original.debugFile);
 		const gherkinFeature = new GherkinFeature();
 		let featurePath: string | undefined = '';
-		for (let path of original.paths) {
+		for (const path of original.paths) {
 			let found: boolean = false;
 			const features = gherkinFeature.loadFeatures(path);
 			const feature = features.find(feature => {
 				feature.scenarios.find(scenario => {
 					scenario.steps.find(step => {
 						if (['given', 'when', 'then'].find(x => x === step.keyword)) {
-							const fileStep = fileSteps.find(s => s.text == step.stepText);
+							const fileStep = fileSteps.find(s => s.text === step.stepText);
 							if (fileStep) {
 								// if we have a tag check to see if it matches one in the current scenario
 								// or in the current feature
-								if (fileStep.tag.length > 0) {
+								if (hasStringValue(fileStep.tag)) {
 									// check to see if it's associated with the scenario
 									if (scenario.tags.length > 0) {
 										const tag = scenario.tags.find(t => fileStep.tag.indexOf(t) >= 0);
-										found = tag && tag.length > 0 ? true : false;
+										found = hasStringValue(tag);
 									}
 									// if not a scenario tag check to see if we have one associated with the feature
 									else if (!found && feature.tags.length > 0) {
 										const tag = feature.tags.find(t => fileStep.tag.indexOf(t) >= 0);
-										found = tag && tag.length > 0 ? true : false;
+										found = hasStringValue(tag);
 									}
 								} else {
 									found = true;
@@ -124,7 +132,7 @@ export const loadConfiguration = async (
 				break;
 			}
 		}
-		if (featurePath && featurePath.length > 0) {
+		if (hasStringValue(featurePath)) {
 			original.paths = [];
 			original.paths.push(featurePath);
 		} else {
@@ -151,31 +159,23 @@ const parseSteps = (filePath: string): StepInfo[] => {
 	const steps = new Array<StepInfo>();
 	const stepText: string = readFileSync(filePath, 'utf8');
 	// get all of the decorator strings
-	const stepsText = stepText.match(/@\w*\(([^()]+)\)/g);
-	stepsText?.forEach(x => {
-		// extract strings from inside decorator parens
+	const stepDecorators = stepText.match(/@\w*\(([^()]+)\)/g);
+	stepDecorators?.forEach(x => {
+		// extract strings from inside decorator parens,
 		// can be wrapped in single or double quotes
-		const txt = x.match(/["']\s*([^"']+?)\s*["']/g);
-		if (txt && txt.length > 0) {
+		const stepParams = x.match(/["']\s*([^"']+?)\s*["']/g);
+		if (stepParams && stepParams.length > 0) {
 			const stepInfo = new StepInfo();
 			// steps support four parameters with last three optional
 			// first is the pattern and second is a tag, which are the
 			// two peices of information we need to make a match
-			stepInfo.text = txt[0].substring(1, txt[0].length - 1);
-			if (txt.length > 1 && isValidString(txt[1])) {
-				stepInfo.tag = txt[1].substring(1, txt[1].length - 1);
+			stepInfo.text = stepParams[0].substring(1, stepParams[0].length - 1);
+			if (stepParams.length > 1 && hasStringValue(stepParams[1])) {
+				stepInfo.tag = stepParams[1].substring(1, stepParams[1].length - 1);
 			}
 			steps.push(stepInfo);
 		}
 	});
 
 	return steps;
-};
-
-const isValidString = (text: any) => {
-	const isString = typeof text === 'string' || text instanceof String;
-	if (isString && text.length > 0) {
-		return true;
-	}
-	return false;
 };

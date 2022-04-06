@@ -43,7 +43,7 @@ export default class GherkinFeature {
 
 		try {
 			const builder = new AstBuilder(messages.IdGenerator.uuid());
-			var matcher = new GherkinClassicTokenMatcher(); // or Gherkin.GherkinInMarkdownTokenMatcher()
+			const matcher = new GherkinClassicTokenMatcher(); // or Gherkin.GherkinInMarkdownTokenMatcher()
 			ast = new Parser(builder, matcher).parse(featureText);
 		} catch (err: any) {
 			throw new Error(`Error parsing feature Gherkin: ${err.message}`);

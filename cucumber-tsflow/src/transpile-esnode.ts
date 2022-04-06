@@ -8,14 +8,11 @@ require('ts-node').register({
 		resolveJsonModule: true,
 		esModuleInterop: true,
 		skipLibCheck: true,
-		lib: ['es2021'],
-		typeRoots: [
-			'node_modules/@types',
-			'node_modules/@cucumber/cucumber/lib/types',
-			'node_modules/@lynxwall/cucumber-tsflow/lib/types'
-		]
+		lib: ['es2021']
 	},
-	transpileOnly: true
+	ignore: ['(?:^|/)node_modules/', '(?:^|/)cucumber-tsflow/lib/'],
+	transpileOnly: true,
+	transpiler: '@lynxwall/cucumber-tsflow/lib/transpilers/esbuild-transpiler'
 });
 
 require('tsconfig-paths').register();

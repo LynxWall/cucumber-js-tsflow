@@ -14,8 +14,8 @@ export interface IParsedArgvOptions {
 }
 
 export interface ITsflowConfiguration extends IConfiguration {
-	environment: string;
 	debugFile: string;
+	transpiler: string;
 }
 
 export interface IParsedArgv {
@@ -79,7 +79,6 @@ const ArgvParser = {
 			.option('-c, --config <PATH>', 'specify configuration file')
 			.option('-d, --dry-run', 'invoke formatters without executing steps')
 			.option('--debug-file <STRING>', 'path to a file with steps for debugging')
-			.option('-e, --environment <NODE|VUEDOM>', 'test environment: node or vuedom. Default: node')
 			.option(
 				'--exit, --force-exit',
 				'force shutdown of the event loop when the test run has finished: cucumber will call process.exit'
@@ -143,6 +142,12 @@ const ArgvParser = {
 				'-t, --tags <EXPRESSION>',
 				'only execute the features or scenarios with tags matching the expression (repeatable)',
 				ArgvParser.mergeTags
+			)
+			.option(
+				'--transpiler <ESNODE|TSNODE|ESVUE|TSVUE>',
+				`built-in transpiler to use. ESxxx transpilers use esbuild and TSxxx transpilers use typescript.\n
+				Vue versions of the transpilers add a hook for .vue transforms and initialize jsdom globally.\n
+				Default: ESNODE (esbuild without Vue support)`
 			)
 			.option(
 				'--world-parameters <JSON>',

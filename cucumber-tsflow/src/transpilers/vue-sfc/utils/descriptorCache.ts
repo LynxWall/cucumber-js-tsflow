@@ -14,11 +14,11 @@ export interface SFCParseResult {
 const cache = new Map<string, SFCDescriptor>();
 const prevCache = new Map<string, SFCDescriptor | undefined>();
 
-export function createDescriptor(
+export const createDescriptor = (
 	filename: string,
 	source: string,
 	{ root, isProduction, sourceMap, compiler }: ResolvedOptions
-): SFCParseResult {
+): SFCParseResult => {
 	const { descriptor, errors } = compiler.parse(source, {
 		filename,
 		sourceMap
@@ -31,22 +31,22 @@ export function createDescriptor(
 
 	cache.set(filename, descriptor);
 	return { descriptor, errors };
-}
+};
 
-export function getPrevDescriptor(filename: string): SFCDescriptor | undefined {
+export const getPrevDescriptor = (filename: string): SFCDescriptor | undefined => {
 	return prevCache.get(filename);
-}
+};
 
-export function setPrevDescriptor(filename: string, entry: SFCDescriptor): void {
+export const setPrevDescriptor = (filename: string, entry: SFCDescriptor): void => {
 	prevCache.set(filename, entry);
-}
+};
 
-export function getDescriptor(
+export const getDescriptor = (
 	source: string,
 	filename: string,
 	options: ResolvedOptions,
 	createIfNotFound = true
-): SFCDescriptor | undefined {
+): SFCDescriptor | undefined => {
 	if (cache.has(filename)) {
 		return cache.get(filename)!;
 	}
@@ -58,15 +58,15 @@ export function getDescriptor(
 		return descriptor;
 	}
 	return undefined;
-}
+};
 
-export function getSrcDescriptor(filename: string, query: VueQuery): SFCDescriptor {
+export const getSrcDescriptor = (filename: string, query: VueQuery): SFCDescriptor => {
 	return cache.get(`${filename}?src=${query.src}`)!;
-}
+};
 
-export function setSrcDescriptor(filename: string, entry: SFCDescriptor): void {
+export const setSrcDescriptor = (filename: string, entry: SFCDescriptor): void => {
 	// if multiple Vue files use the same src file, they will be overwritten
 	// should use other key
 	cache.set(`${filename}?src=${entry.id}`, entry);
-}
+};
 

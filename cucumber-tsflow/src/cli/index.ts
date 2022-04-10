@@ -1,4 +1,4 @@
-import * as messages from '@cucumber/messages';
+import { IdGenerator } from '@cucumber/messages';
 import { isTruthyString } from '@cucumber/cucumber/lib/configuration/index';
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter';
 import { IRunOptions, runCucumber } from '@cucumber/cucumber/lib/api/index';
@@ -11,6 +11,8 @@ import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { BindingRegistry } from '../cucumber/binding-registry';
 import ArgvParser from './argv-parser';
 import { ParameterType } from '@cucumber/cucumber-expressions';
+import messageCollector from '../cucumber/message-collector';
+import { Console } from 'console';
 
 export interface ICliRunResult {
 	shouldAdvertisePublish: boolean;
@@ -70,6 +72,9 @@ export default class Cli {
 			stderr: this.stderr,
 			env: this.env
 		};
+		const logger = new Console(environment.stdout as any, environment.stderr);
+		logger.info('Loading configuration and step definitions...');
+
 		const { useConfiguration: configuration, runConfiguration } = await loadConfiguration(
 			{
 				file: options.config,
@@ -81,7 +86,7 @@ export default class Cli {
 
 		// get run options
 		const { cwd } = mergeEnvironment(environment);
-		const newId = messages.IdGenerator.uuid();
+		const newId = IdGenerator.uuid();
 		const runOptions = runConfiguration as IRunOptions;
 		const supportCoordinates =
 			'World' in runOptions.support ? runOptions.support.originalCoordinates : runOptions.support;
@@ -109,7 +114,11 @@ export default class Cli {
 		supportCodeLibrary.parameterTypeRegistry.defineParameterType(boolParam);
 
 		// now we can run cucumber
-		const { success } = await runCucumber(runOptions, environment);
+		const { success } = await runCucumber(
+			runOptions,
+			environment,
+			messageCollector.parseEnvelope.bind(messageCollector)
+		);
 		return {
 			shouldAdvertisePublish:
 				!runConfiguration.formats.publish &&

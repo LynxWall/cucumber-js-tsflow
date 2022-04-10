@@ -8,50 +8,30 @@ import type { ResolvedOptions, VueTransformerContext } from './types';
 import { getResolvedScript } from './script';
 import { createRollupError } from './utils/error';
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function transformTemplateAsModule(
-	code: string,
-	descriptor: SFCDescriptor,
-	options: ResolvedOptions,
-	transformerContext: VueTransformerContext,
-	ssr: boolean
-) {
-	const result = compile(code, descriptor, options, transformerContext, ssr);
-
-	const returnCode = result.code;
-
-	return {
-		code: returnCode,
-		map: result.map
-	};
-}
-
 /**
  * transform the template directly in the main SFC module
  */
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function transformTemplateInMain(
+export const transformTemplateInMain = (
 	code: string,
 	descriptor: SFCDescriptor,
 	options: ResolvedOptions,
 	transformerContext: VueTransformerContext,
 	ssr: boolean
-): SFCTemplateCompileResults {
+): SFCTemplateCompileResults => {
 	const result = compile(code, descriptor, options, transformerContext, ssr);
 	return {
 		...result,
 		code: result.code.replace(/\nexport (function|const) (render|ssrRender)/, '\n$1 _sfc_$2')
 	};
-}
+};
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function compile(
+export const compile = (
 	code: string,
 	descriptor: SFCDescriptor,
 	options: ResolvedOptions,
 	transformerContext: VueTransformerContext,
 	ssr: boolean
-) {
+) => {
 	const filename = descriptor.filename;
 	const result = options.compiler.compileTemplate({
 		...resolveTemplateCompilerOptions(descriptor, options, ssr)!,
@@ -76,13 +56,13 @@ export function compile(
 	}
 
 	return result;
-}
+};
 
-export function resolveTemplateCompilerOptions(
+export const resolveTemplateCompilerOptions = (
 	descriptor: SFCDescriptor,
 	options: ResolvedOptions,
 	ssr: boolean
-): Omit<SFCTemplateCompileOptions, 'source'> | undefined {
+): Omit<SFCTemplateCompileOptions, 'source'> | undefined => {
 	const block = descriptor.template;
 	if (!block) {
 		return;
@@ -152,5 +132,5 @@ export function resolveTemplateCompilerOptions(
 			sourceMap: options.sourceMap
 		}
 	};
-}
+};
 

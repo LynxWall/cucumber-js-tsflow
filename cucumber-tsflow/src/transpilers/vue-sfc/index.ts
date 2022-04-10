@@ -4,8 +4,6 @@ import type { RollupError, RollupWarning } from 'rollup';
 import { resolveCompiler } from './compiler';
 import { parseVueRequest } from './utils/query';
 import { transformMain } from './main';
-import { EXPORT_HELPER_ID } from './helper';
-
 import type { Options, ResolvedOptions, VueTransformerContext, VueResolvedId } from './types';
 
 export { parseVueRequest, VueQuery } from './utils/query';
@@ -44,13 +42,9 @@ class VueTransformer implements VueTransformerContext {
 	}
 	public error = (err: string | RollupError, pos?: number | { column: number; line: number } | undefined): void => {};
 	public resolve = (id: string): VueResolvedId | null => {
-		// component export helper
-		if (id === EXPORT_HELPER_ID) {
-			return { external: true, id: id };
-		}
 		// serve sub-part requests (*?vue) as virtual modules
 		if (parseVueRequest(id).query.vue) {
-			return { external: true, id: id };
+			return { external: false, id: id };
 		}
 		return null;
 	};

@@ -14,7 +14,7 @@
 		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
 	"scripts": {
-		"build": "npx genversion --es6 cucumber-tsflow/src/version.ts && tsc --build",
+		"build": "genversion --es6 cucumber-tsflow/src/version.ts && tsc --build",
 		"build:watch": "tsc --build --watch",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
 		"lint": "eslint --fix --ext .js,.ts,.vue --ignore-path .eslintignore cucumber-tsflow/src",
@@ -27,6 +27,7 @@
 		"eslint": "^8.11.0",
 		"eslint-config-prettier": "^8.5.0",
 		"eslint-plugin-vue": "^8.5.0",
+		"genversion": "^3.0.2",
 		"nerdbank-gitversioning": "^3.5.86-alpha",
 		"prettier": "^2.6.0",
 		"typescript": "~4.6.2"

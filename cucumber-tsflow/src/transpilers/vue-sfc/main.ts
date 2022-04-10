@@ -9,19 +9,17 @@ import { transformTemplateInMain } from './template';
 import type { RawSourceMap } from 'source-map';
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map';
 import { createRollupError } from './utils/error';
-import { EXPORT_HELPER_ID } from './helper';
 import { VueTransformerContext, ResolvedOptions } from './types';
 import { transpileCode } from '../esbuild';
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function transformMain(
+export const transformMain = (
 	code: string,
 	filename: string,
 	options: ResolvedOptions,
 	transformerContext: VueTransformerContext,
 	ssr: boolean,
 	asCustomElement: boolean
-) {
+) => {
 	const { descriptor, errors } = createDescriptor(filename, code, options);
 
 	if (errors.length) {
@@ -100,7 +98,13 @@ export function transformMain(
 		output.push(`export default _sfc_main`);
 	} else {
 		output.push(
-			`import _export_sfc from '${EXPORT_HELPER_ID}'`,
+			`import _export_sfc from 'export default (sfc, props) => {
+					const target = sfc.__vccOpts || sfc;
+					for (const [key, val] of props) {
+						target[key] = val;
+					}
+					return target;
+				}'`,
 			`export default /*#__PURE__*/_export_sfc(_sfc_main, [${attachedProps
 				.map(([key, val]) => `['${key}',${val}]`)
 				.join(',')}])`
@@ -124,14 +128,14 @@ export function transformMain(
 			mappings: ''
 		}
 	};
-}
+};
 
-function genTemplateCode(
+const genTemplateCode = (
 	descriptor: SFCDescriptor,
 	options: ResolvedOptions,
 	transformerContext: VueTransformerContext,
 	ssr: boolean
-) {
+) => {
 	const template = descriptor.template!;
 
 	// If the template is not using pre-processor AND is not using external src,
@@ -154,9 +158,9 @@ function genTemplateCode(
 			map: undefined
 		};
 	}
-}
+};
 
-function genScriptCode(
+const genScriptCode = (
 	descriptor: SFCDescriptor,
 	options: ResolvedOptions,
 	transformerContext: VueTransformerContext,
@@ -164,7 +168,7 @@ function genScriptCode(
 ): {
 	code: string;
 	map: RawSourceMap;
-} {
+} => {
 	let scriptCode = `const _sfc_main = {}`;
 	let map: RawSourceMap | SourceMap | undefined;
 
@@ -196,14 +200,14 @@ function genScriptCode(
 		code: scriptCode,
 		map: map as any
 	};
-}
+};
 
-function genStyleCode(
+const genStyleCode = (
 	descriptor: SFCDescriptor,
 	transformerContext: VueTransformerContext,
 	asCustomElement: boolean,
 	attachedProps: [string, string][]
-) {
+) => {
 	let stylesCode = ``;
 	let cssModulesMap: Record<string, string> | undefined;
 	if (descriptor.styles.length) {
@@ -247,21 +251,21 @@ function genStyleCode(
 		attachedProps.push([`__cssModules`, `cssModules`]);
 	}
 	return stylesCode;
-}
+};
 
-function genCSSModulesCode(
+const genCSSModulesCode = (
 	index: number,
 	request: string,
 	moduleName: string | boolean
-): [importCode: string, nameMap: Record<string, string>] {
+): [importCode: string, nameMap: Record<string, string>] => {
 	const styleVar = `style${index}`;
 	const exposedName = typeof moduleName === 'string' ? moduleName : '$style';
 	// inject `.module` before extension so vite handles it as css module
 	const moduleRequest = request.replace(/\.(\w+)$/, '.module.$1');
 	return [`\nimport ${styleVar} from ${JSON.stringify(moduleRequest)}`, { [exposedName]: styleVar }];
-}
+};
 
-function genCustomBlockCode(descriptor: SFCDescriptor, transformerContext: VueTransformerContext) {
+const genCustomBlockCode = (descriptor: SFCDescriptor, transformerContext: VueTransformerContext) => {
 	let code = '';
 	for (let index = 0; index < descriptor.customBlocks.length; index++) {
 		const block = descriptor.customBlocks[index];
@@ -277,25 +281,25 @@ function genCustomBlockCode(descriptor: SFCDescriptor, transformerContext: VueTr
 		code += `if (typeof block${index} === 'function') block${index}(_sfc_main)\n`;
 	}
 	return code;
-}
+};
 
 /**
  * For blocks with src imports, it is important to link the imported file
  * with its owner SFC descriptor so that we can get the information about
  * the owner SFC when compiling that file in the transform phase.
  */
-function linkSrcToDescriptor(src: string, descriptor: SFCDescriptor, transformerContext: VueTransformerContext) {
+const linkSrcToDescriptor = (src: string, descriptor: SFCDescriptor, transformerContext: VueTransformerContext) => {
 	const srcFile = transformerContext.resolve(descriptor.filename)?.id || src;
 	// #1812 if the src points to a dep file, the resolved id may contain a
 	// version query.
 	setSrcDescriptor(srcFile.replace(/\?.*$/, ''), descriptor);
-}
+};
 
 // these are built-in query parameters so should be ignored
 // if the user happen to add them as attrs
 const ignoreList = ['id', 'index', 'src', 'type', 'lang', 'module'];
 
-function attrsToQuery(attrs: SFCBlock['attrs'], langFallback?: string, forceLangFallback = false): string {
+const attrsToQuery = (attrs: SFCBlock['attrs'], langFallback?: string, forceLangFallback = false): string => {
 	let query = ``;
 	for (const name in attrs) {
 		const value = attrs[name];
@@ -308,5 +312,5 @@ function attrsToQuery(attrs: SFCBlock['attrs'], langFallback?: string, forceLang
 			`lang` in attrs ? (forceLangFallback ? `&lang.${langFallback}` : `&lang.${attrs.lang}`) : `&lang.${langFallback}`;
 	}
 	return query;
-}
+};
 

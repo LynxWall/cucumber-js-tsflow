@@ -1,7 +1,7 @@
 import type { CompilerError } from 'vue/compiler-sfc';
 import type { RollupError } from 'rollup';
 
-export function createRollupError(id: string, error: CompilerError | SyntaxError): RollupError {
+export const createRollupError = (id: string, error: CompilerError | SyntaxError): RollupError => {
 	const { message, name, stack } = error;
 	const rollupError: RollupError = {
 		id,
@@ -20,5 +20,5 @@ export function createRollupError(id: string, error: CompilerError | SyntaxError
 	}
 
 	return rollupError;
-}
+};
 

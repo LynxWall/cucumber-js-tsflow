@@ -103,11 +103,11 @@ export class BindingRegistry {
 	 * @param stepBinding The step binding that is to be registered with the binding registry.
 	 */
 	public registerStepBinding(stepBinding: StepBinding): void {
-		if (!stepBinding.tag) {
-			stepBinding.tag = DEFAULT_TAG;
+		if (!stepBinding.tags) {
+			stepBinding.tags = DEFAULT_TAG;
 		}
 
-		if (stepBinding.tag !== DEFAULT_TAG && !stepBinding.tag.startsWith('@')) {
+		if (stepBinding.tags !== DEFAULT_TAG && !stepBinding.tags.startsWith('@')) {
 			// tslint:disable-next-line:no-console
 			console.log('tag should start with @; tsflow has stopped to automatically prepend @ for you.');
 		}
@@ -124,12 +124,12 @@ export class BindingRegistry {
 			this._bindings.set(stepPattern, tagMap);
 		}
 
-		let stepBindings = tagMap.get(stepBinding.tag);
+		let stepBindings = tagMap.get(stepBinding.tags);
 
 		if (!stepBindings) {
 			stepBindings = [];
 
-			tagMap.set(stepBinding.tag, stepBindings);
+			tagMap.set(stepBinding.tags, stepBindings);
 		}
 
 		if (!stepBindings.some(b => isSameStepBinding(stepBinding, b))) {
@@ -157,7 +157,7 @@ export class BindingRegistry {
 			return (
 				a.callsite.filename === b.callsite.filename &&
 				a.callsite.lineNumber === b.callsite.lineNumber &&
-				String(a.tag) === String(b.tag) &&
+				String(a.tags) === String(b.tags) &&
 				String(a.stepPattern) === String(b.stepPattern)
 			);
 		}
@@ -226,6 +226,11 @@ export class BindingRegistry {
 							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
 						);
 						break;
+					case StepBindingFlags.beforeStep:
+						cucumberDefinition = library.beforeTestStepHookDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
 					case StepBindingFlags.given:
 						cucumberDefinition = library.stepDefinitions.find(
 							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
@@ -238,6 +243,11 @@ export class BindingRegistry {
 						break;
 					case StepBindingFlags.then:
 						cucumberDefinition = library.stepDefinitions.find(
+							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
+						);
+						break;
+					case StepBindingFlags.afterStep:
+						cucumberDefinition = library.afterTestStepHookDefinitions.find(
 							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
 						);
 						break;

@@ -7,7 +7,7 @@ declare module 'vue/compiler-sfc' {
 
 import type * as _compiler from 'vue/compiler-sfc';
 
-export function resolveCompiler(root: string): typeof _compiler {
+export const resolveCompiler = (root: string): typeof _compiler => {
 	// resolve from project root first, then fallback to peer dep (if any)
 	const compiler = tryRequire('vue/compiler-sfc', root) || tryRequire('vue/compiler-sfc');
 
@@ -20,12 +20,12 @@ export function resolveCompiler(root: string): typeof _compiler {
 	}
 
 	return compiler;
-}
+};
 
-function tryRequire(id: string, from?: string) {
+const tryRequire = (id: string, from?: string) => {
 	try {
 		return from ? require(require.resolve(id, { paths: [from] })) : require(id);
 		// eslint-disable-next-line no-empty
 	} catch (e) {}
-}
+};
 

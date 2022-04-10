@@ -1,3 +1,4 @@
+import { ManagedScenarioContext } from '../cucumber/managed-scenario-context';
 import { Options } from './configuration';
 
 export type StepFromStepDefinitions = {
@@ -28,6 +29,7 @@ export type ParsedScenario = {
 	tags: string[];
 	lineNumber: number;
 	skippedViaTagFilter: boolean;
+	scenarioContext: ManagedScenarioContext | undefined;
 };
 
 export type ParsedScenarioOutline = {
@@ -37,6 +39,7 @@ export type ParsedScenarioOutline = {
 	steps: ParsedStep[];
 	lineNumber: number;
 	skippedViaTagFilter: boolean;
+	scenarioContext: ManagedScenarioContext | undefined;
 };
 
 export type ParsedFeature = {

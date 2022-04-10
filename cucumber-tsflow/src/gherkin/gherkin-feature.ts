@@ -4,19 +4,9 @@ import * as messages from '@cucumber/messages';
 import { getJestCucumberConfiguration, Options } from './configuration';
 import { AstBuilder, GherkinClassicTokenMatcher, Parser, Dialect, dialects } from '@cucumber/gherkin/dist/src';
 import { ParsedFeature, ParsedScenario, ParsedStep, ParsedScenarioOutline } from './models';
-import { CucumberExpressionGenerator, ParameterType, ParameterTypeRegistry } from '@cucumber/cucumber-expressions';
 
 export default class GherkinFeature {
 	private cwd = process.cwd();
-	private cucumberExpressionGenerator: CucumberExpressionGenerator;
-
-	constructor() {
-		const boolParam = new ParameterType('boolean', /true|false/, null, s => (s === 'true' ? true : false), true, false);
-		const registry = new ParameterTypeRegistry();
-		registry.defineParameterType(boolParam);
-
-		this.cucumberExpressionGenerator = new CucumberExpressionGenerator(() => registry.parameterTypes);
-	}
 
 	public loadFeature = (featureFilePath: string, options?: Options) => {
 		try {
@@ -113,10 +103,8 @@ export default class GherkinFeature {
 	};
 
 	private parseStep = (astStep: any) => {
-		const generatedExpressions = this.cucumberExpressionGenerator.generateExpressions(astStep.text);
-		const pattern = generatedExpressions[0].source.replace(/'/g, "\\'");
 		return {
-			stepText: pattern,
+			stepText: astStep.text,
 			keyword: astStep.keyword.trim().toLowerCase() as string,
 			stepArgument: this.parseStepArgument(astStep),
 			lineNumber: astStep.location.line
@@ -131,16 +119,17 @@ export default class GherkinFeature {
 		if (!ast.tags) {
 			return [] as string[];
 		} else {
-			return ast.tags.map((tag: any) => tag.name.toLowerCase());
+			return ast.tags.map((tag: any) => tag.name);
 		}
 	};
 
-	private parseScenario = (astScenario: any) => {
+	private parseScenario = (astScenario: any, astFeature: any) => {
 		return {
 			title: astScenario.name,
 			steps: this.parseSteps(astScenario),
-			tags: this.parseTags(astScenario),
-			lineNumber: astScenario.location.line
+			tags: [...this.parseTags(astFeature), ...this.parseTags(astScenario)],
+			lineNumber: astScenario.location.line,
+			scenarioContext: undefined
 		} as ParsedScenario;
 	};
 
@@ -226,15 +215,16 @@ export default class GherkinFeature {
 		}, [] as ParsedScenario[]);
 	};
 
-	private parseScenarioOutline = (astScenarioOutline: any) => {
-		const outlineScenario = this.parseScenario(astScenarioOutline.scenario);
+	private parseScenarioOutline = (astScenarioOutline: any, astFeature: any) => {
+		const outlineScenario = this.parseScenario(astScenarioOutline.scenario, astFeature);
 
 		return {
 			title: outlineScenario.title,
 			scenarios: this.parseScenarioOutlineExampleSets(astScenarioOutline.scenario.examples, outlineScenario),
 			tags: outlineScenario.tags,
 			steps: outlineScenario.steps,
-			lineNumber: astScenarioOutline.scenario.location.line
+			lineNumber: astScenarioOutline.scenario.location.line,
+			scenarioContext: undefined
 		} as ParsedScenarioOutline;
 	};
 
@@ -245,7 +235,7 @@ export default class GherkinFeature {
 
 				return child.scenario && keywords.indexOf(child.scenario.keyword) === -1;
 			})
-			.map((astScenario: any) => this.parseScenario(astScenario.scenario));
+			.map((astScenario: any) => this.parseScenario(astScenario.scenario, astFeature));
 	};
 
 	private parseScenarioOutlines = (astFeature: any) => {
@@ -255,7 +245,7 @@ export default class GherkinFeature {
 
 				return child.scenario && keywords.indexOf(child.scenario.keyword) !== -1;
 			})
-			.map((astScenarioOutline: any) => this.parseScenarioOutline(astScenarioOutline));
+			.map((astScenarioOutline: any) => this.parseScenarioOutline(astScenarioOutline, astFeature));
 	};
 
 	private collapseBackgrounds = (astChildren: any[], backgrounds: any[]) => {

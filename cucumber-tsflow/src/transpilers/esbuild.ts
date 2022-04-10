@@ -2,12 +2,10 @@ import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions } 
 import path from 'path';
 
 export type TranspileOptions = {
-	type: 'bundle' | 'transform';
 	debug: boolean;
 	esbuild?: CommonOptions & TransformOptions & BuildOptions;
 };
 const defaultOptions: TranspileOptions = {
-	type: 'transform',
 	debug: false
 };
 

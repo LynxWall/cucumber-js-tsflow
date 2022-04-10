@@ -87,7 +87,7 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 		};
 
 		if (tag) {
-			stepBinding.tag = checkTag(tag);
+			stepBinding.tags = checkTag(tag);
 		}
 
 		BindingRegistry.instance.registerStepBinding(stepBinding);

@@ -11,10 +11,9 @@ import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/vali
 import { convertConfiguration } from '@cucumber/cucumber/lib/api/convert_configuration';
 import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { ITsflowConfiguration } from './argv-parser';
-import GherkinFeature from '../gherkin/gherkin-feature';
-import { readFileSync } from 'fs';
 import chalk from 'chalk';
 import { hasStringValue } from '../utils/helpers';
+import GherkinManager from '../gherkin/gherkin-manager';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -25,11 +24,6 @@ export interface ITsflowResolvedConfiguration {
 	 * The format that can be passed into `runCucumber`.
 	 */
 	runConfiguration: IRunConfiguration;
-}
-
-class StepInfo {
-	text: string = '';
-	tag: string = '';
 }
 
 /**
@@ -64,22 +58,22 @@ export const loadConfiguration = async (
 
 	switch (original.transpiler) {
 		case 'esvue':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-esvue');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/esvue');
 			break;
 		case 'tsvue':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-tsvue');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/tsvue');
 			break;
 		case 'tsnode':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-tsnode');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/tsnode');
 			break;
 		default:
 			// defaulting to esbuild
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpile-esnode');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/esnode');
 			break;
 	}
 	// set the snippet syntax
 	if (!original.formatOptions.snippetSyntax) {
-		original.formatOptions.snippetSyntax = '@lynxwall/cucumber-tsflow/lib/tsflow-snippet.js';
+		original.formatOptions.snippetSyntax = '@lynxwall/cucumber-tsflow/lib/snippet.js';
 	}
 	// look for behave format
 	const behaveIdx = original.format.findIndex(e => e.startsWith('behave:'));
@@ -89,48 +83,16 @@ export const loadConfiguration = async (
 			'@lynxwall/cucumber-tsflow/lib/behave.js'
 		);
 	}
+
 	// check to see if a debugFile was passed in
 	if (hasStringValue(original.debugFile)) {
-		const fileSteps = parseSteps(original.debugFile);
-		const gherkinFeature = new GherkinFeature();
 		let featurePath: string | undefined = '';
-		for (const path of original.paths) {
-			let found: boolean = false;
-			const features = gherkinFeature.loadFeatures(path);
-			const feature = features.find(feature => {
-				feature.scenarios.find(scenario => {
-					scenario.steps.find(step => {
-						if (['given', 'when', 'then'].find(x => x === step.keyword)) {
-							const fileStep = fileSteps.find(s => s.text === step.stepText);
-							if (fileStep) {
-								// if we have a tag check to see if it matches one in the current scenario
-								// or in the current feature
-								if (hasStringValue(fileStep.tag)) {
-									// check to see if it's associated with the scenario
-									if (scenario.tags.length > 0) {
-										const tag = scenario.tags.find(t => fileStep.tag.indexOf(t) >= 0);
-										found = hasStringValue(tag);
-									}
-									// if not a scenario tag check to see if we have one associated with the feature
-									else if (!found && feature.tags.length > 0) {
-										const tag = feature.tags.find(t => fileStep.tag.indexOf(t) >= 0);
-										found = hasStringValue(tag);
-									}
-								} else {
-									found = true;
-								}
-							}
-						}
-						return found;
-					});
-					return found;
-				});
-				return found;
-			});
-			if (feature) {
-				featurePath = feature.featureFile;
-				break;
-			}
+
+		// Initialize gherkin manager with path to feature files
+		const gherkin = new GherkinManager(original.paths);
+		const featureInfo = gherkin.findFeatureByStepFile(original.debugFile);
+		if (featureInfo) {
+			featurePath = featureInfo.featureFile;
 		}
 		if (hasStringValue(featurePath)) {
 			original.paths = [];
@@ -148,34 +110,4 @@ export const loadConfiguration = async (
 		useConfiguration: original,
 		runConfiguration: runnable
 	};
-};
-/**
- * extracts 'given', 'when', 'then' step text and tags from
- * the file passed in.
- * @param filePath
- * @returns
- */
-const parseSteps = (filePath: string): StepInfo[] => {
-	const steps = new Array<StepInfo>();
-	const stepText: string = readFileSync(filePath, 'utf8');
-	// get all of the decorator strings
-	const stepDecorators = stepText.match(/@\w*\(([^()]+)\)/g);
-	stepDecorators?.forEach(x => {
-		// extract strings from inside decorator parens,
-		// can be wrapped in single or double quotes
-		const stepParams = x.match(/["']\s*([^"']+?)\s*["']/g);
-		if (stepParams && stepParams.length > 0) {
-			const stepInfo = new StepInfo();
-			// steps support four parameters with last three optional
-			// first is the pattern and second is a tag, which are the
-			// two peices of information we need to make a match
-			stepInfo.text = stepParams[0].substring(1, stepParams[0].length - 1);
-			if (stepParams.length > 1 && hasStringValue(stepParams[1])) {
-				stepInfo.tag = stepParams[1].substring(1, stepParams[1].length - 1);
-			}
-			steps.push(stepInfo);
-		}
-	});
-
-	return steps;
 };

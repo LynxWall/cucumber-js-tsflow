@@ -7,10 +7,12 @@ export interface VueQuery {
 	raw?: boolean;
 }
 
-export function parseVueRequest(id: string): {
+export const parseVueRequest = (
+	id: string
+): {
 	filename: string;
 	query: VueQuery;
-} {
+} => {
 	const [filename, rawQuery] = id.split(`?`, 2);
 	const query = parseQuery(rawQuery);
 	if (query.vue != null) {
@@ -26,7 +28,7 @@ export function parseVueRequest(id: string): {
 		filename,
 		query
 	};
-}
+};
 
 export const parseQuery = (querystring: string): VueQuery => {
 	const vueQuery: any = {};

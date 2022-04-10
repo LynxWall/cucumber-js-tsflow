@@ -1,4 +1,4 @@
-import * as _ from 'underscore';
+import _ from 'underscore';
 
 import { ScenarioContext, ScenarioInfo } from '../types/scenario-context';
 import { ContextType } from '../types/types';

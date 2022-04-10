@@ -31,9 +31,9 @@ export interface StepBinding {
 	argsLength: number;
 
 	/**
-	 * The optional tag that is associated with the current step binding.
+	 * The optional tag(s) that are associated with the current step binding.
 	 */
-	tag?: string;
+	tags?: string;
 
 	/**
 	 * The optiomal timeout that is associated with the current step binding.

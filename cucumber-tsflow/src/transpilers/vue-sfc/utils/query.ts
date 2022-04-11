@@ -42,4 +42,3 @@ export const parseQuery = (querystring: string): VueQuery => {
 	}
 	return vueQuery;
 };
-

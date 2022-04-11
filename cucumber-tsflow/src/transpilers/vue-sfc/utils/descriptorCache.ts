@@ -69,4 +69,3 @@ export const setSrcDescriptor = (filename: string, entry: SFCDescriptor): void =
 	// should use other key
 	cache.set(`${filename}?src=${entry.id}`, entry);
 };
-

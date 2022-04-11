@@ -313,4 +313,3 @@ const attrsToQuery = (attrs: SFCBlock['attrs'], langFallback?: string, forceLang
 	}
 	return query;
 };
-

@@ -28,4 +28,3 @@ const tryRequire = (id: string, from?: string) => {
 		// eslint-disable-next-line no-empty
 	} catch (e) {}
 };
-

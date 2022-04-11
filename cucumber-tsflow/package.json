@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 8.0.0+ in TypeScript 1.7+.",
-	"version": "5.0.3",
+	"version": "5.0.4",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./lib/index",
@@ -36,6 +36,7 @@
 		"log4js": "^6.4.3",
 		"require-extension-hooks": "^0.3.3",
 		"rollup": "^2.70.1",
+		"short-uuid": "^4.2.0",
 		"source-map-support": "^0.5.21",
 		"ts-node": "^10.6.0",
 		"tsconfig-paths": "^3.14.0",
@@ -49,9 +50,7 @@
 		"@types/lodash.merge": "^4.6.6",
 		"@types/source-map-support": "^0.5.4",
 		"@types/underscore": "1.11.4",
-		"@types/verror": "^1.10.5",
-		"short-uuid": "^4.2.0"
+		"@types/verror": "^1.10.5"
 	},
 	"bin": "./bin/cucumber-tsflow"
 }
-

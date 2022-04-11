@@ -17,6 +17,41 @@ const toCamelCase = (str: string) => {
 			return $1.toLowerCase();
 		});
 };
+
+/**
+ * format cucumber expression parameters for typescript
+ * @param parameters
+ * @returns
+ */
+const formatParameters = (parameters: string[]): string => {
+	const params = parameters.map(param => {
+		return `${param}: ${matchType(param)}`;
+	});
+	return params.join(', ');
+};
+
+/**
+ * match the parameter name passed in with a typescript
+ * primitive type (string, number or boolean)
+ * @param paramName
+ * @returns
+ */
+const matchType = (paramName: string): string => {
+	const numberTypes = ['int', 'float', 'bigdecimal', 'double', 'biginteger', 'byte', 'short', 'long'];
+	const stringTypes = ['string', 'word'];
+
+	if (stringTypes.find(x => paramName.indexOf(x) >= 0)) {
+		return 'string';
+	}
+	if (numberTypes.find(x => paramName.indexOf(x) >= 0)) {
+		return 'number';
+	}
+	if (paramName.indexOf('boolean') >= 0) {
+		return 'boolean';
+	}
+	return 'any';
+};
+
 /**
  * Generate snippets for tsflow.
  * NOTE: Needs to be an exported function for cucumber to
@@ -42,23 +77,20 @@ export function TsflowSnippetSyntax(snippetInterface: SnippetInterface): ISnippe
 			} else {
 				implementation = "return 'pending';";
 			}
+			// we only care about the first expression. TypeScript has a
+			// small number of primitive types
+			const generatedExpression = generatedExpressions[0];
+			const allParameterNames = generatedExpression.parameterNames.concat(stepParameterNames);
+			if (snippetInterface === SnippetInterface.Callback) {
+				allParameterNames.push(CALLBACK_NAME);
+			}
+			const pattern = generatedExpression.source.replace(/'/g, "\\'");
+			const methodName = toCamelCase(pattern);
+			const parametersStr = allParameterNames.length > 0 ? formatParameters(allParameterNames) : '';
+			const definitionChoices =
+				`@${functionName.toLowerCase()}('${pattern}')\n` + `${functionKeyword}${methodName}(${parametersStr}): any {\n`;
 
-			const definitionChoices = generatedExpressions.map((generatedExpression, index) => {
-				const prefix = index === 0 ? '' : '// ';
-				const allParameterNames = generatedExpression.parameterNames.concat(stepParameterNames);
-				if (snippetInterface === SnippetInterface.Callback) {
-					allParameterNames.push(CALLBACK_NAME);
-				}
-				const pattern = generatedExpression.source.replace(/'/g, "\\'");
-				const methodName = toCamelCase(pattern);
-				const parametersStr = allParameterNames.length > 0 ? allParameterNames.join(': any, ') + ': any' : '';
-				return (
-					`${prefix}@${functionName.toLowerCase()}('${pattern}')\n` +
-					`${functionKeyword}${methodName}(${parametersStr}): any {\n`
-				);
-			});
-
-			return definitionChoices.join('') + '  // ' + comment + '\n  ' + implementation + '\n}';
+			return `${definitionChoices}  //${comment}\n  ${implementation}\n}`;
 		}
 	};
 }

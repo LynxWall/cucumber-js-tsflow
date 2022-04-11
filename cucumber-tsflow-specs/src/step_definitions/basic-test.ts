@@ -1,4 +1,4 @@
-import { after, before, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
+import { after, afterStep, before, beforeStep, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
 
 @binding()
@@ -7,6 +7,8 @@ export default class TestSteps {
 	private beforeIsCalled = false;
 	private whenIsCalled = false;
 	private thenIsCalled = false;
+	private beforeStepIsCalled = false;
+	private stepIsCalled = false;
 	private beforeWithNoTagIsCalled = false;
 	private computedResult = 0;
 
@@ -18,6 +20,19 @@ export default class TestSteps {
 	@before('@basic')
 	beforeBasic() {
 		this.beforeIsCalled = true;
+	}
+
+	@beforeStep('@addNumbers')
+	beforeStep() {
+		this.beforeStepIsCalled = true;
+	}
+
+	@afterStep('@addNumbers')
+	afterStep() {
+		expect(this.beforeStepIsCalled).to.be.true;
+		expect(this.stepIsCalled).to.be.true;
+		this.stepIsCalled = false;
+		this.beforeStepIsCalled = false;
 	}
 
 	@after('@basic')
@@ -58,22 +73,29 @@ export default class TestSteps {
 		this.thenIsCalled = true;
 	}
 
-	@given('I enter {string} and {string}')
-	iEnterstringAndstring(num1: string, num2: string): any {
-		this.computedResult = parseInt(num1) + parseInt(num2);
+	@given('I enter {int} and {int}')
+	iEnterintAndint(int: number, int2: number): any {
+		this.computedResult = int + int2;
+		expect(this.beforeStepIsCalled).to.be.true;
+		this.stepIsCalled = true;
 		this.givenIsCalled = true;
 	}
 
 	@when('checking the results')
 	checkingTheResults(): any {
+		expect(this.computedResult).to.be.greaterThan(0);
+		expect(this.beforeStepIsCalled).to.be.true;
+		this.stepIsCalled = true;
 		this.whenIsCalled = true;
 	}
 
-	@then('I receive the result {string}')
-	iReceiveTheResultstring(expectedResult: string): any {
-		if (parseInt(expectedResult) !== this.computedResult) {
+	@then('I receive the result {int}')
+	iReceiveTheResultint(int: number): any {
+		if (int !== this.computedResult) {
 			throw new Error('Arithmetic Error');
 		}
+		expect(this.beforeStepIsCalled).to.be.true;
+		this.stepIsCalled = true;
 		this.thenIsCalled = true;
 	}
 }

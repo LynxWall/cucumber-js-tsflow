@@ -44,6 +44,16 @@ export enum StepBindingFlags {
 	afterAll = 1 << 6,
 
 	/**
+	 * An 'BeforeStep' hook binding
+	 */
+	beforeStep = 1 << 7,
+
+	/**
+	 * An 'AfterStep' hook binding
+	 */
+	afterStep = 1 << 8,
+
+	/**
 	 * All step definition bindings.
 	 */
 	StepDefinitions = StepBindingFlags.given | StepBindingFlags.when | StepBindingFlags.then,
@@ -51,5 +61,10 @@ export enum StepBindingFlags {
 	/**
 	 * All hook bindings.
 	 */
-	Hooks = StepBindingFlags.before | StepBindingFlags.after | StepBindingFlags.beforeAll | StepBindingFlags.afterAll
+	Hooks = StepBindingFlags.before |
+		StepBindingFlags.after |
+		StepBindingFlags.beforeAll |
+		StepBindingFlags.afterAll |
+		StepBindingFlags.beforeStep |
+		StepBindingFlags.afterStep
 }

@@ -2,18 +2,16 @@ require('ts-node').register({
 	compilerOptions: {
 		module: 'commonjs',
 		moduleResolution: 'node',
-		target: 'es6',
-		declaration: true,
+		target: 'es2021',
 		strict: true,
-		skipLibCheck: true,
-		noUnusedLocals: true,
-		noUnusedParameters: true,
-		removeComments: false,
 		experimentalDecorators: true,
-		inlineSourceMap: true,
+		allowSyntheticDefaultImports: true,
 		resolveJsonModule: true,
-		esModuleInterop: true
+		esModuleInterop: true,
+		skipLibCheck: true,
+		lib: ['es2021']
 	},
+	ignore: ['(?:^|/)node_modules/', '(?:^|/)cucumber-tsflow/lib/'],
 	transpileOnly: true
 });
 

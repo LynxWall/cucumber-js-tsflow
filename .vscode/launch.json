@@ -2,10 +2,10 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Specs",
-			"type": "node",
+			"name": "Debug All",
+			"type": "pwa-node",
 			"request": "launch",
-			"program": "${workspaceRoot}/node_modules/@cucumber/cucumber/bin/cucumber-js",
+			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
 			"args": ["-p", "default"],
 			"cwd": "${workspaceRoot}",
@@ -20,14 +20,23 @@
 			"outDir": null
 		},
 		{
-			"name": "Attach",
-			"type": "node",
-			"request": "attach",
-			"port": 5858,
-			"sourceMaps": false,
-			"outDir": null,
-			"localRoot": "${workspaceRoot}",
-			"remoteRoot": null
+			"name": "Debug Feature",
+			"type": "pwa-node",
+			"request": "launch",
+			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
+			"stopOnEntry": true,
+			"args": ["--debug-file", "${file}", "-p", "default"],
+			"cwd": "${workspaceRoot}",
+			"runtimeExecutable": null,
+			"runtimeArgs": ["--nolazy"],
+			"env": {
+				"NODE_ENV": "development"
+			},
+			"externalConsole": false,
+			"console": "integratedTerminal",
+			"sourceMaps": true,
+			"outDir": null
 		}
 	]
 }
+

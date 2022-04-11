@@ -31,9 +31,9 @@ export interface StepBinding {
 	argsLength: number;
 
 	/**
-	 * The optional tag that is associated with the current step binding.
+	 * The optional tag(s) that are associated with the current step binding.
 	 */
-	tag?: string;
+	tags?: string;
 
 	/**
 	 * The optiomal timeout that is associated with the current step binding.
@@ -49,6 +49,13 @@ export interface StepBinding {
 	 * The callsite of the step binding.
 	 */
 	callsite: Callsite;
+
+	/**
+	 * Key passed in with options in cucumber step bindings.
+	 * This property is used to match tsflow step definitions
+	 * with cucumber step definitions.
+	 */
+	cucumberKey: string;
 }
 
 export * from './step-binding-flags';

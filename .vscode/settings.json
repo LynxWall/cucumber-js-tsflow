@@ -104,5 +104,14 @@
 	"cucumberautocomplete.steps": ["cucumber-tsflow-specs/src/step_definitions/**/*.ts"],
 	"cucumberautocomplete.strictGherkinCompletion": true,
 	"cucumberautocomplete.syncfeatures": "cucumber-tsflow-specs/features/*feature",
-	"cucumberautocomplete.strictGherkinValidation": false
+	"cucumberautocomplete.strictGherkinValidation": false,
+	"markdownlint.config": {
+		"default": true,
+		"MD003": { "style": "atx" },
+		"MD007": { "indent": 2 },
+		"MD032": false,
+		"MD022": false,
+		"MD024": false,
+		"no-hard-tabs": false
+	}
 }

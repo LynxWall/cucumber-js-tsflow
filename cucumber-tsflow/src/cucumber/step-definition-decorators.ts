@@ -1,6 +1,7 @@
 import { BindingRegistry } from './binding-registry';
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
+import shortUuid from 'short-uuid';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.
@@ -24,10 +25,11 @@ export function given(
 			targetPrototype: target,
 			targetPropertyKey: propertyKey,
 			argsLength: target[propertyKey].length,
-			tag: tag,
+			tags: tag,
 			timeout: timeout,
 			wrapperOption: wrapperOption,
-			callsite: callsite
+			callsite: callsite,
+			cucumberKey: shortUuid().new()
 		};
 
 		BindingRegistry.instance.registerStepBinding(stepBinding);
@@ -58,10 +60,11 @@ export function when(
 			targetPrototype: target,
 			targetPropertyKey: propertyKey,
 			argsLength: target[propertyKey].length,
-			tag: tag,
+			tags: tag,
 			timeout: timeout,
 			wrapperOption: wrapperOption,
-			callsite: callsite
+			callsite: callsite,
+			cucumberKey: shortUuid().new()
 		};
 
 		BindingRegistry.instance.registerStepBinding(stepBinding);
@@ -92,10 +95,11 @@ export function then(
 			targetPrototype: target,
 			targetPropertyKey: propertyKey,
 			argsLength: target[propertyKey].length,
-			tag: tag,
+			tags: tag,
 			timeout: timeout,
 			wrapperOption: wrapperOption,
-			callsite: callsite
+			callsite: callsite,
+			cucumberKey: shortUuid().new()
 		};
 
 		BindingRegistry.instance.registerStepBinding(stepBinding);

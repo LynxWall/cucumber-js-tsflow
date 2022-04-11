@@ -14,10 +14,11 @@
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
 		"inlineSourceMap": true,
-		"esModuleInterop": false,
+		"esModuleInterop": true,
 		"lib": ["es2019"],
-		"typeRoots": ["../node_modules/@types", "./src/types"],
+		"typeRoots": ["../node_modules/@types", "../node_modules/@cucumber/cucumber/lib/types", "./src/types"],
 		"outDir": "lib",
 		"rootDir": "src"
 	}
 }
+

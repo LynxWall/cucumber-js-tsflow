@@ -5,6 +5,7 @@ import * as sourceMapSupport from 'source-map-support';
  * Represents a callsite of where a step binding is being applied.
  */
 export class Callsite {
+	private static cwd = process.cwd();
 	/**
 	 * Initializes a new [[Callsite]].
 	 *
@@ -29,6 +30,9 @@ export class Callsite {
 	public static capture(): Callsite {
 		const stack = callsites()[2];
 		const tsStack = sourceMapSupport.wrapCallSite(stack);
-		return new Callsite(tsStack.getFileName() || '', tsStack.getLineNumber() || -1);
+		const ourCallsite = new Callsite(tsStack.getFileName() || '', tsStack.getLineNumber() || -1);
+		ourCallsite.filename = ourCallsite.filename.replace(`${this.cwd}\\`, '');
+
+		return ourCallsite;
 	}
 }

@@ -21,4 +21,3 @@ export const createRollupError = (id: string, error: CompilerError | SyntaxError
 
 	return rollupError;
 };
-

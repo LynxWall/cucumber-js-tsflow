@@ -62,4 +62,3 @@ class VueTransformer implements VueTransformerContext {
 }
 
 export default VueTransformer;
-

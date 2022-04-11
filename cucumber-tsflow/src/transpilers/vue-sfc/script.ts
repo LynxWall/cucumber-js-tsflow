@@ -47,4 +47,3 @@ export const resolveScript = (
 	cacheToUse.set(descriptor, resolved);
 	return resolved;
 };
-

@@ -2,12 +2,12 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for CucumberJS in TypeScript 1.7+.
+Provides 'specflow' like bindings for CucumberJS 8.0.0+ in TypeScript 1.7+.
 
 Supports Vue3 files in cucumber tests.
 
 ## Fork description
-This is a detached fork of <a href="https://github.com/timjroberts/cucumber-js-tsflow" target="_blank">https://github.com/timjroberts/cucumber-js-tsflow</a>. It has had the <a href="https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks" target="_blank">https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks</a> branch merged into it, which adds support for beforeAll and afterAll hooks.
+This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. It has had the <https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks> branch merged into it, which adds support for beforeAll and afterAll hooks.
 
 In addition, the following features have been added:
 - Test runner using cucumber-tsflow command line
@@ -20,7 +20,7 @@ In addition, the following features have been added:
 - Boolean custom definition added to cucumber expressions
 - A behave-json-formatter that fixes json so it can be used with Behave Pro
 - tsflow-snippet-syntax used to format snippet examples
-  - snippets use the <a href="https://github.com/cucumber/cucumber-expressions#readme" target="_blank">Cucumber Syntax</a> for parameters
+  - snippets use the [Cucumber Syntax](https://github.com/cucumber/cucumber-expressions#readme) for parameters
 
 ## Quick Start
 
@@ -94,11 +94,11 @@ Note how the cucumber-tsflow Decorators are being used to bind the methods in th
 
 ### Compiling your TypeScript Support Code
 
-If not using one of the [transpilers](/cucumber-js-tsflow#transpiler-and-vue3-supported) listed below you'll need a `tsconfig.json` file to compile your code. You'll also need to ensure that the `"moduleResolution": "node"` compiler option is set in order to bring in the typings that are shipped with cucumber-tsflow.
+If not using one of the [transpilers](#transpiler-and-vue3-supported) listed below you'll need a `tsconfig.json` file to compile your code. You'll also need to ensure that the `"moduleResolution": "node"` compiler option is set in order to bring in the typings that are shipped with cucumber-tsflow.
 
 Running the cucumber-tsflow command line should execute your features along with the support code that you've created in the class.
 
-In this quick example test state is encapsulated directly in the class. As your test suite grows larger and step definitions get shared between multiple classes, you can begin using 'Context Injection' to share state between running step definitions (see below).
+In this quick example test state is encapsulated directly in the class. As your test suite grows larger and step definitions get shared between multiple classes, you can begin using '[Context Injection](#context-injection)' to share state between running step definitions (see below).
 
 ## Cucumber-tsflow Test Runner
 
@@ -126,7 +126,7 @@ cucumber-tsflow extends cucumber-js, which means that all options and features p
 
 ### New Configuration options
 
-As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <a href="https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/configuration.md" target="_blank">https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/configuration.md</a>
+As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/configuration.md>
 
 In addition to cucumber configuration options the following two options have been added:
 
@@ -137,7 +137,7 @@ In addition to cucumber configuration options the following two options have bee
 
 #### Transpiler and Vue3 supported
 
-Using TypeScript with cucumberJs requires a couple of tsconfig.json parameters and the output needs to be commonJS as documented here: <a href="https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/transpiling.md" target="_blank">https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/transpiling.md</a>
+Using TypeScript with cucumberJs requires a couple of tsconfig.json parameters and the output needs to be commonJS as documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/transpiling.md>
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
 
@@ -286,7 +286,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 }
 ```
 
-Note: Tags added to steps work the same as "Tagged Hooks" documented here: <a href="https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/support_files/hooks.md" target="_blank">https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/support_files/hooks.md</a>
+Note: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/support_files/hooks.md>
 
 ## Hooks
 

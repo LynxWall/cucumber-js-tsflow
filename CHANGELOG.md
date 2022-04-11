@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.0.3]
+### Fixed
+- Line endings in bin/cucumber-tsflow to fix test issue in GitHub
+
+## [5.0.2]
+### Fixed
+- README links
+- Removed Vue dependency
+
 ## [5.0.1]
 ### Changed
 - Removed ManagedScenarioContext from World object along with Before and After hooks used to manage it.

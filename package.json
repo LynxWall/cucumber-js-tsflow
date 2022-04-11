@@ -18,7 +18,7 @@
 		"build:watch": "tsc --build --watch",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
 		"lint": "eslint --fix --ext .js,.ts,.vue --ignore-path .eslintignore cucumber-tsflow/src",
-		"test": "cucumber-tsflow -p default",
+		"test": "cucumber-tsflow/bin/cucumber-tsflow -p default",
 		"set-packageversion": "node .build/setPackageVersion.js"
 	},
 	"devDependencies": {

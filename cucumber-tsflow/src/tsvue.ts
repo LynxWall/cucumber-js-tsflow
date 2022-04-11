@@ -8,6 +8,7 @@ require('ts-node').register({
 		target: 'es2021',
 		strict: true,
 		experimentalDecorators: true,
+		allowSyntheticDefaultImports: true,
 		resolveJsonModule: true,
 		esModuleInterop: true,
 		skipLibCheck: true,

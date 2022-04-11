@@ -83,6 +83,7 @@ export default class TestSteps {
 
 	@when('checking the results')
 	checkingTheResults(): any {
+		expect(this.computedResult).to.be.greaterThan(0);
 		expect(this.beforeStepIsCalled).to.be.true;
 		this.stepIsCalled = true;
 		this.whenIsCalled = true;

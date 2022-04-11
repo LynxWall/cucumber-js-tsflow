@@ -3,7 +3,7 @@
 	"name": "@lynxwall/cucumber-tsflow-workspace",
 	"description": "Workspace for cucumber-tsflow",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
-	"version": "4.1.0",
+	"version": "5.0.0",
 	"license": "MIT",
 	"workspaces": [
 		"cucumber-tsflow",
@@ -34,3 +34,4 @@
 	},
 	"packageManager": "yarn@3.2.0"
 }
+

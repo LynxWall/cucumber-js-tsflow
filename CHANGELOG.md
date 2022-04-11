@@ -13,7 +13,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Added
 - Transpiler support using typescript or esbuild
-- Vue transform support based on the vite/vue-cucumber plugin
+- Vue transform support based on the vite/vue-plugin
 - Cucumber message collector to manage the ManagedScenarioContext object
 - RegEx matcher to match step expressions with feature step text. Supports all cucumber expressions along with regular expressions.
 - BeforeStep and AfterStep hooks from cucumber with tests

@@ -40,6 +40,8 @@ npm install @lynxwall/cucumber-tsflow --save-dev
 yarn add --dev @lynxwall/cucumber-tsflow
 ```
 
+**Note**: If you want to use cucumber-js to execute tests you will also need to install @cucumber/cucumber. However, if using cucumber-tsflow to execute tests you would only need to install @lynxwall/cucumber-tsflow, which will install all necessary cucumber packages.
+
 ### Create .feature files to describe your specifications
 
 By default, CucumberJS looks for .feature files in a folder called 'features', so create that folder and then create a new file called 'my_feature.feature':
@@ -90,7 +92,7 @@ export default class ArithmeticSteps {
 }
 ```
 
-Note how the cucumber-tsflow Decorators are being used to bind the methods in the class. During runtime, these Decorators simply call the Cucumber code on your behalf in order to register callbacks with Given(), When(), Then(), etc. The callbacks that are being registered with Cucumber are wrappers around your bound class.
+**Note**: how the cucumber-tsflow Decorators are being used to bind the methods in the class. During runtime, these Decorators simply call the Cucumber code on your behalf in order to register callbacks with Given(), When(), Then(), etc. The callbacks that are being registered with Cucumber are wrappers around your bound class.
 
 ### Compiling your TypeScript Support Code
 
@@ -286,7 +288,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 }
 ```
 
-Note: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/support_files/hooks.md>
+**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/support_files/hooks.md>
 
 ## Hooks
 
@@ -389,7 +391,7 @@ If it doesn't already exist, create a file named cucumber.js at the root of your
 #### Using cucumber-tsflow command line
 
 The following example shows how to configure the behave formatter when using the cucumber-tsflow command line.
-Note: When using cucumber-tsflow the tsflow-snippet-syntax is configured by default.
+**Note**: When using cucumber-tsflow the tsflow-snippet-syntax is configured by default.
 
 ```javascript
 {

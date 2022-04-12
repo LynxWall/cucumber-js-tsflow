@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.0.6]
+### Changed
+- README updates to specify that cucumber-tsflow command should be used for test execution.
+
+### Added
+- Examples and information to README
+
 ## [5.0.5]
 ### Fixed
 - Issue with boolean parameter being added too early. Needs to be added once when code is transpiled.

@@ -10,7 +10,7 @@ Supports Vue3 files in cucumber tests.
 This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. It has had the <https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks> branch merged into it, which adds support for beforeAll and afterAll hooks.
 
 In addition, the following features have been added:
-- Test runner using cucumber-tsflow command line
+- Test runner using the cucumber-tsflow command
   - Uses underlying cucumber api to run tests
 - Typescript and esbuild transpiler support
 - Vue3 transformer used to handle .vue files in tests
@@ -20,7 +20,11 @@ In addition, the following features have been added:
 - Boolean custom definition added to cucumber expressions
 - A behave-json-formatter that fixes json so it can be used with Behave Pro
 - tsflow-snippet-syntax used to format snippet examples
-  - snippets use the [Cucumber Syntax](https://github.com/cucumber/cucumber-expressions#readme) for parameters
+  - snippets use the [Cucumber Expressions](https://github.com/cucumber/cucumber-expressions#readme) Syntax for parameters
+
+<div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b;; background-color: #fcf8e3; border-color: #faebcc;">
+<strong>Note:</strong> With recent updates you must use the <strong>cucumber-tsflow</strong> command to execute tests. This command executes the same API calls that cucumber-js does and supports all of the options and features as cucumber-js along with new features listed above.
+</div>
 
 ## Quick Start
 
@@ -40,7 +44,7 @@ npm install @lynxwall/cucumber-tsflow --save-dev
 yarn add --dev @lynxwall/cucumber-tsflow
 ```
 
-**Note**: If you want to use cucumber-js to execute tests you will also need to install @cucumber/cucumber. However, if using cucumber-tsflow to execute tests you would only need to install @lynxwall/cucumber-tsflow, which will install all necessary cucumber packages.
+**Note**: Latest updates with context management requires use of cucumber-tsflow to execute tests. As a result, you do not need to install @cucumber/cucumber. All necessary cucumber packages are installed as dependencies of cucumber-tsflow. If you do have @cucumber/cucumber in dependencies please remove the reference to avoid conflicts.
 
 ### Create .feature files to describe your specifications
 
@@ -60,7 +64,7 @@ Feature: Example Feature
 
 ### Create the Support Files to support the Feature
 
-By default, CucumberJS looks for support files beneath the 'features' folder. You can override this on the cucumber command line by specifying the '-r' option. However, let's work with the default and create our code in the default location. We need to write step definitions to support the three steps that we created above.
+By default, CucumberJS looks for support files beneath the 'features' folder. You can override this on the cucumber-tsflow command line by specifying the '-r' option. However, let's work with the default and create our code in the default location. We need to write step definitions to support the three steps that we created above.
 
 Create a new 'ArithmeticSteps.ts' file:
 
@@ -98,15 +102,15 @@ export default class ArithmeticSteps {
 
 If not using one of the [transpilers](#transpiler-and-vue3-supported) listed below you'll need a `tsconfig.json` file to compile your code. You'll also need to ensure that the `"moduleResolution": "node"` compiler option is set in order to bring in the typings that are shipped with cucumber-tsflow.
 
-Running the cucumber-tsflow command line should execute your features along with the support code that you've created in the class.
+Running the cucumber-tsflow command will execute your features along with the support code that you've created in the class.
 
-In this quick example test state is encapsulated directly in the class. As your test suite grows larger and step definitions get shared between multiple classes, you can begin using '[Context Injection](#context-injection)' to share state between running step definitions (see below).
+In this quick example test state is encapsulated directly in the class. As your test suite grows larger and step definitions get shared between multiple classes, you can begin using '[Context Injection](#context-injection)' to share state between running step definitions.
 
 ## Cucumber-tsflow Test Runner
 
-While the cucumber-js command line can be used to execute cucumber-tsflow tests, many of the new features will not be available. For instance, when using cucumber-js all reports will contain the wrong location information. In addition, new configuration parameters --transpiler and --debug-file are not available.
+As mentioned previously, with recent updates cucumber-tsflow must be used to execute tests. The reason for this update was to replace before and after hooks previously used to manage context with a message handler. Executing tests with cucumber-tsflow uses the same API calls that cucumber-js does. The only differences are updates to support new configuration parameters along with updates to step definitions that set the correct location.
 
-In order to provide correct location information (step-definition file and line number), along with support for new configuration parameters. You can run cucumber tests using the cucumber-tsflow command line. The following example demonstrates executing cucumber-tsflow from the command line to execute tests:
+The following example demonstrates executing cucumber-tsflow from the command line to execute tests:
 
 ```bash
 C:\GitHub\cucumber-js-tsflow (vue-plugin -> origin)
@@ -124,7 +128,7 @@ Loading configuration and step definitions...
 0m00.075s (executing steps: 0m00.037s)
 ```
 
-cucumber-tsflow extends cucumber-js, which means that all options and features provided by cucumber-js are supported with cucumber-tsflow. In other words, when executing tests using cucumber-tsflow the underlying cucumber api is actually used to run the tests.
+To recap, cucumber-tsflow extends cucumber-js, which means that all options and features provided by cucumber-js are supported with cucumber-tsflow. In other words, when executing tests using cucumber-tsflow the underlying cucumber API is actually used to run the tests.
 
 ### New Configuration options
 
@@ -151,9 +155,9 @@ The following transpilers are provided:
 - **tsvue**: Uses typescript to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into commonJS.
   - **jsdom** is also loaded globally to support loading and testing Vue SFC components.
 
-##### Using cucumber-tsflow command line
+##### Using the transpiler configuration option
 
-When using cucumber-tsflow to execute tests you can specify which transpiler to use with the `transpiler` configuration option as shown below:
+When configuring cucumber to execute tests you can specify which transpiler to use with the `transpiler` configuration option as shown below:
 
 ```json
 {
@@ -165,9 +169,9 @@ When using cucumber-tsflow to execute tests you can specify which transpiler to 
 
 ```
 
-##### Using cucumber-js command line
+##### Alternate without using the transpiler option
 
-If using cucumber-js to execute tests you can still use one of the new transpiler configurations with the `requireModule` configuration option as shown below:
+You can also use the `requireModule` parameter to configure a transpiler. The following example shows how to configure cucumber to use the `esvue` transpiler with the `requireModule` option.
 
 ```json
 {
@@ -193,7 +197,7 @@ If using VSCode to edit your project the following launch configurations can be 
 	"type": "pwa-node",
 	"request": "launch",
 	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
-	"stopOnEntry": true,
+	"stopOnEntry": false,
 	"args": ["-p", "default"],
 	"cwd": "${workspaceRoot}",
 	"runtimeExecutable": null,
@@ -216,7 +220,7 @@ If using VSCode to edit your project the following launch configurations can be 
 	"type": "pwa-node",
 	"request": "launch",
 	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
-	"stopOnEntry": true,
+	"stopOnEntry": false,
 	"args": ["--debug-file", "${file}", "-p", "default"],
 	"cwd": "${workspaceRoot}",
 	"runtimeExecutable": null,
@@ -230,6 +234,8 @@ If using VSCode to edit your project the following launch configurations can be 
 	"outDir": null
 }
 ```
+
+**Note:** When using `Debug Feature` you'll need to have the step definition file open as the current file in VSCode. The current file path is passed into the debugger as the ${file} argument for --debug-file.
 
 ## Bindings
 
@@ -267,6 +273,44 @@ export default class MySteps {
 The function follows the same requirements of functions you would normally supply to Cucumber which means that the
 functions may be synchronous by returning nothing, use the callback, or return a `Promise<T>`. Additionally, the
 function may also be `async` following the TypeScript async semantics.
+
+### Boolean Custom Parameter
+
+As mentioned, cucumber-tsflow uses Cucumber Expressions for snippet syntax, which provides different parameter types used in expressions. However, a boolean type is not provided by default.
+
+As a result, a new custom parameter type has been added for boolean matches. For example, when a scenario step contains the words `true` or `false` they will be replaced with the `{boolean}` parameter expression and passed into the step function.
+
+The following Scenario uses boolean values in the Given and Then statements:
+
+```json
+Scenario: Boolean type supported
+	Given I pass true into a step
+	When checking the boolean value
+	Then we can see that true was passed in
+```
+
+The associated step definition replaces `true` in this scenario with a `{boolean}` expression as shown below:
+
+```javascript
+@given('I pass {boolean} into a step')
+iPassbooleanIntoAStep(boolean: boolean): any {
+	this.boolValue = boolean;
+}
+
+@when('checking the boolean value')
+checkingTheBooleanValue(): any {
+	expect(this.boolValue).not.to.be.undefined;
+}
+
+@then('we can see that {boolean} was passed in')
+weCanThatbooleanWasPassedIn(boolean: boolean): any {
+	expect(this.boolValue).to.equal(boolean);
+}
+```
+
+More information on Cucumber Expressions and Custom Parameter Types can be found here: <https://github.com/cucumber/cucumber-expressions#readme>
+
+### Step Tags
 
 Step definitions can be conditionally selected for execution based on the tags of the scenario by supplying tags when using the binding
 decorators:
@@ -364,7 +408,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 
 tsflow currently doesn't have a way to define a global default step timeout,
 
-but it can be easily done through cucumber.js ```setDefaultTimeout``` function.
+but it can be easily done through CucumberJS ```setDefaultTimeout``` function.
 
 ### Passing WrapperOptions
 
@@ -383,15 +427,13 @@ public givenAValueBasedSearch(searchValue: string): void {
 
 ### Using behave-json-formatter and tsflow-snippet-syntax
 
-Changing the formatter used for generating json along with changing the Snippet Syntax can be done through the cucumber.js configuration file.
+Changing the formatter used for generating json along with changing the Snippet Syntax can be done through the CucumberJS configuration file.
 
-If it doesn't already exist, create a file named cucumber.js at the root of your project. This is where we can configure different options for cucumber.js.
+If it doesn't already exist, create a file named cucumber.json at the root of your project. This is where we can configure different options for CucumberJS.
 
+#### Using the behave json formatter
 
-#### Using cucumber-tsflow command line
-
-The following example shows how to configure the behave formatter when using the cucumber-tsflow command line.
-**Note**: When using cucumber-tsflow the tsflow-snippet-syntax is configured by default.
+The following example shows how to configure the behave formatter in cucumber.json. The tsflow-snippet-syntax module is configured as the default snippet syntax and does not require configuration. However, you can override the snippet syntax as documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/custom_snippet_syntaxes.md>
 
 ```javascript
 {
@@ -403,26 +445,6 @@ The following example shows how to configure the behave formatter when using the
 	}
 }
 ```
-
-#### Using cucumber-js command line
-
-The following example shows how to configure the formatter and snippet syntax when using the cucumber-js command line:
-
-```javascript
-{
-	"default": {
-		"format": [
-			"node_modules/@lynxwall/cucumber-tsflow/lib/behave.js:cucumber_report.json"
-		],
-		"formatOptions": { "snippetSyntax": "node_modules/@lynxwall/cucumber-tsflow/lib/snippet.js" },
-		"publishQuiet": true
-	}
-}
-```
-
-The `format` line tells cucumber to generate a report using the behave-json-formatter.
-
-The `formatOptions` line tells cucumber to generate example snippets using the tsflow-snippet-syntax.
 
 ## Sharing Data between Bindings
 

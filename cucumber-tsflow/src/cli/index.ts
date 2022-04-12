@@ -10,7 +10,6 @@ import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { BindingRegistry } from '../cucumber/binding-registry';
 import ArgvParser from './argv-parser';
-import { ParameterType } from '@cucumber/cucumber-expressions';
 import messageCollector from '../cucumber/message-collector';
 import { Console } from 'console';
 
@@ -107,11 +106,6 @@ export default class Cli {
 		// Set support to the updated step and hook definitions
 		// in the supportCodeLibrary
 		runOptions.support = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
-
-		// define a custom boolean type this has to be done
-		// after all of the definitions have been loaded
-		const boolParam = new ParameterType('boolean', /true|false/, null, s => (s === 'true' ? true : false), true, false);
-		supportCodeLibrary.parameterTypeRegistry.defineParameterType(boolParam);
 
 		// now we can run cucumber
 		const { success } = await runCucumber(

@@ -51,7 +51,7 @@ const getRegTextForStep = (step: string): string => {
 	step = step.replace(/{stringInDoubleQuotes}/g, '"[^"]+"');
 	step = step.replace(/{word}/g, '[A-Za-z]+');
 	step = step.replace(/{string}/g, '("|\')[^\\1]*\\1');
-	step = step.replace(/{boolean}/gi, '(true|false)');
+	step = step.replace(/{boolean}/g, 'true|false');
 	step = step.replace(/{}/g, '.*');
 
 	//Optional Text

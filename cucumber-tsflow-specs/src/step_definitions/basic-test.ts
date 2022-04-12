@@ -11,6 +11,7 @@ export default class TestSteps {
 	private stepIsCalled = false;
 	private beforeWithNoTagIsCalled = false;
 	private computedResult = 0;
+	private boolValue: any = undefined;
 
 	@before()
 	beforeWithNoTag() {
@@ -96,6 +97,24 @@ export default class TestSteps {
 		}
 		expect(this.beforeStepIsCalled).to.be.true;
 		this.stepIsCalled = true;
+		this.thenIsCalled = true;
+	}
+
+	@given('I pass {boolean} into a step')
+	iPassbooleanIntoAStep(boolean: boolean): any {
+		this.boolValue = boolean;
+		this.givenIsCalled = true;
+	}
+
+	@when('checking the boolean value')
+	checkingTheBooleanValue(): any {
+		expect(this.boolValue).not.to.be.undefined;
+		this.whenIsCalled = true;
+	}
+
+	@then('we can see that {boolean} was passed in')
+	weCanThatbooleanWasPassedIn(boolean: boolean): any {
+		expect(this.boolValue).to.equal(boolean);
 		this.thenIsCalled = true;
 	}
 }

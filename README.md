@@ -282,7 +282,7 @@ As a result, a new custom parameter type has been added for boolean matches. For
 
 The following Scenario uses boolean values in the Given and Then statements:
 
-```json
+```gherkin
 Scenario: Boolean type supported
 	Given I pass true into a step
 	When checking the boolean value

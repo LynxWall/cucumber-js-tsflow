@@ -16,4 +16,10 @@ Feature: Basic Test Feature
 		When checking the results
 		Then I receive the result 10
 
+	Scenario: Boolean type supported
+		Given I pass true into a step
+		When checking the boolean value
+		Then we can see that true was passed in
+
+
 

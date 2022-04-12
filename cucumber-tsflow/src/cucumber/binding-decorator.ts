@@ -16,6 +16,8 @@ import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TypeDecorator } from '../types/types';
 import messageCollector from './message-collector';
+import { defineParameterType } from '@cucumber/cucumber';
+import _ from 'underscore';
 interface WritableWorld extends World {
 	[key: string]: any;
 }
@@ -30,8 +32,6 @@ interface WritableWorld extends World {
  */
 const stepPatternRegistrations = new Map<StepPattern, StepBindingFlags>();
 
-// tslint:disable:no-bitwise
-
 /**
  * A class decorator that marks the associated class as a CucumberJS binding.
  *
@@ -42,6 +42,7 @@ const stepPatternRegistrations = new Map<StepPattern, StepBindingFlags>();
  */
 export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
 	return <T>(target: { new (...args: any[]): T }) => {
+		defineParameters();
 		const bindingRegistry = BindingRegistry.instance;
 		bindingRegistry.registerContextTypesForTarget(target.prototype, requiredContextTypes);
 		const allBindings: StepBinding[] = [];
@@ -65,6 +66,20 @@ export function binding(requiredContextTypes?: ContextType[]): TypeDecorator {
 		});
 	};
 }
+
+/**
+ * Called only once to register new parameters. This has to be
+ * executed here during binding initialization for cucumber to
+ * to use it when matching expressions. Attempting to add it
+ * before the test run doesn't work
+ */
+const defineParameters = _.once(() => {
+	defineParameterType({
+		name: 'boolean',
+		regexp: /true|false/,
+		transformer: s => (s === 'true' ? true : false)
+	});
+});
 
 /**
  * Binds a step definition to Cucumber.

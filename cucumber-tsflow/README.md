@@ -362,15 +362,15 @@ class MySteps {
         ...
     }
 
-	@beforeStep('@addNumbers')
-	beforeStep() {
-		...
-	}
+    @beforeStep('@addNumbers')
+    public beforeStep() {
+	    ...
+    }
 
-	@afterStep('@addNumbers')
-	afterStep() {
-		...
-	}
+    @afterStep('@addNumbers')
+    public afterStep() {
+	    ...
+    }
 
     @after()
     public afterAllScenarios(): void {

@@ -2,7 +2,7 @@ import path from 'path';
 import slash from 'slash';
 import hash from 'hash-sum';
 import type { CompilerError, SFCDescriptor } from 'vue/compiler-sfc';
-import type { VueQuery } from '..';
+import type { VueQuery } from './query';
 import type { ResolvedOptions } from '../types';
 
 // compiler-sfc should be exported so it can be re-used

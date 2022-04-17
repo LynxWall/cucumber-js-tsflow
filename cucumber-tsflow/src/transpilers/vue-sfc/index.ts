@@ -9,23 +9,14 @@ import type { Options, ResolvedOptions, VueTransformerContext, VueResolvedId } f
 export { parseVueRequest, VueQuery } from './utils/query';
 
 class VueTransformer implements VueTransformerContext {
-	private filter: (id: unknown) => boolean;
 	private customElementFilter: (id: unknown) => boolean;
-	private refTransformFilter: (id: unknown) => boolean;
 	private options: ResolvedOptions;
 	private isSSR = (opt: { ssr?: boolean } | boolean | undefined) =>
 		opt === undefined ? false : typeof opt === 'boolean' ? opt : opt?.ssr === true;
 
 	constructor(rawOptions: Options = {}) {
 		const { include = /\.vue$/, exclude, customElement = /\.ce\.vue$/, reactivityTransform = false } = rawOptions;
-		this.filter = createFilter(include, exclude);
 		this.customElementFilter = typeof customElement === 'boolean' ? () => customElement : createFilter(customElement);
-		this.refTransformFilter =
-			reactivityTransform === false
-				? () => false
-				: reactivityTransform === true
-				? createFilter(/\.(j|t)sx?$/, /node_modules/)
-				: createFilter(reactivityTransform);
 
 		const rootDir: string = process.cwd();
 		this.options = {

@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"baseUrl": ".",
-		"target": "es6",
+		"target": "es2020",
 		"module": "es2020",
 		"strict": true,
 		"jsx": "preserve",
@@ -16,6 +16,7 @@
 		"allowJs": true,
 		"removeComments": false,
 		"experimentalDecorators": true,
+		"lib": ["es2020"],
 		"typeRoots": ["../node_modules/@types"]
 	},
 	"include": ["./src/**/*.ts", "./src/**/*.vue"]

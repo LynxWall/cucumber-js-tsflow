@@ -5,16 +5,15 @@ require('ts-node').register({
 	compilerOptions: {
 		module: 'commonjs',
 		moduleResolution: 'node',
-		target: 'es2021',
+		target: 'es2020',
 		strict: true,
 		experimentalDecorators: true,
 		allowSyntheticDefaultImports: true,
 		resolveJsonModule: true,
 		esModuleInterop: true,
 		skipLibCheck: true,
-		lib: ['es2021']
+		lib: ['es2020']
 	},
-	ignore: ['(?:^|/)node_modules/', '(?:^|/)cucumber-tsflow/lib/'],
 	transpileOnly: true
 });
 

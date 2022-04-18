@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.0.8]
+### Fixed
+- Removed slash import because some packages (Histoire) install latest esm only version. Replaced with code from slash package and added original author to MIT License.
+
 ## [5.0.7]
 ### Changed
-- Switched to commonjs build instead of umd to resolve issues with some applications (Histoire) attempting to use esm module
+- Switched to commonjs build instead of umd
 - Package updates to latest version
 - Removed callsites and implemented internally. Latest version of callsites is esm only, which doesn't work with tests.
 

@@ -1,5 +1,4 @@
 import path from 'path';
-import slash from 'slash';
 import hash from 'hash-sum';
 import type { CompilerError, SFCDescriptor } from 'vue/compiler-sfc';
 import type { VueQuery } from './query';
@@ -13,6 +12,20 @@ export interface SFCParseResult {
 
 const cache = new Map<string, SFCDescriptor>();
 const prevCache = new Map<string, SFCDescriptor | undefined>();
+
+/**
+ * code copied from slash npm package to resolve issue with latest
+ * version being esm only
+ */
+const slash = (path: string): string => {
+	const isExtendedLengthPath = /^\\\\\?\\/.test(path);
+	const hasNonAscii = /[^\u0000-\u0080]+/.test(path); // eslint-disable-line no-control-regex
+
+	if (isExtendedLengthPath || hasNonAscii) {
+		return path;
+	}
+	return path.replace(/\\/g, '/');
+};
 
 export const createDescriptor = (
 	filename: string,

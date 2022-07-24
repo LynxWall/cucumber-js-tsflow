@@ -2,7 +2,7 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for CucumberJS 8.0.0+ in TypeScript 1.7+.
+Provides 'specflow' like bindings for CucumberJS 8.5.0+ in TypeScript 1.7+.
 
 Supports Vue3 files in cucumber tests.
 
@@ -18,6 +18,7 @@ In addition, the following features have been added:
 - WrapperOptions in step definitions
 - BeforeStep and AfterStep Hooks
 - Boolean custom definition added to cucumber expressions
+- Support for Parallel execution of tests
 - A behave-json-formatter that fixes json so it can be used with Behave Pro
 - tsflow-snippet-syntax used to format snippet examples
   - snippets use the [Cucumber Expressions](https://github.com/cucumber/cucumber-expressions#readme) Syntax for parameters

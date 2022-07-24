@@ -1,7 +1,8 @@
 import { IdGenerator } from '@cucumber/messages';
 import { isTruthyString } from '@cucumber/cucumber/lib/configuration/index';
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter';
-import { IRunOptions, runCucumber } from '@cucumber/cucumber/lib/api/index';
+import { IRunOptions } from '@cucumber/cucumber/lib/api/index';
+import { runCucumber } from '../cucumber/run-cucumber';
 import { loadConfiguration } from './load-configuration';
 import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
@@ -10,7 +11,6 @@ import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { BindingRegistry } from '../cucumber/binding-registry';
 import ArgvParser from './argv-parser';
-import messageCollector from '../cucumber/message-collector';
 import { Console } from 'console';
 
 export interface ICliRunResult {
@@ -47,7 +47,8 @@ export default class Cli {
 	}
 
 	async run(): Promise<ICliRunResult> {
-		await validateInstall(this.cwd);
+		await validateInstall();
+
 		const { options, configuration: argvConfiguration } = ArgvParser.parse(this.argv);
 		if (options.i18nLanguages) {
 			(this.stdout as any).write(getLanguages());
@@ -104,15 +105,13 @@ export default class Cli {
 				  });
 
 		// Set support to the updated step and hook definitions
-		// in the supportCodeLibrary
+		// in the supportCodeLibrary. We also need to initialize originalCoordinates
+		// to support parallel execution.
 		runOptions.support = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
+		runOptions.support = { ...runOptions.support, ...{ originalCoordinates: supportCoordinates } };
 
 		// now we can run cucumber
-		const { success } = await runCucumber(
-			runOptions,
-			environment,
-			messageCollector.parseEnvelope.bind(messageCollector)
-		);
+		const { success } = await runCucumber(runOptions, environment);
 		return {
 			shouldAdvertisePublish:
 				!runConfiguration.formats.publish &&

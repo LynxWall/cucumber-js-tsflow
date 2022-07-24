@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.1.0]
+### Fixed
+- Fixed support for Parallel execution of tests.
+
+### Changed
+- Upgraded to cucumber.js 8.5.0
+- Upgraded jsdom to latest version
+- Upgraded other packages to latest stable versions
+
 ## [5.0.8]
 ### Fixed
 - Removed slash import because some packages (Histoire) install latest esm only version. Replaced with code from slash package and added original author to MIT License.

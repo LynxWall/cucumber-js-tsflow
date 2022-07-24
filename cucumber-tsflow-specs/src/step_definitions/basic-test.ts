@@ -1,4 +1,15 @@
-import { after, afterStep, before, beforeStep, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
+import {
+	beforeAll,
+	afterAll,
+	after,
+	afterStep,
+	before,
+	beforeStep,
+	binding,
+	given,
+	then,
+	when
+} from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
 
 @binding()
@@ -12,6 +23,15 @@ export default class TestSteps {
 	private beforeWithNoTagIsCalled = false;
 	private computedResult = 0;
 	private boolValue: any = undefined;
+
+	@beforeAll()
+	beforeAll() {
+		console.log('beforeAll was called');
+	}
+	@afterAll()
+	afterAll() {
+		console.log('afterAll was called');
+	}
 
 	@before()
 	beforeWithNoTag() {

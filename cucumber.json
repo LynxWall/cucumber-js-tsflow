@@ -4,6 +4,7 @@
 		"paths": ["cucumber-tsflow-specs/features/**/*.feature"],
 		"require": ["cucumber-tsflow-specs/src/step_definitions/**/*.ts"],
 		"format": ["behave:cucumber-tsflow-specs/cucumber_report.json", "html:cucumber-tsflow-specs/cucumber_report.html"],
+		"parallel": 2,
 		"publishQuiet": true
 	}
 }

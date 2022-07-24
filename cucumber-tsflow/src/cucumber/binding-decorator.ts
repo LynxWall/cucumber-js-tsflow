@@ -15,7 +15,6 @@ import {
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TypeDecorator } from '../types/types';
-import messageCollector from './message-collector';
 import { defineParameterType } from '@cucumber/cucumber';
 import _ from 'underscore';
 interface WritableWorld extends World {
@@ -90,7 +89,7 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 	const bindingFunc = function (this: WritableWorld): any {
 		const bindingRegistry = BindingRegistry.instance;
 
-		const scenarioContext = messageCollector.getStepScenarioContext(stepBinding);
+		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
 		if (scenarioContext) {
 			const matchingStepBindings = bindingRegistry.getStepBindings(
 				stepBinding.stepPattern.toString(),
@@ -128,7 +127,7 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 				arguments as any
 			);
 		} else {
-			throw new Error('Unable to find the Scenario Context for Hook!');
+			throw new Error('Unable to find the Scenario Context for a Step!');
 		}
 	};
 
@@ -164,7 +163,7 @@ function bindHook(stepBinding: StepBinding): void {
 					return stepBinding.targetPrototype[stepBinding.targetPropertyKey].apply() as () => void;
 			  }
 			: function (this: any, arg: any): any {
-					const scenarioContext = messageCollector.getHookScenarioContext(arg);
+					const scenarioContext = global.messageCollector.getHookScenarioContext(arg);
 					if (scenarioContext) {
 						const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
 						const bindingObject = scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes);

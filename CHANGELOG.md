@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.1.1]
+
+### Fixed
+
+- Bug loading configuration files that was introduced with the latest update of Cucumber.js to version 8.6.0. Underlying cucumber libraries added a logging parameter to the beginning of several functions
+  used by cucumber-tsflow.
+
+### Changed
+
+- Upgraded to Cucumber.js 8.6.0 and locked the reference to the current major.minor version. This should prevent breaking changes from Cucumber.js breaking cucumber-tsflow.
+- Upgraded other packages to latest stable versions
+- Updated tests to add the Cucumber.js World object to an injected context object.
+
+### Added
+
+- Example on how to access the Cucumber.js World object to README 
+
 ## [5.1.0]
 ### Fixed
 - Fixed support for Parallel execution of tests.

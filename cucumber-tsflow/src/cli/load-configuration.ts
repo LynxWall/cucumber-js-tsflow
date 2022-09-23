@@ -1,4 +1,3 @@
-import { Console } from 'console';
 import { IRunEnvironment, ILoadConfigurationOptions, IRunConfiguration } from '@cucumber/cucumber/lib/api/types';
 import { locateFile } from '@cucumber/cucumber/lib/configuration/locate_file';
 import {
@@ -14,7 +13,8 @@ import { ITsflowConfiguration } from './argv-parser';
 import chalk from 'chalk';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
-
+import { ILogger } from '@cucumber/cucumber/lib/logger';
+import { ConsoleLogger } from '@cucumber/cucumber/lib/api/console_logger';
 export interface ITsflowResolvedConfiguration {
 	/**
 	 * The final flat configuration object resolved from the configuration file/profiles plus any extra provided.
@@ -37,10 +37,16 @@ export const loadConfiguration = async (
 	options: ILoadConfigurationOptions = {},
 	environment: IRunEnvironment = {}
 ): Promise<ITsflowResolvedConfiguration> => {
-	const { cwd, env } = mergeEnvironment(environment);
+	const { cwd, stderr, env, debug } = mergeEnvironment(environment);
+	const logger: ILogger = new ConsoleLogger(stderr, debug);
+
 	const configFile = options.file ?? locateFile(cwd);
-	const profileConfiguration = configFile ? await fromFile(cwd, configFile, options.profiles) : {};
-	const logger = new Console(environment.stdout as any, environment.stderr);
+	if (configFile) {
+		logger.debug(`Configuration will be loaded from "${configFile}"`);
+	} else {
+		logger.debug('No configuration file found');
+	}
+	const profileConfiguration = configFile ? await fromFile(logger, cwd, configFile, options.profiles) : {};
 
 	// if a feature was passed in on command line it's added
 	// to the provided configuration as paths. We need to clear

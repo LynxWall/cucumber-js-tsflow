@@ -3,7 +3,7 @@
 	"configurations": [
 		{
 			"name": "Debug All",
-			"type": "pwa-node",
+			"type": "node",
 			"request": "launch",
 			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
@@ -14,14 +14,12 @@
 			"env": {
 				"NODE_ENV": "development"
 			},
-			"externalConsole": false,
 			"console": "integratedTerminal",
-			"sourceMaps": true,
-			"outDir": null
+			"sourceMaps": true
 		},
 		{
 			"name": "Debug Feature",
-			"type": "pwa-node",
+			"type": "node",
 			"request": "launch",
 			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
@@ -32,10 +30,8 @@
 			"env": {
 				"NODE_ENV": "development"
 			},
-			"externalConsole": false,
 			"console": "integratedTerminal",
-			"sourceMaps": true,
-			"outDir": null
+			"sourceMaps": true
 		}
 	]
 }

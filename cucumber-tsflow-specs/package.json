@@ -2,17 +2,17 @@
 	"private": true,
 	"name": "@lynxwall/cucumber-tsflow-specs",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "5.1.0",
+	"version": "5.1.1",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",
 	"typings": "./index.d.ts",
 	"dependencies": {
-		"vue": "^3.2.37"
+		"vue": "^3.2.39"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",
-		"@types/chai": "^4.3.1",
+		"@types/chai": "^4.3.3",
 		"@vue/test-utils": "^2.0.2",
 		"chai": "^4.3.6"
 	}

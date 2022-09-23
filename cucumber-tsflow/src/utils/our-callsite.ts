@@ -1,4 +1,5 @@
 import * as sourceMapSupport from 'source-map-support';
+import { CallSite } from 'source-map-support';
 
 /**
  * Represents a callsite of where a step binding is being applied.
@@ -34,7 +35,7 @@ export class Callsite {
 	 * Captures the current [[Callsite]] object.
 	 */
 	public static capture(): Callsite {
-		const stack = Callsite.callsites()[2];
+		const stack = Callsite.callsites()[2] as unknown as CallSite;
 		const tsStack = sourceMapSupport.wrapCallSite(stack);
 		const ourCallsite = new Callsite(tsStack.getFileName() || '', tsStack.getLineNumber() || -1);
 		ourCallsite.filename = ourCallsite.filename.replace(`${this.cwd}\\`, '');

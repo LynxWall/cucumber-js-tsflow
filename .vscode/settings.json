@@ -4,6 +4,7 @@
 	"eslint.packageManager": "yarn",
 	"editor.formatOnPaste": true,
 	"editor.formatOnSave": true,
+	"editor.formatOnType": false,
 
 	// Prettier configuration - Javascript and JSX Formatter
 	"prettier.trailingComma": "none",
@@ -18,12 +19,11 @@
 	"prettier.endOfLine": "crlf",
 
 	// Volar settings - TypeScript
-	"volar.takeOverBuiltinTsExtension": false,
-	"volar.formatting.printWidth": 120,
 	"volar.codeLens.pugTools": false,
 	"volar.codeLens.scriptSetupTools": false,
 	"volar.icon.splitEditors": false,
-	"volar.preferredTagNameCase": "kebab",
+	"volar.completion.preferredAttrNameCase": "kebab",
+	"volar.completion.preferredTagNameCase": "pascal",
 
 	"files.exclude": {
 		"**/.nyc_output": true,
@@ -98,7 +98,8 @@
 		"titleBar.activeBackground": "#61dafb",
 		"titleBar.activeForeground": "#15202b",
 		"titleBar.inactiveBackground": "#61dafb99",
-		"titleBar.inactiveForeground": "#15202b99"
+		"titleBar.inactiveForeground": "#15202b99",
+		"commandCenter.border": "#15202b99"
 	},
 	"peacock.color": "#61dafb",
 	"cucumberautocomplete.steps": ["cucumber-tsflow-specs/src/step_definitions/**/*.ts"],

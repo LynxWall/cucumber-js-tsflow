@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.1.2]
+
+### Fixed
+
+- Update to command line execution in README to use npx command.
+
 ## [5.1.1]
 
 ### Fixed

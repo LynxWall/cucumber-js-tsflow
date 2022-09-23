@@ -5,6 +5,7 @@ import { IdGenerator } from '@cucumber/messages';
 import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import Coordinator from './parallel/coordinator';
 import { IRunOptionsRuntime } from '@cucumber/cucumber/lib/api/types';
+import { ILogger } from '@cucumber/cucumber/lib/logger';
 
 /**
  * Extending this function from cucumber.js to use our own implementation
@@ -24,7 +25,7 @@ export function makeRuntime({
 	options: { parallel, ...options }
 }: {
 	cwd: string;
-	logger: Console;
+	logger: ILogger;
 	eventBroadcaster: EventEmitter;
 	eventDataCollector: EventDataCollector;
 	newId: IdGenerator.NewId;

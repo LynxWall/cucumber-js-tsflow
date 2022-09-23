@@ -119,7 +119,6 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 				matchingStepBindings[0].targetPrototype,
 				contextTypes
 			);
-
 			bindingObject._worldObj = this;
 
 			return (bindingObject[matchingStepBindings[0].targetPropertyKey] as () => void).apply(

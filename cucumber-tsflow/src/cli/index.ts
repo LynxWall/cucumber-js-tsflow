@@ -11,6 +11,9 @@ import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { BindingRegistry } from '../cucumber/binding-registry';
 import ArgvParser from './argv-parser';
+import debug from 'debug';
+import { ILogger } from '@cucumber/cucumber/lib/logger';
+import { ConsoleLogger } from '@cucumber/cucumber/lib/api/console_logger';
 import { Console } from 'console';
 
 export interface ICliRunResult {
@@ -66,14 +69,17 @@ export default class Cli {
 				success: true
 			};
 		}
+
+		const enableDebug = debug.enabled('cucumber');
 		const environment = {
 			cwd: this.cwd,
 			stdout: this.stdout,
 			stderr: this.stderr,
-			env: this.env
+			env: this.env,
+			debug: enableDebug
 		};
-		const logger = new Console(environment.stdout as any, environment.stderr);
-		logger.info('Loading configuration and step definitions...');
+		const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+		consoleLogger.info('Loading configuration and step definitions...\n');
 
 		const { useConfiguration: configuration, runConfiguration } = await loadConfiguration(
 			{
@@ -90,7 +96,8 @@ export default class Cli {
 		const runOptions = runConfiguration as IRunOptions;
 		const supportCoordinates =
 			'World' in runOptions.support ? runOptions.support.originalCoordinates : runOptions.support;
-		const { requirePaths, importPaths } = await resolvePaths(cwd, runOptions.sources, supportCoordinates);
+		const logger: ILogger = new ConsoleLogger(environment.stderr, enableDebug);
+		const { requirePaths, importPaths } = await resolvePaths(logger, cwd, runOptions.sources, supportCoordinates);
 
 		// Load the step and hook definitions
 		const supportCodeLibrary =

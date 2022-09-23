@@ -7,11 +7,11 @@ import { resolvePaths } from '@cucumber/cucumber/lib/api/paths';
 import { makeRuntime } from './runtime';
 import { initializeFormatters } from '@cucumber/cucumber/lib/api/formatters';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
-import { Console } from 'console';
 import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
 import { getFilteredPicklesAndErrors } from '@cucumber/cucumber/lib/api/gherkin';
 import MessageCollector from './message-collector';
-
+import { ILogger } from '@cucumber/cucumber/lib/logger';
+import { ConsoleLogger } from '@cucumber/cucumber/lib/api/console_logger';
 /**
  * Execute a Cucumber test run.
  *
@@ -28,14 +28,16 @@ export async function runCucumber(
 	environment: IRunEnvironment = {},
 	onMessage?: (message: Envelope) => void
 ): Promise<IRunResult> {
-	const { cwd, stdout, stderr, env } = mergeEnvironment(environment);
-	const logger = new Console(stdout, stderr);
+	const { cwd, stdout, stderr, env, debug } = mergeEnvironment(environment);
+	const logger: ILogger = new ConsoleLogger(stderr, debug);
+
 	const newId = IdGenerator.uuid();
 
 	const supportCoordinates =
 		'World' in configuration.support ? configuration.support.originalCoordinates : configuration.support;
 
 	const { unexpandedFeaturePaths, featurePaths, requirePaths, importPaths } = await resolvePaths(
+		logger,
 		cwd,
 		configuration.sources,
 		supportCoordinates

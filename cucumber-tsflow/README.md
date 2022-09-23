@@ -114,19 +114,22 @@ As mentioned previously, with recent updates cucumber-tsflow must be used to exe
 The following example demonstrates executing cucumber-tsflow from the command line to execute tests:
 
 ```bash
-C:\GitHub\cucumber-js-tsflow (vue-plugin -> origin)
-λ npx cucumber-tsflow
+C:\GitHub\cucumber-js-tsflow (dev -> origin)
+λ yarn test
 Loading configuration and step definitions...
-.....@basic after hook is called.
-......@basic after hook is called.
-........@tags1 after hook is called.
-.....@tagging afterTag method is called
-.......<Suspense> is an experimental feature and its API will likely change.
-..
 
-7 scenarios (7 passed)
-20 steps (20 passed)
-0m00.075s (executing steps: 0m00.037s)
+beforeAll was called
+......@basic after hook is called.
+.......@basic after hook is called.
+.......@basic after hook is called.
+...........@tags1 after hook is called.
+......@tagging afterTag method is called
+.........<Suspense> is an experimental feature and its API will likely change.
+..afterAll was called
+
+8 scenarios (8 passed)
+24 steps (24 passed)
+0m00.076s (executing steps: 0m00.040s)
 ```
 
 To recap, cucumber-tsflow extends cucumber-js, which means that all options and features provided by cucumber-js are supported with cucumber-tsflow. In other words, when executing tests using cucumber-tsflow the underlying cucumber API is actually used to run the tests.
@@ -195,10 +198,10 @@ If using VSCode to edit your project the following launch configurations can be 
 ```json
 {
 	"name": "Debug All",
-	"type": "pwa-node",
+	"type": "node",
 	"request": "launch",
 	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
-	"stopOnEntry": false,
+	"stopOnEntry": true,
 	"args": ["-p", "default"],
 	"cwd": "${workspaceRoot}",
 	"runtimeExecutable": null,
@@ -206,10 +209,8 @@ If using VSCode to edit your project the following launch configurations can be 
 	"env": {
 		"NODE_ENV": "development"
 	},
-	"externalConsole": false,
 	"console": "integratedTerminal",
-	"sourceMaps": true,
-	"outDir": null
+	"sourceMaps": true
 }
 ```
 
@@ -218,10 +219,10 @@ If using VSCode to edit your project the following launch configurations can be 
 ```json
 {
 	"name": "Debug Feature",
-	"type": "pwa-node",
+	"type": "node",
 	"request": "launch",
 	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
-	"stopOnEntry": false,
+	"stopOnEntry": true,
 	"args": ["--debug-file", "${file}", "-p", "default"],
 	"cwd": "${workspaceRoot}",
 	"runtimeExecutable": null,
@@ -229,10 +230,8 @@ If using VSCode to edit your project the following launch configurations can be 
 	"env": {
 		"NODE_ENV": "development"
 	},
-	"externalConsole": false,
 	"console": "integratedTerminal",
-	"sourceMaps": true,
-	"outDir": null
+	"sourceMaps": true
 }
 ```
 
@@ -451,31 +450,73 @@ The following example shows how to configure the behave formatter in cucumber.js
 
 ### Context Injection
 
-Like 'specflow', cucumber-tsflow supports a simple dependency injection framework that will instantitate and inject
-class instances into 'binding' classes for each execuing scenario.
+Like 'specflow', cucumber-tsflow supports a simple dependency injection framework that will instantitate and inject class instances into 'binding' classes for each execuing scenario.
 
 To use context injection:
 
 - Create simple classes representing the shared data (they *must* have default constructors)
-- Define a constructor on the 'binding' classes that will require the shared data that accepts the context objects
-as parameters
-- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding'
-class
+- Define a constructor on the 'binding' classes that will require the shared data that accepts the context objects as parameters
+- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class
 
 ```javascript
-import { binding, before, after } from "@lynxwall/cucumber-tsflow";
-import { Workspace } from "./Workspace";
+import { binding, given, when } from '@lynxwall/cucumber-tsflow';
+import { Workspace } from './workspace';
+import { expect } from 'chai';
 
 @binding([Workspace])
-export default class MySteps {
-    constructor(protected workspace: Workspace)
-    { }
+export default class InjectionTestSteps1 {
+	constructor(private workspace: Workspace) {}
 
-    @before("requireTempDir")
-    public async beforeAllScenariosRequiringTempDirectory(): Promise<void> {
-        let tempDirInfo = await this.createTemporaryDirectory();
+	@given('The Workspace is available and valid')
+	theWorkspaceIsAvailableAndValid() {
+		expect(this.workspace).not.to.be.undefined;
+		expect(this.workspace.world).not.to.be.undefined;
+	}
 
-        this.workspace.updateFolder(tempDirInfo);
-    }
+	@when('I change the workspace in one step definition class')
+	whenIChangeTheWorkspaceInOneStep() {
+		this.workspace.someValue = 'value changed';
+	}
 }
 ```
+
+### Access to Cucumber.js World object
+
+The context object that you inject can also be configured to access the [World](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/world.md) object from Cucumber.js, which provides a method for adding attachments, a method for logging information from hooks/steps and an object of parameters passed in via configuration.
+
+The first step is to define a world property on the class that you're injecting:
+
+```javascript
+import { World } from '@cucumber/cucumber';
+
+export class Workspace {
+	public world!: World;
+	public someValue = '';
+}
+```
+
+Next you'll need to initialize the world property in a ***@before*** hook so that it's available to all steps in a scenario. My approach is to add a new file to the steps folder that is dedicated to initializing the class (Workspace in this example) in a ***@before*** hook.
+
+For this example I've added a file named world-context.ts with the following content:
+
+```javascript
+import { binding, before } from '@lynxwall/cucumber-tsflow';
+import { Workspace } from './workspace';
+import { World } from '@cucumber/cucumber';
+
+@binding([Workspace])
+export default class WorldContext {
+	_worldObj?: World;
+
+	constructor(private workspace: Workspace) {}
+
+	@before()
+	beforeScenario() {
+		this.workspace.world = this._worldObj as World;
+	}
+}
+```
+
+As described in the section on Hooks, the ***beforeScenario*** function will be executed before each scenario. We're accessing a member property that was bound to the class instance during creation of each step class, and initializing the world property.
+
+**NOTE:** Examples of this and other tests can be found in the GitHub repository.

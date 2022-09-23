@@ -11,6 +11,7 @@ import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import { ITestRunStopwatch, RealTestRunStopwatch } from '@cucumber/cucumber/lib/runtime/stopwatch';
 import { assembleTestCases, IAssembledTestCases } from '@cucumber/cucumber/lib/runtime/assemble_test_cases';
 import { IdGenerator } from '@cucumber/messages';
+import { ILogger } from '@cucumber/cucumber/lib/logger';
 
 // Updated to use our own run-worker, which instantiates a new Worker instance
 // using our modified Worker.
@@ -18,7 +19,7 @@ const runWorkerPath = path.resolve(__dirname, 'run-worker.js');
 
 export interface INewCoordinatorOptions {
 	cwd: string;
-	logger: Console;
+	logger: ILogger;
 	eventBroadcaster: EventEmitter;
 	eventDataCollector: EventDataCollector;
 	options: IRuntimeOptions;
@@ -72,7 +73,7 @@ export default class Coordinator implements IRuntime {
 	private readonly requirePaths: string[];
 	private readonly importPaths: string[];
 	private readonly numberOfWorkers: number;
-	private readonly logger: Console;
+	private readonly logger: ILogger;
 	private success: boolean;
 	private idleInterventions: number;
 

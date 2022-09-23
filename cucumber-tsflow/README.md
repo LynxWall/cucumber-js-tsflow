@@ -115,7 +115,7 @@ The following example demonstrates executing cucumber-tsflow from the command li
 
 ```bash
 C:\GitHub\cucumber-js-tsflow (dev -> origin)
-λ yarn test
+λ npx cucumber-tsflow
 Loading configuration and step definitions...
 
 beforeAll was called
@@ -134,7 +134,31 @@ beforeAll was called
 
 To recap, cucumber-tsflow extends cucumber-js, which means that all options and features provided by cucumber-js are supported with cucumber-tsflow. In other words, when executing tests using cucumber-tsflow the underlying cucumber API is actually used to run the tests.
 
-### New Configuration options
+### Executing with script in package.json
+
+You can also add a script to package.json to execute the tests as shown below:
+
+```json
+"scripts": {
+	"test": "cucumber-tsflow -p default"
+}
+```
+
+With this script in place you can execute the tests using npm or yarn,
+
+#### npm
+
+```bash
+npm run test
+```
+
+#### yarn
+
+```bash
+yarn test
+```
+
+## New Configuration options
 
 As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/configuration.md>
 
@@ -170,7 +194,6 @@ When configuring cucumber to execute tests you can specify which transpiler to u
 		"publishQuiet": true
 	}
 }
-
 ```
 
 ##### Alternate without using the transpiler option
@@ -184,7 +207,6 @@ You can also use the `requireModule` parameter to configure a transpiler. The fo
 		"publishQuiet": true
 	}
 }
-
 ```
 
 #### Debug File support

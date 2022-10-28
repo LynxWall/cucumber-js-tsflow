@@ -11,6 +11,7 @@
 </script>
 
 <template>
+	<img src="../assets/images/HDRI_Sample_Scene_Balls.jpg" alt="Sample Scene Balls" />
 	<div>{{ count }} x {{ times }} = {{ result }}</div>
 	<button @click="times += 1">x1</button>
 </template>

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [5.1.3]
+
+### Fixed
+
+- Asset handling in Vue components causing transform failures. Since this is only used for Vue components loaded in Vue/test-utils, the ***transformAssetUrls*** option will be set to **false** by default. As a result, any Vue components with media assets will load without attempting to transform the asset.
+
 ## [5.1.2]
 
 ### Fixed

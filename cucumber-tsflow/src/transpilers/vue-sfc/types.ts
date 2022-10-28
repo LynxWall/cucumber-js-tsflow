@@ -10,7 +10,12 @@ export interface Options {
 
 	// options to pass on to vue/compiler-sfc
 	script?: Partial<SFCScriptCompileOptions>;
-	template?: Partial<SFCTemplateCompileOptions>;
+	template?: Partial<
+		Pick<
+			SFCTemplateCompileOptions,
+			'compiler' | 'compilerOptions' | 'preprocessOptions' | 'preprocessCustomRequire' | 'transformAssetUrls'
+		>
+	>;
 	style?: Partial<SFCStyleCompileOptions>;
 
 	/**

@@ -92,7 +92,7 @@ export const resolveTemplateCompilerOptions = (
 			transformAssetUrls = { ...transformAssetUrls, ...assetUrlOptions };
 		}
 	} else {
-		transformAssetUrls = assetUrlOptions;
+		transformAssetUrls = false;
 	}
 
 	let preprocessOptions = block.lang && options.template?.preprocessOptions;
@@ -121,7 +121,7 @@ export const resolveTemplateCompilerOptions = (
 		inMap: block.src ? undefined : block.map,
 		ssr,
 		ssrCssVars: cssVars,
-		transformAssetUrls,
+		transformAssetUrls: transformAssetUrls,
 		preprocessLang: block.lang,
 		preprocessOptions,
 		compilerOptions: {

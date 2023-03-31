@@ -4,6 +4,7 @@ import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { hasMatchingStep, hasMatchingTags } from './utils';
 import { hasStringValue } from '../utils/helpers';
+import { TestStepResultStatus } from '@cucumber/messages';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -52,6 +53,18 @@ export default class MessageCollector {
 	addPickleAndTestCase(pickle: messages.Pickle, testCase: messages.TestCase) {
 		this.pickleMap[pickle.id] = pickle;
 		this.testCaseMap[testCase.id] = testCase;
+	}
+
+	hasFailures(): boolean {
+		for (const caseKey in this.testCaseAttemptDataMap) {
+			const stepResults = this.testCaseAttemptDataMap[caseKey].stepResults;
+			for (const key in stepResults) {
+				if (stepResults[key].status === TestStepResultStatus.FAILED) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	getGherkinDocument(uri: string): messages.GherkinDocument {

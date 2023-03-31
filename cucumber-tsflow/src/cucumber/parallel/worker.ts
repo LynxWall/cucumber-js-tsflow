@@ -1,13 +1,11 @@
 import * as messages from '@cucumber/messages';
 import { IdGenerator } from '@cucumber/messages';
-import { duration } from 'durations';
 import { EventEmitter } from 'events';
 import { pathToFileURL } from 'url';
-import StackTraceFilter from '@cucumber/cucumber/lib/stack_trace_filter';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { makeRunTestRunHooks, RunsTestRunHooks } from '@cucumber/cucumber/lib/runtime/run_test_run_hooks';
-import { RealTestRunStopwatch } from '@cucumber/cucumber/lib/runtime/stopwatch';
+import { create } from '@cucumber/cucumber/lib/runtime/stopwatch';
 import TestCaseRunner from '@cucumber/cucumber/lib/runtime/test_case_runner';
 import {
 	ICoordinatorReport,
@@ -37,7 +35,6 @@ export default class Worker {
 	private filterStacktraces: boolean = false;
 	private readonly newId: IdGenerator.NewId;
 	private readonly sendMessage: IMessageSender;
-	private readonly stackTraceFilter: StackTraceFilter;
 	private supportCodeLibrary?: ISupportCodeLibrary;
 	private worldParameters: any;
 	private runTestRunHooks?: RunsTestRunHooks;
@@ -59,7 +56,6 @@ export default class Worker {
 		this.exit = exit;
 		this.sendMessage = sendMessage;
 		this.eventBroadcaster = new EventEmitter();
-		this.stackTraceFilter = new StackTraceFilter();
 		this.eventBroadcaster.on('envelope', (envelope: messages.Envelope) => {
 			this.sendMessage({
 				jsonEnvelope: JSON.stringify(envelope)
@@ -90,9 +86,6 @@ export default class Worker {
 
 		this.worldParameters = options.worldParameters;
 		this.filterStacktraces = filterStacktraces;
-		if (this.filterStacktraces) {
-			this.stackTraceFilter.filter();
-		}
 		this.runTestRunHooks = makeRunTestRunHooks(
 			options.dryRun,
 			this.supportCodeLibrary.defaultTimeout,
@@ -105,9 +98,6 @@ export default class Worker {
 	async finalize(): Promise<void> {
 		if (this.supportCodeLibrary && this.runTestRunHooks) {
 			await this.runTestRunHooks(this.supportCodeLibrary.afterTestRunHookDefinitions, 'an AfterAll');
-		}
-		if (this.filterStacktraces) {
-			this.stackTraceFilter.unfilter();
 		}
 		this.exit(0);
 	}
@@ -123,11 +113,10 @@ export default class Worker {
 	}
 
 	async runTestCase({ gherkinDocument, pickle, testCase, elapsed, retries, skip }: IWorkerCommandRun): Promise<void> {
-		const stopwatch = new RealTestRunStopwatch();
-		stopwatch.from(duration(elapsed));
 		// Add the pickle and testCase to the messageCollector that's
 		// initialized in the constructor
 		global.messageCollector.addPickleAndTestCase(pickle, testCase);
+		const stopwatch = create(elapsed);
 		const testCaseRunner = new TestCaseRunner({
 			eventBroadcaster: this.eventBroadcaster,
 			stopwatch,
@@ -137,6 +126,7 @@ export default class Worker {
 			testCase,
 			retries,
 			skip,
+			filterStackTraces: this.filterStacktraces,
 			supportCodeLibrary: this.supportCodeLibrary as ISupportCodeLibrary,
 			worldParameters: this.worldParameters
 		});

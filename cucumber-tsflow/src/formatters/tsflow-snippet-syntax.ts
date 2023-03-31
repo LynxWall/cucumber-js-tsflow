@@ -65,10 +65,7 @@ export function TsflowSnippetSyntax(snippetInterface: SnippetInterface): ISnippe
 			let functionKeyword = '';
 			if (snippetInterface === SnippetInterface.AsyncAwait) {
 				functionKeyword = 'async ';
-			} else if (snippetInterface === SnippetInterface.Generator) {
-				functionKeyword = '*';
 			}
-
 			let implementation: string;
 			if (snippetInterface === SnippetInterface.Callback) {
 				implementation = `${CALLBACK_NAME}(null, 'pending');`;

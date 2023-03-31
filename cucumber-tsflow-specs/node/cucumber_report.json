@@ -1,0 +1,848 @@
+[
+  {
+    "description": "\tDescription: The purpose of this feature is to test the Background keyword",
+    "elements": [
+      {
+        "description": "",
+        "id": "test-background-feature;search-a-product-and-add-the-first-product-to-the-user-basket",
+        "keyword": "Scenario",
+        "line": 10,
+        "name": "Search a product and add the first product to the User basket",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 180208
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 35125
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:15"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2997084
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 7,
+            "name": "I submit username and password",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 937542
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 8,
+            "name": "I should be logged in",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:24"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 596291
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "User search for Lenovo Laptop",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:31"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 528708
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 12,
+            "name": "Add the first laptop that appears in the search result to the basket",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:37"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 766165
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 13,
+            "name": "User basket should display with added item",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:57"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1862125
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "test-background-feature;navigate-to-a-product-and-add-the-same-to-the-user-basket",
+        "keyword": "Scenario",
+        "line": 15,
+        "name": "Navigate to a product and add the same to the User basket",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 179917
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 34375
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:15"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3473667
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 7,
+            "name": "I submit username and password",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 746208
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 8,
+            "name": "I should be logged in",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:24"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 705749
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 16,
+            "name": "User navigate for Lenovo Laptop",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:44"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1135541
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Add the laptop to the basket",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 438166
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 18,
+            "name": "User basket should display with added item",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/background-test.ts:57"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 538832
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "test-background-feature",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Test Background Feature",
+    "tags": [
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "../features/background-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "basic-test-feature;basic-test-scenario",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Basic test scenario",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 33959
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 88250
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 74041
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "some step to be executed",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:82"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 346292
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "the condition is right",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:87"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 340166
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 7,
+            "name": "we can see the result correctly",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:92"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 414833
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 97375
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@basic",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "\t\tStep definitions that are tagged will only be used in scenarios\n\t\tor features that have the same tag [addNumbers].",
+        "id": "basic-test-feature;adding-two-numbers",
+        "keyword": "Scenario",
+        "line": 10,
+        "name": "Adding two numbers",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 53040
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 172707
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 188166
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 15,
+            "name": "I enter 2 and 8",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:97"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1929831
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "checking the results",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:105"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 594581
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 17,
+            "name": "I receive the result 10",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:113"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 850040
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 83833
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@basic",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          },
+          {
+            "name": "@addNumbers",
+            "line": 9
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "basic-test-feature;boolean-type-supported",
+        "keyword": "Scenario",
+        "line": 19,
+        "name": "Boolean type supported",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 38791
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 12082
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 24125
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 20,
+            "name": "I pass true into a step",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:123"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 842209
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 21,
+            "name": "checking the boolean value",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:129"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 389625
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "we can see that true was passed in",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:135"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 728707
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 70291
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@basic",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "basic-test-feature",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Basic Test Feature",
+    "tags": [
+      {
+        "name": "@basic",
+        "line": 1
+      },
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "../features/basic-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "test-features-with-injection-support.;change-can-be-seen-among-the-shared-workspace",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "change can be seen among the shared workspace",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 33165
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 19165
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "The Workspace is available and valid",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/injection-test1.ts:9"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1209749
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "I change the workspace in one step definition class",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/injection-test1.ts:15"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 564624
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 7,
+            "name": "I can see changed state in another step definition class",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/injection-test2.ts:9"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 684707
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@injection",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "test-features-with-injection-support.",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Test Features with injection support.",
+    "tags": [
+      {
+        "name": "@injection",
+        "line": 1
+      },
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "../features/injection-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "\t\tBecause in 'basic-test.ts' step definition is not tagged,\n\t\tthe step definition will be used here as well.",
+        "id": "test-features-with-tagging-support.;test-step-definitions-without-tags",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "Test step definitions without tags",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 47625
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 27500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 9,
+            "name": "some step to be executed",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:82"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 141834
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 10,
+            "name": "the condition is right",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:87"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 135167
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 11,
+            "name": "we can see the result correctly",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/basic-test.ts:92"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 218333
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 407374
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@tags",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          },
+          {
+            "name": "@tag1",
+            "line": 4
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "\t\tStep definitions that are tagged will only be in scenarios or features that have the same tag.\n\t\tOne step can have multiple tags associated with it, for example, in this case, this\n\t\tscenario has tags [tags, tag2]. A step definition that has a tag matching any of them\n\t\twill be picked as candidate for execution.",
+        "id": "test-features-with-tagging-support.;test-step-definitions-with-tags",
+        "keyword": "Scenario",
+        "line": 14,
+        "name": "Test step definitions with tags",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 32958
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 19165
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 21,
+            "name": "some step to be executed with tag",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/tag-test.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1094250
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 22,
+            "name": "the condition is right with tag",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/tag-test.ts:22"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 380334
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 23,
+            "name": "we can see the result correctly with tag",
+            "match": {
+              "location": "/Users/lwall/github/cucumber-js-tsflow/cucumber-tsflow-specs/node/src/step_definitions/tag-test.ts:27"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 432042
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 71791
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@tags",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          },
+          {
+            "name": "@tag2",
+            "line": 13
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "test-features-with-tagging-support.",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Test Features with Tagging support.",
+    "tags": [
+      {
+        "name": "@tags",
+        "line": 1
+      },
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "../features/tagging-test.feature"
+  }
+]

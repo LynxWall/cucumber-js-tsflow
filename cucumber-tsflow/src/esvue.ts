@@ -3,16 +3,16 @@ import VueTransformer from './transpilers/vue-sfc';
 
 require('ts-node').register({
 	compilerOptions: {
-		module: 'commonjs',
+		module: 'es2022',
 		moduleResolution: 'node',
-		target: 'es2020',
+		target: 'es2022',
 		strict: true,
 		experimentalDecorators: true,
 		allowSyntheticDefaultImports: true,
 		resolveJsonModule: true,
 		esModuleInterop: true,
 		skipLibCheck: true,
-		lib: ['es2020']
+		lib: ['es2022']
 	},
 	transpileOnly: true,
 	transpiler: '@lynxwall/cucumber-tsflow/lib/transpilers/esbuild-transpiler'

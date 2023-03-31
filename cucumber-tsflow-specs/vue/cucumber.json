@@ -1,0 +1,18 @@
+{
+	"esvue": {
+		"transpiler": "esvue",
+		"paths": ["../features/**/*.feature"],
+		"require": ["./src/step_definitions/**/*.ts"],
+		"format": ["behave:cucumber_report.json", "html:cucumber_report.html"],
+		"parallel": 2,
+		"publishQuiet": true
+	},
+	"tsvue": {
+		"transpiler": "tsvue",
+		"paths": ["../features/**/*.feature"],
+		"require": ["./src/step_definitions/**/*.ts"],
+		"format": ["behave:cucumber_report.json", "html:cucumber_report.html"],
+		"parallel": 2,
+		"publishQuiet": true
+	}
+}

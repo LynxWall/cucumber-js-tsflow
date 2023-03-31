@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.0.0]
+
+### Added
+
+- New exit code to differentiate between a test run that has failures and one that just has pending or undefined scenario steps. The original implementation only had two exit codes: 0 and 1. This update adds an extra exit code and changes the meaning of exit code 1. New exit codes are: 0 = all scenarios passing, 1 = implemented scenarios are passing but there are pending, undefined or unknown scenario steps, 2 = one or more scenario steps have failed.
+- Background test example.
+- Tests using all four transpires
+
+### Changed
+
+- Upgraded to cucumber.js 9.1.0, which has [breaking changes](https://github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md#900---2023-02-27) that were implemented in version 9.0.0. 
+- Upgraded packages to latest stable versions
+- Locked package versions being used to Major/Minor
+- Updated esvue and esnode transpiler configurations to use es module (es2022) for transpilation instead of CommonJS. 
+
 ## [5.1.3]
 
 ### Fixed

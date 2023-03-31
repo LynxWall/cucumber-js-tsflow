@@ -3,7 +3,7 @@
 		"transpiler": "esnode",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
-		"format": ["behave:cucumber_report.json", "html:cucumber_report.html"],
+		"format": ["behave:../cucumber_report_esnode.json", "html:../cucumber_report_esnode.html"],
 		"parallel": 2,
 		"tags": "@node",
 		"publishQuiet": true
@@ -12,7 +12,7 @@
 		"transpiler": "tsnode",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
-		"format": ["behave:cucumber_report.json", "html:cucumber_report.html"],
+		"format": ["behave:../cucumber_report_tsnode.json", "html:../cucumber_report_tsnode.html"],
 		"parallel": 2,
 		"tags": "@node",
 		"publishQuiet": true

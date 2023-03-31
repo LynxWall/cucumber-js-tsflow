@@ -13,5 +13,5 @@ tsconfig.tsbuildinfo
 # Documentation here: https://yarnpkg.com/features/zero-installs
 #!/.yarn/cache
 /.pnp.*
-cucumber-tsflow-specs/cucumber_report.*
+cucumber-tsflow-specs/cucumber_report_*.*
 .DS_Store

@@ -14,3 +14,4 @@ tsconfig.tsbuildinfo
 #!/.yarn/cache
 /.pnp.*
 cucumber-tsflow-specs/cucumber_report.*
+.DS_Store

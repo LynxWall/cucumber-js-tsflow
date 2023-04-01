@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
 		"baseUrl": ".",
-		"target": "es6",
-		"module": "es2020",
+		"target": "es2022",
+		"module": "es2022",
 		"strict": true,
 		"jsx": "preserve",
 		"moduleResolution": "node",
@@ -11,7 +11,7 @@
 		"allowSyntheticDefaultImports": true,
 		"allowJs": true,
 		"experimentalDecorators": true,
-		"typeRoots": ["./node_modules/@types", "./node_modules/@cucumber/cucumber/lib/types"]
+		"typeRoots": ["**/node_modules/@types", "**/node_modules/@cucumber/cucumber/lib/types"]
 	},
 	"files": [],
 	"include": [],
@@ -21,4 +21,3 @@
 		}
 	]
 }
-

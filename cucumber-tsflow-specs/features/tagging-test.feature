@@ -1,4 +1,4 @@
-@tags
+@tags @node
 Feature: Test Features with Tagging support.
 
 	@tag1

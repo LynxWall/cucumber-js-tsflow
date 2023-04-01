@@ -10,7 +10,7 @@ export interface IParsedArgvOptions {
 	config?: string;
 	i18nKeywords?: string;
 	i18nLanguages?: boolean;
-	profile: string[];
+	profile?: string[];
 }
 
 export interface ITsflowConfiguration extends IConfiguration {

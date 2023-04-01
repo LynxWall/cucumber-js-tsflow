@@ -102,7 +102,7 @@
 		"commandCenter.border": "#15202b99"
 	},
 	"peacock.color": "#61dafb",
-	"cucumberautocomplete.steps": ["cucumber-tsflow-specs/src/step_definitions/**/*.ts"],
+	"cucumberautocomplete.steps": ["cucumber-tsflow-specs/**/step_definitions/**/*.ts"],
 	"cucumberautocomplete.strictGherkinCompletion": true,
 	"cucumberautocomplete.syncfeatures": "cucumber-tsflow-specs/features/*feature",
 	"cucumberautocomplete.strictGherkinValidation": false,

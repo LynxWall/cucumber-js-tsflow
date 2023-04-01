@@ -8,7 +8,7 @@ import { IRuntime, IRuntimeOptions } from '@cucumber/cucumber/lib/runtime';
 import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { ICoordinatorReport, IWorkerCommand } from '@cucumber/cucumber/lib/runtime/parallel/command_types';
 import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';
-import { ITestRunStopwatch, RealTestRunStopwatch } from '@cucumber/cucumber/lib/runtime/stopwatch';
+import { IStopwatch, create } from '@cucumber/cucumber/lib/runtime/stopwatch';
 import { assembleTestCases, IAssembledTestCases } from '@cucumber/cucumber/lib/runtime/assemble_test_cases';
 import { IdGenerator } from '@cucumber/messages';
 import { ILogger } from '@cucumber/cucumber/lib/logger';
@@ -60,7 +60,7 @@ export default class Coordinator implements IRuntime {
 	private readonly cwd: string;
 	private readonly eventBroadcaster: EventEmitter;
 	private readonly eventDataCollector: EventDataCollector;
-	private readonly stopwatch: ITestRunStopwatch;
+	private readonly stopwatch: IStopwatch;
 	private onFinish: ((success: boolean) => void) | undefined;
 	private readonly options: IRuntimeOptions;
 	private readonly newId: IdGenerator.NewId;
@@ -95,7 +95,7 @@ export default class Coordinator implements IRuntime {
 		this.logger = logger;
 		this.eventBroadcaster = eventBroadcaster;
 		this.eventDataCollector = eventDataCollector;
-		this.stopwatch = new RealTestRunStopwatch();
+		this.stopwatch = create();
 		this.options = options;
 		this.newId = newId;
 		this.supportCodeLibrary = supportCodeLibrary;
@@ -276,7 +276,7 @@ export default class Coordinator implements IRuntime {
 			run: {
 				retries,
 				skip,
-				elapsed: this.stopwatch.duration().nanos(),
+				elapsed: this.stopwatch.duration(),
 				pickle,
 				testCase: testCase as messages.TestCase,
 				gherkinDocument

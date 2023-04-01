@@ -1,4 +1,4 @@
-@injection
+@injection @node
 Feature: Test Features with injection support.
 
 	Scenario: change can be seen among the shared workspace

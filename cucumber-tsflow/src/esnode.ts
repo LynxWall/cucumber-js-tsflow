@@ -1,6 +1,6 @@
 require('ts-node').register({
 	compilerOptions: {
-		module: 'commonjs',
+		module: 'es2020',
 		moduleResolution: 'node',
 		target: 'es2020',
 		strict: true,

@@ -3,7 +3,7 @@
 		"composite": true,
 		"module": "commonjs",
 		"moduleResolution": "node",
-		"target": "es2020",
+		"target": "es2022",
 		"strict": true,
 		"jsx": "preserve",
 		"skipLibCheck": true,
@@ -15,10 +15,9 @@
 		"noImplicitThis": true,
 		"inlineSourceMap": true,
 		"esModuleInterop": true,
-		"lib": ["es2020"],
+		"lib": ["es2022"],
 		"typeRoots": ["../node_modules/@types", "../node_modules/@cucumber/cucumber/lib/types", "./src/types"],
 		"outDir": "lib",
 		"rootDir": "src"
 	}
 }
-

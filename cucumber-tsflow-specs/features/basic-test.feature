@@ -1,4 +1,4 @@
-@basic
+@basic @node
 Feature: Basic Test Feature
 
 	Scenario: Basic test scenario

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.0.1]
+
+### Changed
+
+- Upgraded yarn package mmanager to version 3.5.0
+
 ## [6.0.0]
 
 ### Added
@@ -17,10 +23,10 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Changed
 
-- Upgraded to cucumber.js 9.1.0, which has [breaking changes](https://github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md#900---2023-02-27) that were implemented in version 9.0.0. 
+- Upgraded to cucumber.js 9.1.0, which has [breaking changes](https://github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md#900---2023-02-27) that were implemented in version 9.0.0.
 - Upgraded packages to latest stable versions
 - Locked package versions being used to Major/Minor
-- Updated esvue and esnode transpiler configurations to use es module (es2022) for transpilation instead of CommonJS. 
+- Updated esvue and esnode transpiler configurations to use es module (es2022) for transpilation instead of CommonJS.
 
 ## [5.1.3]
 
@@ -49,7 +55,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Added
 
-- Example on how to access the Cucumber.js World object to README 
+- Example on how to access the Cucumber.js World object to README
 
 ## [5.1.0]
 ### Fixed
@@ -90,7 +96,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 ## [5.0.4]
 ### Fixed
 - missing dependency short-uuid (had been added as devDependency)
-  
+
 ### Added
 - Note about only needing @cucumber/cucumber installed if using cucumber-js to execute tests instead of cucumber-tsflow
 

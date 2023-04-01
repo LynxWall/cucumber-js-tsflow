@@ -15,6 +15,7 @@
 		"tests",
 		"typescript",
 		"specflow",
+		"tsflow",
 		"vue3"
 	],
 	"repository": {

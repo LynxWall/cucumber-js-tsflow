@@ -2,7 +2,7 @@
 	"private": true,
 	"name": "cucumber-tsflow-vue",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "6.0.1",
+	"version": "6.0.2",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",

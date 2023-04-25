@@ -1,0 +1,10 @@
+{
+	"default": {
+		"transpiler": "esvue",
+		"paths": ["./features/**/*.feature"],
+		"require": ["./vue/src/step_definitions/**/*.ts"],
+		"format": ["behave:./cucumber_report_esvue.json", "html:./cucumber_report_esvue.html"],
+		"parallel": 1,
+		"publishQuiet": true
+	}
+}

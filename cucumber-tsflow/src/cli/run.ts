@@ -40,8 +40,6 @@ export default async function run(): Promise<void> {
 		exitCode = 2;
 	}
 
-	const registry = BindingRegistry.instance;
-
 	if (result.shouldExitImmediately) {
 		process.exit(exitCode);
 	} else {

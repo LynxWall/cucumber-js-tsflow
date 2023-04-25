@@ -35,7 +35,7 @@ export type ParsedScenario = {
 export type ParsedScenarioOutline = {
 	title: string;
 	tags: string[];
-	scenarios: ParsedScenario[];
+	exampleScenarios: ParsedScenario[];
 	steps: ParsedStep[];
 	lineNumber: number;
 	skippedViaTagFilter: boolean;

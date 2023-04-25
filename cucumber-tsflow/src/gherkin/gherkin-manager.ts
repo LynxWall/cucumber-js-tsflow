@@ -55,6 +55,29 @@ export default class GherkinManager {
 				}
 				if (featureResult) break;
 			}
+			for (const scenarioOutline of feature.scenarioOutlines) {
+				if (scenarioOutline.exampleScenarios && (scenarioOutline.exampleScenarios?.length ?? 0 > 0)) {
+					for (const step of scenarioOutline.exampleScenarios[0].steps) {
+						if (['given', 'when', 'then'].find(x => x === step.keyword)) {
+							const fileStep = fileSteps.find(s => hasMatchingStep(s.text, step.stepText));
+							if (fileStep) {
+								// if we have tags on the step binding check to see if it matches one in the
+								// current scenario, which also includes tags associated with the feature
+								if (hasStringValue(fileStep.tags)) {
+									if (scenarioOutline.tags.length > 0 && hasMatchingTags(fileStep.tags, scenarioOutline.tags)) {
+										featureResult = feature;
+									}
+								} else {
+									featureResult = feature;
+								}
+							}
+						}
+						if (featureResult) break;
+					}
+				}
+				if (featureResult) break;
+			}
+
 			if (featureResult) break;
 		}
 		return featureResult;

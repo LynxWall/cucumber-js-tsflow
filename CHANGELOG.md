@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.1.0]
+
+### Fixed
+
+- Execution and debugging of individual feature files that only contained Scenario Outlines.
+
+### Added
+
+- Scenario Outline tests.
+
 ## [6.0.2]
 
 ### Fixed
@@ -17,7 +27,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Changed
 
-- Upgraded yarn package mmanager to version 3.5.0
+- Upgraded yarn package manager to version 3.5.0
 
 ## [6.0.0]
 

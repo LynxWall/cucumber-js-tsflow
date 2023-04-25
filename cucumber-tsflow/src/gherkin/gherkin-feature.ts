@@ -220,7 +220,7 @@ export default class GherkinFeature {
 
 		return {
 			title: outlineScenario.title,
-			scenarios: this.parseScenarioOutlineExampleSets(astScenarioOutline.scenario.examples, outlineScenario),
+			exampleScenarios: this.parseScenarioOutlineExampleSets(astScenarioOutline.scenario.examples, outlineScenario),
 			tags: outlineScenario.tags,
 			steps: outlineScenario.steps,
 			lineNumber: astScenarioOutline.scenario.location.line,

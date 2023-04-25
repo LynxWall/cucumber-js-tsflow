@@ -8,7 +8,7 @@
 			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
 			"args": ["-p", "default"],
-			"cwd": "${workspaceRoot}",
+			"cwd": "${workspaceRoot}/cucumber-tsflow-specs",
 			"runtimeExecutable": null,
 			"runtimeArgs": ["--nolazy"],
 			"env": {
@@ -24,7 +24,7 @@
 			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
 			"args": ["--debug-file", "${file}", "-p", "default"],
-			"cwd": "${workspaceRoot}",
+			"cwd": "${workspaceRoot}/cucumber-tsflow-specs",
 			"runtimeExecutable": null,
 			"runtimeArgs": ["--nolazy"],
 			"env": {
@@ -35,4 +35,3 @@
 		}
 	]
 }
-

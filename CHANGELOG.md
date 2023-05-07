@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.1.1]
+
+### Fixed
+
+- Execution and debugging of step files associated with multiple feature files.
+
+### Changed
+
+- Upgraded to cucumber.js 9.1.2.
+- Performance improvements when matching a step file to features.
+
 ## [6.1.0]
 
 ### Fixed

@@ -27,6 +27,7 @@ export type ParsedScenario = {
 	title: string;
 	steps: ParsedStep[];
 	tags: string[];
+	exampleRow: any | undefined;
 	lineNumber: number;
 	skippedViaTagFilter: boolean;
 	scenarioContext: ManagedScenarioContext | undefined;

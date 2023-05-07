@@ -6,7 +6,7 @@ Feature: Basic Test Feature
 		When the condition is right
 		Then we can see the result correctly
 
-	@addNumbers
+	@addNumbers @1234
 	Scenario: Adding two numbers
 
 		Step definitions that are tagged will only be used in scenarios

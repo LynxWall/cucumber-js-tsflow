@@ -3,7 +3,7 @@
 	"name": "@lynxwall/cucumber-tsflow-workspace",
 	"description": "Workspace for cucumber-tsflow",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
-	"version": "6.1.0",
+	"version": "6.1.1",
 	"license": "MIT",
 	"workspaces": [
 		"cucumber-tsflow",
@@ -27,13 +27,12 @@
 	},
 	"devDependencies": {
 		"@jsdevtools/npm-publish": "~1.4.3",
-		"@vue/eslint-config-typescript": "~11.0.2",
+		"@vue/eslint-config-typescript": "~11.0.3",
 		"eslint": "~8.36.0",
 		"eslint-config-prettier": "~8.8.0",
 		"eslint-plugin-vue": "~9.10.0",
 		"genversion": "~3.1.1",
-		"nerdbank-gitversioning": "~3.6.79-alpha",
-		"prettier": "~2.8.7",
+		"prettier": "~2.8.8",
 		"typescript": "~4.9.5"
 	},
 	"packageManager": "yarn@3.5.0"

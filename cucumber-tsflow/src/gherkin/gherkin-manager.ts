@@ -17,12 +17,12 @@ export default class GherkinManager {
 	private features: Array<ParsedFeature> = [];
 	private gherkinFeature = new GherkinFeature();
 
-	constructor(paths: string[]) {
-		for (const path of paths) {
-			const features = this.gherkinFeature.loadFeatures(path);
+	public loadFeatures = async (paths: string[]): Promise<void> => {
+		for (let idx = 0; idx < paths.length; idx++) {
+			const features = await this.gherkinFeature.loadFeatures(paths[idx]);
 			this.features = [...this.features, ...features];
 		}
-	}
+	};
 
 	/**
 	 * Attempts to find a feature based on the steps found in
@@ -30,57 +30,61 @@ export default class GherkinManager {
 	 * @param filePath
 	 * @returns
 	 */
-	public findFeatureByStepFile = (filePath: string): ParsedFeature | undefined => {
-		let featureResult: ParsedFeature | undefined = undefined;
+	public findFeaturesByStepFile = (filePath: string): Array<ParsedFeature> => {
+		const featuresResult = new Array<ParsedFeature>();
 
 		const fileSteps = this.parseSteps(filePath);
-		for (const feature of this.features) {
-			for (const scenario of feature.scenarios) {
-				for (const step of scenario.steps) {
-					if (['given', 'when', 'then'].find(x => x === step.keyword)) {
+		for (let idx = 0; idx < this.features.length; idx++) {
+			const feature = this.features[idx];
+			for (let sIdx = 0; sIdx < feature.scenarios.length; sIdx++) {
+				const scenario = feature.scenarios[sIdx];
+				for (let stIdx = 0; stIdx < scenario.steps.length; stIdx++) {
+					const step = scenario.steps[stIdx];
+					if (['given', 'when', 'then', 'and'].find(x => x === step.keyword)) {
 						const fileStep = fileSteps.find(s => hasMatchingStep(s.text, step.stepText));
 						if (fileStep) {
 							// if we have tags on the step binding check to see if it matches one in the
 							// current scenario, which also includes tags associated with the feature
 							if (hasStringValue(fileStep.tags)) {
 								if (scenario.tags.length > 0 && hasMatchingTags(fileStep.tags, scenario.tags)) {
-									featureResult = feature;
+									featuresResult.push(feature);
 								}
 							} else {
-								featureResult = feature;
+								featuresResult.push(feature);
 							}
 						}
 					}
-					if (featureResult) break;
+					if (featuresResult.includes(feature)) break;
 				}
-				if (featureResult) break;
+				if (featuresResult.includes(feature)) break;
 			}
-			for (const scenarioOutline of feature.scenarioOutlines) {
+			for (let oIdx = 0; oIdx < feature.scenarioOutlines.length; oIdx++) {
+				const scenarioOutline = feature.scenarioOutlines[oIdx];
 				if (scenarioOutline.exampleScenarios && (scenarioOutline.exampleScenarios?.length ?? 0 > 0)) {
-					for (const step of scenarioOutline.exampleScenarios[0].steps) {
-						if (['given', 'when', 'then'].find(x => x === step.keyword)) {
+					const outlineSteps = scenarioOutline.exampleScenarios[0].steps;
+					for (let osIdx = 0; osIdx < outlineSteps.length; osIdx++) {
+						const step = outlineSteps[osIdx];
+						if (['given', 'when', 'then', 'and'].find(x => x === step.keyword)) {
 							const fileStep = fileSteps.find(s => hasMatchingStep(s.text, step.stepText));
 							if (fileStep) {
 								// if we have tags on the step binding check to see if it matches one in the
 								// current scenario, which also includes tags associated with the feature
 								if (hasStringValue(fileStep.tags)) {
 									if (scenarioOutline.tags.length > 0 && hasMatchingTags(fileStep.tags, scenarioOutline.tags)) {
-										featureResult = feature;
+										featuresResult.push(feature);
 									}
 								} else {
-									featureResult = feature;
+									featuresResult.push(feature);
 								}
 							}
 						}
-						if (featureResult) break;
+						if (featuresResult.includes(feature)) break;
 					}
+					if (featuresResult.includes(feature)) break;
 				}
-				if (featureResult) break;
 			}
-
-			if (featureResult) break;
 		}
-		return featureResult;
+		return featuresResult;
 	};
 
 	generateKey = (name: string, tags: string[]): string => {

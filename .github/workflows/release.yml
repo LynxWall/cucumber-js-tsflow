@@ -1,6 +1,5 @@
 #
-# This workflow creates a release from a specified branch. The Package version is managed
-# by Nerdbank Gitversioning based on configuration held in 'version.json' file.
+# This workflow creates a release from a specified branch.
 #
 name: Release
 on:
@@ -16,17 +15,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0 # avoid shallow clone (required by Nerbank GitVersioning)
-      - uses: actions/setup-dotnet@v1 # .NET Core is required in order to use nerdbank-gitversioning
-        with:
-          dotnet-version: 3.1.301
       - uses: actions/setup-node@v1
         with:
-          node-version: "18.x"
+          node-version: "18"
           registry-url: "https://registry.npmjs.org"
       - name: Install npm packages
         run: yarn
-      - name: Update package version
-        run: yarn set-packageversion
       - name: Build
         run: yarn build
       - name: Run specification tests

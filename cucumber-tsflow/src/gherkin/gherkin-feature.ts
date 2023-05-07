@@ -1,5 +1,6 @@
-import { readFileSync } from 'fs';
-import { sync as globSync } from 'glob';
+import * as path from 'path';
+import * as fs from 'fs';
+import { glob } from 'glob';
 import * as messages from '@cucumber/messages';
 import { getJestCucumberConfiguration, Options } from './configuration';
 import { AstBuilder, GherkinClassicTokenMatcher, Parser, Dialect, dialects } from '@cucumber/gherkin/dist/src';
@@ -8,26 +9,29 @@ import { ParsedFeature, ParsedScenario, ParsedStep, ParsedScenarioOutline } from
 export default class GherkinFeature {
 	private cwd = process.cwd();
 
-	public loadFeature = (featureFilePath: string, options?: Options) => {
+	public loadFeature = async (featureFilePath: string, addCwd: boolean, options?: Options) => {
 		try {
-			const featureText: string = readFileSync(featureFilePath, 'utf8');
+			if (addCwd) {
+				featureFilePath = path.join(this.cwd, featureFilePath);
+			}
+			const featureText: string = await fs.promises.readFile(featureFilePath, { encoding: 'utf8' });
 			return this.parseFeature(featureText, featureFilePath, options);
 		} catch (err: any) {
 			if (err.code === 'ENOENT') {
 				throw new Error(`Feature file not found (${featureFilePath})`);
+			} else {
+				throw err;
 			}
-
-			throw err;
 		}
 	};
 
-	public loadFeatures = (globPattern: string, options?: Options) => {
-		const featureFiles = globSync(globPattern);
+	public loadFeatures = async (globPattern: string, options?: Options) => {
+		const featureFiles = await glob(globPattern, { cwd: this.cwd });
 
-		return featureFiles.map(featureFilePath => this.loadFeature(featureFilePath, options));
+		return await Promise.all(featureFiles.map(featureFilePath => this.loadFeature(featureFilePath, true, options)));
 	};
 
-	private parseFeature = (featureText: string, featureFilePath: string, options?: Options): ParsedFeature => {
+	public parseFeature = (featureText: string, featureFilePath: string, options?: Options): ParsedFeature => {
 		let ast: any;
 		options = getJestCucumberConfiguration(options);
 
@@ -47,7 +51,7 @@ export default class GherkinFeature {
 
 		return {
 			title: astFeature.name,
-			featureFile: featureFilePath.replace(`${this.cwd}\\`, ''),
+			featureFile: featureFilePath,
 			scenarios: this.parseScenarios(astFeature),
 			scenarioOutlines: this.parseScenarioOutlines(astFeature),
 			tags: this.parseTags(astFeature),
@@ -146,27 +150,38 @@ export default class GherkinFeature {
 					stepArgument = (scenarioStep.stepArgument as any).map((stepArgumentRow: any) => {
 						const modifiedStepArgumentRow = { ...stepArgumentRow };
 
-						Object.keys(exampleTableRow).forEach(nextTableColumn => {
-							Object.keys(modifiedStepArgumentRow).forEach(prop => {
-								modifiedStepArgumentRow[prop] = modifiedStepArgumentRow[prop].replace(
-									new RegExp(`<${nextTableColumn}>`, 'g'),
-									exampleTableRow[nextTableColumn]
-								);
-							});
-						});
-
+						const exampleKeys = Object.keys(exampleTableRow);
+						const modifiedKeys = Object.keys(modifiedStepArgumentRow);
+						if (exampleKeys.length > 0 && modifiedKeys.length > 0) {
+							const exampleLen = exampleKeys.length;
+							const modifiedLen = modifiedKeys.length;
+							for (let exampleIdx = 0; exampleIdx < exampleLen; exampleIdx++) {
+								const nextTableColumn = exampleKeys[exampleIdx];
+								for (let modifiedIdx = 0; modifiedIdx < modifiedLen; modifiedIdx++) {
+									const prop = modifiedKeys[modifiedIdx];
+									modifiedStepArgumentRow[prop] = modifiedStepArgumentRow[prop].replace(
+										new RegExp(`<${nextTableColumn}>`, 'g'),
+										exampleTableRow[nextTableColumn]
+									);
+								}
+							}
+						}
 						return modifiedStepArgumentRow;
 					});
 				} else {
 					stepArgument = scenarioStep.stepArgument;
-
 					if (typeof scenarioStep.stepArgument === 'string' || scenarioStep.stepArgument instanceof String) {
-						Object.keys(exampleTableRow).forEach(nextTableColumn => {
-							stepArgument = (stepArgument as string).replace(
-								new RegExp(`<${nextTableColumn}>`, 'g'),
-								exampleTableRow[nextTableColumn]
-							);
-						});
+						const exampleKeys = Object.keys(exampleTableRow);
+						const exampleLen = exampleKeys.length;
+						if (exampleKeys.length > 0) {
+							for (let exampleIdx = 0; exampleIdx < exampleLen; exampleIdx++) {
+								const nextTableColumn = exampleKeys[exampleIdx];
+								stepArgument = (stepArgument as string).replace(
+									new RegExp(`<${nextTableColumn}>`, 'g'),
+									exampleTableRow[nextTableColumn]
+								);
+							}
+						}
 					}
 				}
 			}
@@ -193,7 +208,8 @@ export default class GherkinFeature {
 		return {
 			title: this.getOutlineDynamicTitle(exampleTableRow, outlineScenario.title),
 			steps: this.parseScenarioOutlineExampleSteps(exampleTableRow, outlineScenario.steps),
-			tags: Array.from(new Set<string>([...outlineScenario.tags, ...exampleSetTags]))
+			tags: Array.from(new Set<string>([...outlineScenario.tags, ...exampleSetTags])),
+			exampleRow: exampleTableRow
 		} as ParsedScenario;
 	};
 
@@ -220,8 +236,8 @@ export default class GherkinFeature {
 
 		return {
 			title: outlineScenario.title,
-			exampleScenarios: this.parseScenarioOutlineExampleSets(astScenarioOutline.scenario.examples, outlineScenario),
 			tags: outlineScenario.tags,
+			exampleScenarios: this.parseScenarioOutlineExampleSets(astScenarioOutline.scenario.examples, outlineScenario),
 			steps: outlineScenario.steps,
 			lineNumber: astScenarioOutline.scenario.location.line,
 			scenarioContext: undefined
@@ -253,12 +269,11 @@ export default class GherkinFeature {
 			return [...allBackgroundSteps, ...nextBackground.steps];
 		}, []);
 
-		astChildren.forEach(child => {
+		for (const child of astChildren) {
 			if (child.scenario) {
 				child.scenario.steps = [...backgroundSteps, ...child.scenario.steps];
 			}
-		});
-
+		}
 		return astChildren;
 	};
 

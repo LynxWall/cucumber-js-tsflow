@@ -92,17 +92,13 @@ export const loadConfiguration = async (
 
 	// check to see if a debugFile was passed in
 	if (hasStringValue(original.debugFile)) {
-		let featurePath: string | undefined = '';
-
 		// Initialize gherkin manager with path to feature files
-		const gherkin = new GherkinManager(original.paths);
-		const featureInfo = gherkin.findFeatureByStepFile(original.debugFile);
-		if (featureInfo) {
-			featurePath = featureInfo.featureFile;
-		}
-		if (hasStringValue(featurePath)) {
+		const gherkin = new GherkinManager();
+		await gherkin.loadFeatures(original.paths);
+		const features = gherkin.findFeaturesByStepFile(original.debugFile);
+		if (features.length > 0) {
 			original.paths = [];
-			original.paths.push(featurePath);
+			features.forEach(x => original.paths.push(x.featureFile));
 		} else {
 			// log a message if the feature path is not found
 			logger.warn(chalk.yellow(`\nUnable to find feature for debugFile: ${original.debugFile}`));

@@ -82,12 +82,19 @@ export const loadConfiguration = async (
 		original.formatOptions.snippetSyntax = '@lynxwall/cucumber-tsflow/lib/snippet.js';
 	}
 	// look for behave format
-	const behaveIdx = original.format.findIndex(e => e.startsWith('behave:'));
-	if (behaveIdx >= 0) {
-		original.format[behaveIdx] = original.format[behaveIdx].replace(
-			'behave',
-			'@lynxwall/cucumber-tsflow/lib/behave.js'
-		);
+	for (let idx = 0; idx < original.format.length; idx++) {
+		if (typeof original.format[idx] === 'string') {
+			const formatItem = original.format[idx] as string;
+			if (formatItem.startsWith('behave:')) {
+				original.format[idx] = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/lib/behave.js');
+			}
+		} else if (original.format[idx].length > 0) {
+			const formatItem = original.format[idx][0] as string;
+			if (formatItem.startsWith('behave')) {
+				const newVal = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/lib/behave.js');
+				original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
+			}
+		}
 	}
 
 	// check to see if a debugFile was passed in
@@ -106,8 +113,8 @@ export const loadConfiguration = async (
 		}
 	}
 
-	validateConfiguration(original);
-	const runnable = await convertConfiguration(original, env);
+	validateConfiguration(original, logger);
+	const runnable = await convertConfiguration(logger, original, env);
 	return {
 		useConfiguration: original,
 		runConfiguration: runnable

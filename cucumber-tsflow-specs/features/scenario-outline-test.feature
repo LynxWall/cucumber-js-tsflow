@@ -1,7 +1,7 @@
 @node
 Feature: Scenario Outlines
 
-	Scenario Outline: A student can choose different modules
+	Scenario Outline: A student can choose a module
 		Given A student has selected the "<module>" module
 		Then The "<module>" module is available
 		Examples:

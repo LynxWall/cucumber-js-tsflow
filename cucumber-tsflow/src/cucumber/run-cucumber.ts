@@ -58,6 +58,7 @@ export async function runCucumber(
 	if (onMessage) {
 		eventBroadcaster.on('envelope', onMessage);
 	}
+
 	// create a global instance of the message collector and bind it
 	// to the event broadcaster. This is used by cucumber and for tests
 	// that are not running in parallel.

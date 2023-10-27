@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 9.1.0+ in TypeScript 4.0+.",
-	"version": "6.1.1",
+	"version": "6.2.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./lib/index",
@@ -23,9 +23,9 @@
 		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
 	"dependencies": {
-		"@cucumber/cucumber": "~9.1.2",
+		"@cucumber/cucumber": "~9.6.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
-		"@rollup/pluginutils": "~5.0.2",
+		"@rollup/pluginutils": "~5.0.5",
 		"@types/node": "~18.15.13",
 		"chalk": "~4.1.2",
 		"esbuild": "~0.17.18",
@@ -40,19 +40,19 @@
 		"short-uuid": "~4.2.2",
 		"source-map-support": "~0.5.21",
 		"ts-node": "~10.9.1",
-		"tsconfig-paths": "~4.1.2",
-		"typescript": "~4.9.5",
+		"tsconfig-paths": "~4.2.0",
+		"typescript": "~5.2.2",
 		"underscore": "~1.13.6",
 		"verror": "~1.10.1"
 	},
 	"devDependencies": {
-		"@types/debug": "~4.1.7",
+		"@types/debug": "~4.1.10",
 		"@types/glob": "~8.1.0",
-		"@types/hash-sum": "~1.0.0",
-		"@types/lodash.merge": "~4.6.7",
-		"@types/source-map-support": "~0.5.6",
-		"@types/underscore": "~1.11.4",
-		"@types/verror": "~1.10.6"
+		"@types/hash-sum": "~1.0.1",
+		"@types/lodash.merge": "~4.6.8",
+		"@types/source-map-support": "~0.5.9",
+		"@types/underscore": "~1.11.12",
+		"@types/verror": "~1.10.8"
 	},
 	"bin": "./bin/cucumber-tsflow"
 }

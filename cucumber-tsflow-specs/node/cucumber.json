@@ -5,8 +5,7 @@
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../cucumber_report_esnode.json", "html:../cucumber_report_esnode.html"],
 		"parallel": 2,
-		"tags": "@node",
-		"publishQuiet": true
+		"tags": "@node"
 	},
 	"tsnode": {
 		"transpiler": "tsnode",
@@ -14,7 +13,6 @@
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../cucumber_report_tsnode.json", "html:../cucumber_report_tsnode.html"],
 		"parallel": 2,
-		"tags": "@node",
-		"publishQuiet": true
+		"tags": "@node"
 	}
 }

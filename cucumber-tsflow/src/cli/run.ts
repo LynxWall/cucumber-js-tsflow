@@ -35,9 +35,11 @@ export default async function run(): Promise<void> {
 		logErrorMessageAndExit(VError.fullStack(error));
 	}
 
-	let exitCode = result.success ? 0 : 1;
+	// 0 = success, 2 = failed or has pending, undefined or unknown steps
+	let exitCode = result.success ? 0 : 2;
 	if (!result.success && global.messageCollector.hasFailures()) {
-		exitCode = 2;
+		// 3 = implemented tests have failed
+		exitCode = 3;
 	}
 
 	if (result.shouldExitImmediately) {

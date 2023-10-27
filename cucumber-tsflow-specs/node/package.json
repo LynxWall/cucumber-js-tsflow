@@ -2,16 +2,16 @@
 	"private": true,
 	"name": "cucumber-tsflow-node",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "6.1.1",
+	"version": "6.2.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"scripts": {
-		"test:es": "node ../../cucumber-tsflow/bin/cucumber-tsflow -p esnode",
-		"test:ts": "node ../../cucumber-tsflow/bin/cucumber-tsflow -p tsnode"
+		"test:es": "cucumber-tsflow -p esnode",
+		"test:ts": "cucumber-tsflow -p tsnode"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",
-		"@types/chai": "~4.3.5",
-		"chai": "~4.3.7"
+		"@types/chai": "~4.3.9",
+		"chai": "~4.3.10"
 	}
 }

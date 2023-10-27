@@ -2,18 +2,23 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for CucumberJS 9.1.0+ in TypeScript 4.0+.
+Provides 'specflow' like bindings for CucumberJS 9.6.0+ in TypeScript 5.0+.
 
 Supports Vue3 files in cucumber tests.
 
 ## Fork description
+
 This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. It has had the <https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks> branch merged into it, which adds support for beforeAll and afterAll hooks.
 
 In addition, the following features have been added:
+
 - Test runner using the cucumber-tsflow command.
   - Uses underlying cucumber api to run tests.
-  - Returns three exit codes:
-    - **0** = all scenarios passing, **1** = implemented scenarios are passing but there are pending, undefined or unknown scenario steps, **2** = one or more scenario steps have failed.
+  - Returns **four** exit codes:
+    - **0** - All scenarios passing.
+    - **1** - Invalid configuration or Unhandled exception when executing tests.
+    - **2** - Implemented scenarios are passing but there are pending, undefined or unknown scenario steps.
+    - **3** - One or more scenario steps have failed.
 - Typescript and esbuild transpiler support.
 - Vue3 transformer used to handle .vue files in tests.
 - Timeout in step definitions and hooks.
@@ -28,7 +33,6 @@ In addition, the following features have been added:
 <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
 <strong><span style="color: #000">Note:</span></strong> With recent updates you must use the <strong><span style="color: #000">cucumber-tsflow</span></strong> command to execute tests. This command executes the same API calls that cucumber-js does and supports all of the options and features as cucumber-js along with new features listed above.
 </div>
-
 
 ## Quick Start
 
@@ -116,7 +120,7 @@ As mentioned previously, with recent updates cucumber-tsflow must be used to exe
 
 The following example demonstrates executing cucumber-tsflow from the command line to execute tests:
 
-```cmd
+```bash
 C:\GitHub\cucumber-js-tsflow (dev -> origin)
 λ npx cucumber-tsflow
 Loading configuration and step definitions...
@@ -147,18 +151,56 @@ You can also add a script to package.json to execute the tests as shown below:
 }
 ```
 
-With this script in place you can execute the tests using npm or yarn,
+With this script in place you can execute the tests using npm, pnpm or yarn,
 
-#### npm
+**npm**
 
 ```bash
 npm run test
 ```
 
-#### yarn
+**pnpm**
+
+```bash
+pnpm test
+```
+
+**yarn**
 
 ```bash
 yarn test
+```
+
+<div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
+<strong><span style="color: #000">Note:</span></strong> When executing cucumber-tsflow using scripts in package.json you will not have access to the exit code. This is due to the way that scripts are handled by package managers. If the command exit code is anything greater than 0, these scripts will always return 1. In other words, the commands shown above will return 0 or 1 regardless of the exit code returned from cucumber-tsflow.
+</div>
+
+### Executing Tests with Continuous Integration (CI)
+
+When executing tests as part of Continuous Integration (CI) operations you should use the following command to execute the tests from the folder that contains your cucumber and Typescript (tsconfig) configuration files that are associated with tests you want to execute. 
+
+```bash
+npx cucumber-tsflow -p default
+```
+
+This will allow you to access the exit code that is returned from cucumber-tsflow.
+
+**cmd shell**
+
+```bash
+echo %errorlevel%
+```
+
+**powershell**
+
+```bash
+echo $LastExitCode
+```
+
+**bash**
+
+```bash
+echo $?
 ```
 
 ## New Configuration options
@@ -167,18 +209,19 @@ As mentioned, when using cucumber-tsflow to execute tests all of the configurati
 
 In addition to cucumber configuration options the following two options have been added:
 
-| Name         | Type     | Repeatable | CLI Option     | Description                                                  | Default |
-| ------------ | -------- | ---------- | -------------- | ------------------------------------------------------------ | ------- |
+| Name         | Type     | Repeatable | CLI Option     | Description                                                   | Default |
+| ------------ | -------- | ---------- | -------------- | ------------------------------------------------------------- | ------- |
 | `transpiler` | `string` | No         | `--transpiler` | Name of the transpiler to use: esnode, esvue, tsnode or tsvue | esnode  |
-| `debugFile`  | `string` | No         | `--debug-file` | Path to a file with steps for debugging                      |         |
+| `debugFile`  | `string` | No         | `--debug-file` | Path to a file with steps for debugging                       |         |
 
 #### Transpiler and Vue3 supported
 
-Using TypeScript with cucumberJs requires a couple of tsconfig.json parameters as described here: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v9.1.0/docs/transpiling.md) 
+Using TypeScript with cucumberJs requires a couple of tsconfig.json parameters as described here: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v9.1.0/docs/transpiling.md)
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
 
 The following transpilers are provided:
+
 - **esnode**: Uses esbuild to transpile TypeScript code for node test execution.
 - **esvue**: Uses esbuild to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into commonJS.
   - **jsdom** is also loaded globally to support loading and testing Vue SFC components.
@@ -193,8 +236,7 @@ When configuring cucumber to execute tests you can specify which transpiler to u
 ```json
 {
 	"default": {
-		"transpiler": "esvue",
-		"publishQuiet": true
+		"transpiler": "esvue"
 	}
 }
 ```
@@ -206,8 +248,7 @@ You can also use the `requireModule` parameter to configure a transpiler. The fo
 ```json
 {
 	"default": {
-		"requireModule": ["@lynxwall/cucumber-tsflow/lib/esvue"],
-		"publishQuiet": true
+		"requireModule": ["@lynxwall/cucumber-tsflow/lib/esvue"]
 	}
 }
 ```
@@ -260,7 +301,7 @@ If using VSCode to edit your project the following launch configurations can be 
 }
 ```
 
-**Note:** When using `Debug Feature` you'll need to have the step definition file open as the current file in VSCode. The current file path is passed into the debugger as the ${file} argument for --debug-file.
+**Note:** When using `Debug Feature` you'll need to have the step definition file open as the current file in VS Code. The current file path is passed into the debugger as the ${file} argument for --debug-file.
 
 ## Bindings
 
@@ -379,7 +420,7 @@ class MySteps {
     public beforeAllScenarios(): void {
         ...
     }
- 
+
     @before("@requireTempDir")
     public async beforeAllScenariosRequiringTempDirectory(): Promise<void> {
         let tempDirInfo = await this.createTemporaryDirectory();
@@ -433,7 +474,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 
 tsflow currently doesn't have a way to define a global default step timeout,
 
-but it can be easily done through CucumberJS ```setDefaultTimeout``` function.
+but it can be easily done through CucumberJS `setDefaultTimeout` function.
 
 ### Passing WrapperOptions
 
@@ -444,7 +485,7 @@ In step definition, we can pass additional wrapper options to cucumber js. For e
 @given('I perform a search using the value {string}', undefined, undefined, {retry: 2})
 public givenAValueBasedSearch(searchValue: string): void {
     ...
-    // this step will be retried by cucumber js    
+    // this step will be retried by cucumber js
     ...
 }
 
@@ -465,8 +506,7 @@ The following example shows how to configure the behave formatter in cucumber.js
 	"default": {
 		"format": [
 			"behave:cucumber_report.json"
-		],
-		"publishQuiet": true
+		]
 	}
 }
 ```
@@ -479,7 +519,7 @@ Like 'specflow', cucumber-tsflow supports a simple dependency injection framewor
 
 To use context injection:
 
-- Create simple classes representing the shared data (they *must* have default constructors)
+- Create simple classes representing the shared data (they _must_ have default constructors)
 - Define a constructor on the 'binding' classes that will require the shared data that accepts the context objects as parameters
 - Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class
 
@@ -520,7 +560,7 @@ export class Workspace {
 }
 ```
 
-Next you'll need to initialize the world property in a ***@before*** hook so that it's available to all steps in a scenario. My approach is to add a new file to the steps folder that is dedicated to initializing the class (Workspace in this example) in a ***@before*** hook.
+Next you'll need to initialize the world property in a **_@before_** hook so that it's available to all steps in a scenario. My approach is to add a new file to the steps folder that is dedicated to initializing the class (Workspace in this example) in a **_@before_** hook.
 
 For this example I've added a file named world-context.ts with the following content:
 
@@ -542,6 +582,6 @@ export default class WorldContext {
 }
 ```
 
-As described in the section on Hooks, the ***beforeScenario*** function will be executed before each scenario. We're accessing a member property that was bound to the class instance during creation of each step class, and initializing the world property.
+As described in the section on Hooks, the **_beforeScenario_** function will be executed before each scenario. We're accessing a member property that was bound to the class instance during creation of each step class, and initializing the world property.
 
 **NOTE:** Examples of this and other tests can be found in the GitHub repository.

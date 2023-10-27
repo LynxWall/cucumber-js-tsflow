@@ -119,6 +119,8 @@ export default class TestSteps {
 		expect(this.beforeStepIsCalled).to.be.true;
 		this.stepIsCalled = true;
 		this.thenIsCalled = true;
+		// throw 'error';
+		// return 'pending';
 	}
 
 	@given('I pass {boolean} into a step')

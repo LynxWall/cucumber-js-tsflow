@@ -17,7 +17,6 @@ import { ConsoleLogger } from '@cucumber/cucumber/lib/api/console_logger';
 import { Console } from 'console';
 
 export interface ICliRunResult {
-	shouldAdvertisePublish: boolean;
 	shouldExitImmediately: boolean;
 	success: boolean;
 }
@@ -56,7 +55,6 @@ export default class Cli {
 		if (options.i18nLanguages) {
 			(this.stdout as any).write(getLanguages());
 			return {
-				shouldAdvertisePublish: false,
 				shouldExitImmediately: true,
 				success: true
 			};
@@ -64,7 +62,6 @@ export default class Cli {
 		if (options.i18nKeywords) {
 			(this.stdout as any).write(getKeywords(options.i18nKeywords));
 			return {
-				shouldAdvertisePublish: false,
 				shouldExitImmediately: true,
 				success: true
 			};
@@ -120,10 +117,6 @@ export default class Cli {
 		// now we can run cucumber
 		const { success } = await runCucumber(runOptions, environment);
 		return {
-			shouldAdvertisePublish:
-				!runConfiguration.formats.publish &&
-				!configuration.publishQuiet &&
-				!isTruthyString(this.env.CUCUMBER_PUBLISH_QUIET),
 			shouldExitImmediately: configuration.forceExit,
 			success
 		};

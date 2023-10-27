@@ -12,7 +12,7 @@ export default class ScenarioOutlineTest {
 		this.currentModule = module;
 	}
 	@then('The {string} module is available')
-	theCourseScheduleModuleIsAvailable(module: string): any {
+	theStringModuleIsAvailable(module: string): any {
 		expect(module).to.equal(this.currentModule);
 	}
 

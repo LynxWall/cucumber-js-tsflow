@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.2.1]
+
+### Fixed
+
+- Added commander@10.0.1 as a dependency to resolve issues with older versions being used based on other dependencies.
+
 ## [6.2.0]
 
 ### Changed

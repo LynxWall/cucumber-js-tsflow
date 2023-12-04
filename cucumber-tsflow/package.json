@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 9.1.0+ in TypeScript 4.0+.",
-	"version": "6.2.0",
+	"version": "6.2.1",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./lib/index",
@@ -28,6 +28,7 @@
 		"@rollup/pluginutils": "~5.0.5",
 		"@types/node": "~18.15.13",
 		"chalk": "~4.1.2",
+		"commander": "^10.0.1",
 		"esbuild": "~0.17.18",
 		"glob": "~9.3.5",
 		"hash-sum": "~2.0.0",

@@ -3,7 +3,11 @@
 		"transpiler": "esnode",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
-		"format": ["behave:../cucumber_report_esnode.json", "html:../cucumber_report_esnode.html"],
+		"format": [
+			"behave:../cucumber_report_esnode.json",
+			"html:../cucumber_report_esnode.html",
+			"junitbamboo:../cucumber_report_esnode.xml"
+		],
 		"parallel": 2,
 		"tags": "@node"
 	},
@@ -11,7 +15,11 @@
 		"transpiler": "tsnode",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
-		"format": ["behave:../cucumber_report_tsnode.json", "html:../cucumber_report_tsnode.html"],
+		"format": [
+			"behave:../cucumber_report_tsnode.json",
+			"html:../cucumber_report_tsnode.html",
+			"junitbamboo:../cucumber_report_tsnode.xml"
+		],
 		"parallel": 2,
 		"tags": "@node"
 	}

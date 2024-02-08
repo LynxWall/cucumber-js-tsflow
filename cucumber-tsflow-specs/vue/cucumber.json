@@ -3,14 +3,22 @@
 		"transpiler": "esvue",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
-		"format": [["behave", "../cucumber_report_esvue.json"], "html:../cucumber_report_esvue.html"],
+		"format": [
+			["behave", "../cucumber_report_esvue.json"],
+			"html:../cucumber_report_esvue.html",
+			"junitbamboo:../cucumber_report_esvue.xml"
+		],
 		"parallel": 1
 	},
 	"tsvue": {
 		"transpiler": "tsvue",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
-		"format": ["behave:../cucumber_report_tsvue.json", "html:../cucumber_report_tsvue.html"],
+		"format": [
+			"behave:../cucumber_report_tsvue.json",
+			"html:../cucumber_report_tsvue.html",
+			"junitbamboo:../cucumber_report_tsvue.xml"
+		],
 		"parallel": 2
 	}
 }

@@ -97,6 +97,22 @@ export const loadConfiguration = async (
 		}
 	}
 
+	// look for junitbamboo format
+	for (let idx = 0; idx < original.format.length; idx++) {
+		if (typeof original.format[idx] === 'string') {
+			const formatItem = original.format[idx] as string;
+			if (formatItem.startsWith('junitbamboo:')) {
+				original.format[idx] = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/lib/junitbamboo.js');
+			}
+		} else if (original.format[idx].length > 0) {
+			const formatItem = original.format[idx][0] as string;
+			if (formatItem.startsWith('junitbamboo')) {
+				const newVal = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/lib/junitbamboo.js');
+				original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
+			}
+		}
+	}
+
 	// check to see if a debugFile was passed in
 	if (hasStringValue(original.debugFile)) {
 		// Initialize gherkin manager with path to feature files

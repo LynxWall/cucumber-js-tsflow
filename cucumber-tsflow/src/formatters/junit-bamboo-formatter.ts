@@ -240,7 +240,11 @@ export default class JunitBambooFormatter extends Formatter {
 				name: test.name,
 				time: test.time
 			});
-			if (test.result.status === TestStepResultStatus.SKIPPED) {
+			if (
+				test.result.status === TestStepResultStatus.SKIPPED ||
+				test.result.status === TestStepResultStatus.PENDING ||
+				test.result.status === TestStepResultStatus.UNDEFINED
+			) {
 				xmlTestCase.ele('skipped');
 			} else if (test.result.status !== TestStepResultStatus.PASSED) {
 				const xmlFailure = xmlTestCase.ele('failure', {

@@ -177,7 +177,7 @@ yarn test
 
 ### Executing Tests with Continuous Integration (CI)
 
-When executing tests as part of Continuous Integration (CI) operations you should use the following command to execute the tests from the folder that contains your cucumber and Typescript (tsconfig) configuration files that are associated with tests you want to execute. 
+When executing tests as part of Continuous Integration (CI) operations you should use the following command to execute the tests from the folder that contains your cucumber and Typescript (tsconfig) configuration files that are associated with tests you want to execute.
 
 ```bash
 npx cucumber-tsflow -p default
@@ -491,7 +491,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 
 ```
 
-### Using behave-json-formatter and tsflow-snippet-syntax
+### Using different report formatters and tsflow-snippet-syntax
 
 Changing the formatter used for generating json along with changing the Snippet Syntax can be done through the CucumberJS configuration file.
 
@@ -506,6 +506,20 @@ The following example shows how to configure the behave formatter in cucumber.js
 	"default": {
 		"format": [
 			"behave:cucumber_report.json"
+		]
+	}
+}
+```
+
+#### Using the bamboo junit formatter
+
+The following example shows how to configure the bamboo junit formatter in cucumber.json. This differs from the standard cucumber junit formatter in that "pending" and "undefined" tests do not get classified as failures, instead they are classified as skips
+
+```javascript
+{
+	"default": {
+		"format": [
+			"junitbamboo:cucumber_report.xml"
 		]
 	}
 }

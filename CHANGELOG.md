@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.3.0]
+
+### Changed
+
+- Disabled the loading of `<style>` blocks when compiling Vue SFC components.
+
+### Added
+
+- New configuration setting named `enableVueStyle` that allows users to enable the loading of Vue `<style>` blocks when testing against compiled library components.
+
 ## [6.2.4]
 
 ### Fixed

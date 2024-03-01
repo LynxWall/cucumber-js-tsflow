@@ -21,6 +21,8 @@ In addition, the following features have been added:
     - **3** - One or more scenario steps have failed.
 - Typescript and esbuild transpiler support.
 - Vue3 transformer used to handle .vue files in tests.
+
+  **NOTE**: Supports browserless unit testing of Vue SFC components by loading only the `<template>` and `<script>` blocks. Vue SFC `<style>` blocks are disabled by default. However, when testing Vue components from a compiled library, styles can be enabled with the `enableVueStyle` configuration setting.
 - Timeout in step definitions and hooks.
 - WrapperOptions in step definitions.
 - BeforeStep and AfterStep Hooks.
@@ -209,16 +211,19 @@ As mentioned, when using cucumber-tsflow to execute tests all of the configurati
 
 In addition to cucumber configuration options the following two options have been added:
 
-| Name         | Type     | Repeatable | CLI Option     | Description                                                   | Default |
-| ------------ | -------- | ---------- | -------------- | ------------------------------------------------------------- | ------- |
-| `transpiler` | `string` | No         | `--transpiler` | Name of the transpiler to use: esnode, esvue, tsnode or tsvue | esnode  |
-| `debugFile`  | `string` | No         | `--debug-file` | Path to a file with steps for debugging                       |         |
+| Name             | Type      | Repeatable | CLI Option           | Description                                                  | Default |
+| ---------------- | --------- | ---------- | -------------------- | ------------------------------------------------------------ | ------- |
+| `transpiler`     | `string`  | No         | `--transpiler`       | Name of the transpiler to use: esnode, esvue, tsnode or tsvue | esnode  |
+| `debugFile`      | `string`  | No         | `--debug-file`       | Path to a file with steps for debugging                      |         |
+| `enableVueStyle` | `boolean` | No         | `--enable-vue-style` | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 
 #### Transpiler and Vue3 supported
 
 Using TypeScript with cucumberJs requires a couple of tsconfig.json parameters as described here: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v9.1.0/docs/transpiling.md)
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
+
+**NOTE**: By default, the `<style>` block in Vue SFC components will not be loaded when .vue files are transformed. However, that behavior can be overridden when testing compiled Vue components from a library using the `enableVueStyle` configuration setting.
 
 The following transpilers are provided:
 

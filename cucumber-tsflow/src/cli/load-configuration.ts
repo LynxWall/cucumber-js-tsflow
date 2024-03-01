@@ -129,6 +129,12 @@ export const loadConfiguration = async (
 		}
 	}
 
+	// check to see if enable-vue-style was set
+	// if not, default it to false
+	if (original.enableVueStyle === null || original.enableVueStyle === undefined) {
+		original.enableVueStyle = false;
+	}
+
 	validateConfiguration(original, logger);
 	const runnable = await convertConfiguration(logger, original, env);
 	return {

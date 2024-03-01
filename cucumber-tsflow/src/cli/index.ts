@@ -1,5 +1,4 @@
 import { IdGenerator } from '@cucumber/messages';
-import { isTruthyString } from '@cucumber/cucumber/lib/configuration/index';
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter';
 import { IRunOptions } from '@cucumber/cucumber/lib/api/index';
 import { runCucumber } from '../cucumber/run-cucumber';
@@ -86,6 +85,9 @@ export default class Cli {
 			},
 			environment
 		);
+		// set our global parameter used by the Vue transpiler
+		// to determine if Vue Style Blocks should be enabled
+		global.enableVueStyle = configuration.enableVueStyle;
 
 		// get run options
 		const { cwd } = mergeEnvironment(environment);

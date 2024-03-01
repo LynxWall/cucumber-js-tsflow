@@ -47,7 +47,11 @@ export const transformMain = (
 		attachedProps.push(ssr ? ['ssrRender', '_sfc_ssrRender'] : ['render', '_sfc_render']);
 	}
 	// styles
-	const stylesCode = genStyleCode(descriptor, transformerContext, asCustomElement, attachedProps);
+	// Vue styles are disabled by default. However, user could enable them
+	// when importing from compiled libraries
+	const stylesCode = global.enableVueStyle
+		? genStyleCode(descriptor, transformerContext, asCustomElement, attachedProps)
+		: '';
 
 	// custom blocks
 	const customBlocksCode = genCustomBlockCode(descriptor, transformerContext);

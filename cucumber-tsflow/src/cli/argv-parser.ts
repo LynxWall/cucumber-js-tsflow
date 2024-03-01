@@ -16,6 +16,7 @@ export interface IParsedArgvOptions {
 export interface ITsflowConfiguration extends IConfiguration {
 	debugFile: string;
 	transpiler: string;
+	enableVueStyle: boolean;
 }
 
 export interface IParsedArgv {
@@ -79,6 +80,7 @@ const ArgvParser = {
 			.option('-c, --config <PATH>', 'specify configuration file')
 			.option('-d, --dry-run', 'invoke formatters without executing steps')
 			.option('--debug-file <STRING>', 'path to a file with steps for debugging')
+			.option('--enable-vue-style', 'Enable Vue Style block when compiling Vue SFC. Defaults to false.')
 			.option(
 				'--exit, --force-exit',
 				'force shutdown of the event loop when the test run has finished: cucumber will call process.exit'

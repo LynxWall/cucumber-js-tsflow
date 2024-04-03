@@ -1,13 +1,13 @@
 import { binding, when } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
-import { Workspace } from './workspace';
+import { ScenarioContext } from '../fixtures/scenario-context';
 
-@binding([Workspace])
+@binding([ScenarioContext])
 export default class InjectionTestSteps2 {
-	constructor(private workspace: Workspace) {}
+	constructor(private context: ScenarioContext) {}
 
 	@when('I can see changed state in another step definition class')
 	whenIChangeTheWorkspaceInOneStep() {
-		expect(this.workspace.someValue).to.equal('value changed');
+		expect(this.context.someValue).to.equal('value changed');
 	}
 }

@@ -1,6 +1,6 @@
 import { World } from '@cucumber/cucumber';
 
-export class Workspace {
+export class ScenarioContext {
 	public world!: World;
 	public someValue = '';
 }

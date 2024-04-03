@@ -1,8 +1,8 @@
 import { binding, given, when, then } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
-import { Workspace } from './workspace';
+import { ScenarioContext } from '../fixtures/scenario-context';
 
-@binding([Workspace])
+@binding([ScenarioContext])
 export default class BackgroundTest {
 	private navigateToLogin = false;
 	private submitUserName = false;

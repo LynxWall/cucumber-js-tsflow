@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.4.0]
+
+### Changed
+
+- Context objects used with Context Injection can now define a constructor that takes a World object parameter. ex: `constructor(worldObj: World)`
+
 ## [6.3.0]
 
 ### Changed

@@ -2,6 +2,7 @@ import _ from 'underscore';
 
 import { ScenarioContext, ScenarioInfo } from '../types/scenario-context';
 import { ContextType } from '../types/types';
+import { World } from '@cucumber/cucumber';
 
 /**
  * Represents a [[ScenarioContext]] implementation that manages a collection of context objects that
@@ -23,9 +24,9 @@ export class ManagedScenarioContext implements ScenarioContext {
 		return this._scenarioInfo;
 	}
 
-	public getOrActivateBindingClass(targetPrototype: any, contextTypes: ContextType[]): any {
+	public getOrActivateBindingClass(targetPrototype: any, contextTypes: ContextType[], worldObj: World): any {
 		return this.getOrActivateObject(targetPrototype, () => {
-			return this.activateBindingClass(targetPrototype, contextTypes);
+			return this.activateBindingClass(targetPrototype, contextTypes, worldObj);
 		});
 	}
 
@@ -37,7 +38,7 @@ export class ManagedScenarioContext implements ScenarioContext {
 		});
 	}
 
-	private activateBindingClass(targetPrototype: any, contextTypes: ContextType[]): any {
+	private activateBindingClass(targetPrototype: any, contextTypes: ContextType[], worldObj: World): any {
 		const invokeBindingConstructor = (args: any[]): any => {
 			switch (contextTypes.length) {
 				case 0:
@@ -104,22 +105,26 @@ export class ManagedScenarioContext implements ScenarioContext {
 		};
 
 		const contextObjects = _.map(contextTypes, contextType =>
-			this.getOrActivateObject(contextType.prototype, () => {
-				return new contextType();
-			})
+			this.getOrActivateObject(
+				contextType.prototype,
+				(worldObj?: any) => {
+					return new contextType(worldObj);
+				},
+				worldObj
+			)
 		);
 
 		return invokeBindingConstructor(contextObjects);
 	}
 
-	private getOrActivateObject(targetPrototype: any, activatorFunc: (...args: any[]) => any): any {
+	private getOrActivateObject(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
 		let activeObject = this._activeObjects.get(targetPrototype);
 
 		if (activeObject) {
 			return activeObject;
 		}
 
-		activeObject = activatorFunc();
+		activeObject = activatorFunc(optional);
 
 		this._activeObjects.set(targetPrototype, activeObject);
 

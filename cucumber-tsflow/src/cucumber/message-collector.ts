@@ -5,6 +5,7 @@ import { ManagedScenarioContext } from './managed-scenario-context';
 import { hasMatchingStep, hasMatchingTags } from './utils';
 import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
+import EventEmitter from 'events';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -47,6 +48,12 @@ export default class MessageCollector {
 	private testCaseAttemptDataMap: Record<string, ITestCaseAttemptData> = {};
 	readonly undefinedParameterTypes: messages.UndefinedParameterType[] = [];
 	private testCaseRunningMap: Record<string, messages.TestCaseStarted> = {};
+
+	private collectorEvents = new EventEmitter();
+
+	onTestCaseEnd(Handler: (testCaseFinished: messages.TestCaseFinished) => void): void {
+		this.collectorEvents.on('testCaseEnd', Handler);
+	}
 
 	// Used during parallel execution to add the current pickle and testCase
 	// to a new Worker instance of the MessageCollector

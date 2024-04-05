@@ -313,7 +313,7 @@ If using VSCode to edit your project the following launch configurations can be 
 Bindings provide the automation that connects a specification step in a Gherkin feature file to some code that
 executes for that step. When using Cucumber with TypeScript you can define this automation using a 'binding' class:
 
-```javascript
+```typescript
 import { binding } from "@lynxwall/cucumber-tsflow";
 
 @binding()
@@ -327,7 +327,7 @@ export default class MySteps {
 Step definitions can be bound to automation code in a 'binding' class by implementing a public function that is
 bound with a 'given', 'when' or 'then' binding decorator:
 
-```javascript
+```typescript
 import { binding, given, when, then } from "@lynxwall/cucumber-tsflow";
 
 @binding()
@@ -362,7 +362,7 @@ Scenario: Boolean type supported
 
 The associated step definition replaces `true` in this scenario with a `{boolean}` expression as shown below:
 
-```javascript
+```typescript
 @given('I pass {boolean} into a step')
 iPassbooleanIntoAStep(boolean: boolean): any {
 	this.boolValue = boolean;
@@ -386,7 +386,7 @@ More information on Cucumber Expressions and Custom Parameter Types can be found
 Step definitions can be conditionally selected for execution based on the tags of the scenario by supplying tags when using the binding
 decorators:
 
-```javascript
+```typescript
 @given('I perform a search using the value {string}')
 public givenAValueBasedSearch(searchValue: string): void {
     ...
@@ -506,7 +506,7 @@ If it doesn't already exist, create a file named cucumber.json at the root of yo
 
 The following example shows how to configure the behave formatter in cucumber.json. The tsflow-snippet-syntax module is configured as the default snippet syntax and does not require configuration. However, you can override the snippet syntax as documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/custom_snippet_syntaxes.md>
 
-```javascript
+```typescript
 {
 	"default": {
 		"format": [
@@ -520,7 +520,7 @@ The following example shows how to configure the behave formatter in cucumber.js
 
 The following example shows how to configure the bamboo junit formatter in cucumber.json. This differs from the standard cucumber junit formatter in that "pending" and "undefined" tests do not get classified as failures, instead they are classified as skips
 
-```javascript
+```typescript
 {
 	"default": {
 		"format": [
@@ -530,73 +530,133 @@ The following example shows how to configure the bamboo junit formatter in cucum
 }
 ```
 
-## Sharing Data between Bindings
+## Sharing Data between Steps and Bindings
 
 ### Context Injection
 
-Like 'specflow', cucumber-tsflow supports a simple dependency injection framework that will instantitate and inject class instances into 'binding' classes for each execuing scenario.
+Like 'specflow', cucumber-tsflow supports a simple dependency injection framework that will instantiate and inject class instances into 'binding' classes for each executing scenario.
 
-To use context injection:
+Each scenario in a feature will get a new instance of the *Context* object when the steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the *Context* object created for the scenario.
 
-- Create simple classes representing the shared data (they _must_ have default constructors)
-- Define a constructor on the 'binding' classes that will require the shared data that accepts the context objects as parameters
-- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class
+**New in version 6.4.0:**
 
-```javascript
+- The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
+
+**To use context injection:**
+
+- Create a simple *Context* class representing the shared data. The class can have no constructor or a default empty constructor. However, to access the Cucumber World object you should define a constructor as shown in the example below.
+
+  ```typescript
+  import { World } from '@cucumber/cucumber';
+  
+  export class ScenarioContext {
+  	public world: World;
+  	public someValue = '';
+  
+  	constructor(worldObj: World) {
+  		this.world = worldObj;
+  	}
+  
+  	public dispose(): void {
+  		this.someValue = '';
+  	}
+  }
+  ```
+
+- Define a constructor on the `@binding` class with steps that need access to the shared data that accepts one or more context objects as parameters based on initialization of the `@binding` decorator.
+
+- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class. You can include up to nine separate *Context* objects.
+
+```typescript
 import { binding, given, when } from '@lynxwall/cucumber-tsflow';
-import { Workspace } from './workspace';
+import { ScenarioContext } from '../fixtures/scenario-context';
 import { expect } from 'chai';
 
-@binding([Workspace])
+@binding([ScenarioContext])
 export default class InjectionTestSteps1 {
-	constructor(private workspace: Workspace) {}
+	constructor(private context: ScenarioContext) {}
 
 	@given('The Workspace is available and valid')
 	theWorkspaceIsAvailableAndValid() {
-		expect(this.workspace).not.to.be.undefined;
-		expect(this.workspace.world).not.to.be.undefined;
+		expect(this.context).not.to.be.undefined;
+		expect(this.context.world).not.to.be.undefined;
 	}
 
 	@when('I change the workspace in one step definition class')
 	whenIChangeTheWorkspaceInOneStep() {
-		this.workspace.someValue = 'value changed';
+		this.context.someValue = 'value changed';
 	}
 }
 ```
 
 ### Access to Cucumber.js World object
 
-The context object that you inject can also be configured to access the [World](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/world.md) object from Cucumber.js, which provides a method for adding attachments, a method for logging information from hooks/steps and an object of parameters passed in via configuration.
+The context object that you inject can also be configured to access the [World](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/world.md) object from Cucumber.js, which provides the following:
 
-The first step is to define a world property on the class that you're injecting:
+- `attach`: a method for adding [attachments](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/attachments.md) to hooks/steps
+- `log`: a method for [logging](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/attachments.md#logging) information from hooks/steps
+- `parameters`: an object of parameters passed in via configuration
 
-```javascript
+Starting with version **6.4.0** the Cucumber World object is now passed into a *Context* class as a constructor parameter as shown below:
+
+```typescript
 import { World } from '@cucumber/cucumber';
 
-export class Workspace {
+export class ScenarioContext {
+	public world: World;
+	public someValue = '';
+
+	constructor(worldObj: World) {
+		this.world = worldObj;
+	}
+
+	public dispose(): void {
+		this.someValue = '';
+	}
+}
+```
+
+In the example shown above, the world object instance passed in to the constructor is saved to a variable in the `ScenarioContext` class. This class is automatically initialized and injected into the constructor of a binding class when tests are executed. As a result, the world object, with access to world context parameters, logging and attachments, is available to most hooks and all steps within a test.
+
+**NOTE:** `BeforeAll` and `AfterAll` hooks do not have access to the scenario context.
+
+*Context* classes, as demonstrated by the `ScenarioContext` example above, also support a `dispose()` function that is called when the execution of a test scenario is complete. 
+
+With instance initialization, and dispose functionality, you have the ability to initialize common support operations and data needed for scenario test runs, and cleanup any resources when scenario test runs are complete.
+
+### Access to the World object without using a constructor
+
+**NOTE:** This approach of accessing the Cucumber World object is still supported. However, the ability to access the world object during *Context* initialization provides much better control over when context data is initialized versus relying on execution of a hook. As a result, using a `@before` hook as shown below is not recommended.
+
+With this approach, you would define a world property on simple *Context* class that you're injecting:
+
+```typescript
+import { World } from '@cucumber/cucumber';
+
+export class ScenarioContext {
 	public world!: World;
 	public someValue = '';
 }
 ```
 
-Next you'll need to initialize the world property in a **_@before_** hook so that it's available to all steps in a scenario. My approach is to add a new file to the steps folder that is dedicated to initializing the class (Workspace in this example) in a **_@before_** hook.
+Next you'll need to initialize the world property in a `@before` hook so that it's available to all steps in a scenario. This is done by adding a new file to the steps folder that is dedicated to initializing the class (`ScenarioContext` in this example) in a `@before` hook.
 
 For this example I've added a file named world-context.ts with the following content:
 
-```javascript
+```typescript
 import { binding, before } from '@lynxwall/cucumber-tsflow';
-import { Workspace } from './workspace';
+import { ScenarioContext } from '../fixtures/scenario-context';
 import { World } from '@cucumber/cucumber';
 
-@binding([Workspace])
+@binding([ScenarioContext])
 export default class WorldContext {
 	_worldObj?: World;
 
-	constructor(private workspace: Workspace) {}
+	constructor(private context: ScenarioContext) {}
 
 	@before()
 	beforeScenario() {
-		this.workspace.world = this._worldObj as World;
+		this.context.world = this._worldObj as World;
 	}
 }
 ```

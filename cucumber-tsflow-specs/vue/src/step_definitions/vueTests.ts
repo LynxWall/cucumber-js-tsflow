@@ -41,8 +41,7 @@ export default class VueTestSteps {
 	}
 	@when('The Async component is mounted')
 	async theAsyncComponentIsMounted(): Promise<any> {
-		const promise = new Promise(_resolve => (this.resolve = _resolve));
-		// @ts-expect-error
+		const promise = new Promise<void>(_resolve => (this.resolve = _resolve));
 		this.asyncWrapper = mount(AsyncWrapper, {
 			props: {
 				promise

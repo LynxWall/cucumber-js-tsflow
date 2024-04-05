@@ -1,15 +1,15 @@
 import { binding, before } from '@lynxwall/cucumber-tsflow';
-import { Workspace } from './workspace';
+import { ScenarioContext } from '../fixtures/scenario-context';
 import { World } from '@cucumber/cucumber';
 
-@binding([Workspace])
+@binding([ScenarioContext])
 export default class WorldContext {
 	_worldObj?: World;
 
-	constructor(private workspace: Workspace) {}
+	constructor(private context: ScenarioContext) {}
 
 	@before()
 	beforeScenario() {
-		this.workspace.world = this._worldObj as World;
+		this.context.world = this._worldObj as World;
 	}
 }

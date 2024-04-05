@@ -117,7 +117,8 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 			const contextTypes = bindingRegistry.getContextTypesForTarget(matchingStepBindings[0].targetPrototype);
 			const bindingObject = scenarioContext.getOrActivateBindingClass(
 				matchingStepBindings[0].targetPrototype,
-				contextTypes
+				contextTypes,
+				this
 			);
 			bindingObject._worldObj = this;
 
@@ -165,7 +166,11 @@ function bindHook(stepBinding: StepBinding): void {
 					const scenarioContext = global.messageCollector.getHookScenarioContext(arg);
 					if (scenarioContext) {
 						const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
-						const bindingObject = scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes);
+						const bindingObject = scenarioContext.getOrActivateBindingClass(
+							stepBinding.targetPrototype,
+							contextTypes,
+							this
+						);
 						bindingObject._worldObj = this;
 						return (bindingObject[stepBinding.targetPropertyKey] as () => void).apply(bindingObject, arguments as any);
 					} else {

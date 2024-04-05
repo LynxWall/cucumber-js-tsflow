@@ -1,3 +1,5 @@
+import { World } from '@cucumber/cucumber';
+
 /**
  * A string representation of a [[RegExp]] that defines a Cucumber step pattern.
  */
@@ -16,7 +18,7 @@ export interface ContextType {
 	/**
 	 * A default constructor.
 	 */
-	new (): any;
+	new (worldObj: World): any;
 }
 
 export type TypeDecorator = <T>(target: { new (...args: any[]): T }) => void;

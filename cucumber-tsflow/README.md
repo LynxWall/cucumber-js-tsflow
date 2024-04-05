@@ -536,15 +536,15 @@ The following example shows how to configure the bamboo junit formatter in cucum
 
 Like 'specflow', cucumber-tsflow supports a simple dependency injection framework that will instantiate and inject class instances into 'binding' classes for each executing scenario.
 
-Each scenario in a feature will get a new instance of the *Context* object when the test steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the *Context* object created for the scenario.
+Each scenario in a feature will get a new instance of the *Context* object when the steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the *Context* object created for the scenario.
 
 **New in version 6.4.0:**
 
-- The current World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
+- The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
 
 **To use context injection:**
 
-- Create a simple *Context* class representing the shared data. The class can have a no constructor or a default empty constructor. However, to access the Cucumber World object you should define a constructor as shown in the example below.
+- Create a simple *Context* class representing the shared data. The class can have no constructor or a default empty constructor. However, to access the Cucumber World object you should define a constructor as shown in the example below.
 
   ```typescript
   import { World } from '@cucumber/cucumber';

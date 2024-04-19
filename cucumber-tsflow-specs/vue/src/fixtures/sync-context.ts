@@ -1,6 +1,6 @@
 import { World } from '@cucumber/cucumber';
 
-export class ScenarioContext {
+export class SyncContext {
 	public world: World;
 	public someValue = '';
 	private id: string = '';
@@ -9,17 +9,13 @@ export class ScenarioContext {
 		this.world = worldObj;
 	}
 
-	public async initialize(): Promise<void> {
+	public initialize(): void {
 		this.id = this.makeid(5);
-		await this.logTest(`Async init: ${this.id}`);
+		console.log(`Sync init: ${this.id}`);
 	}
 
-	public async dispose(): Promise<void> {
-		await this.logTest(`Async dispose: ${this.id}`);
-	}
-
-	async logTest(text: string): Promise<void> {
-		await Promise.resolve(console.log(text));
+	public dispose(): void {
+		console.log(`Sync dispose: ${this.id}`);
 	}
 
 	makeid(length: number) {

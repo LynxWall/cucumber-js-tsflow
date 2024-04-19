@@ -6,7 +6,7 @@ import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_libra
 import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { makeRunTestRunHooks, RunsTestRunHooks } from '@cucumber/cucumber/lib/runtime/run_test_run_hooks';
 import { create } from '@cucumber/cucumber/lib/runtime/stopwatch';
-import TestCaseRunner from '@cucumber/cucumber/lib/runtime/test_case_runner';
+import TestCaseRunner from '../test-case-runner';
 import {
 	ICoordinatorReport,
 	IWorkerCommand,

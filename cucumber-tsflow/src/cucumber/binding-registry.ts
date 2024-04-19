@@ -205,6 +205,22 @@ export class BindingRegistry {
 		return this.mapTagNamesToStepBindings(['*'], tagMap);
 	}
 
+	public getStepBindingByCucumberKey(cucumberKey: string): StepBinding | undefined {
+		let result: StepBinding | undefined = undefined;
+		for (const [_, binding] of this._targetBindings) {
+			for (const stepBinding of binding.stepBindings) {
+				if (stepBinding.cucumberKey === cucumberKey) {
+					result = stepBinding;
+					break;
+				}
+			}
+			if (result) {
+				break;
+			}
+		}
+		return result;
+	}
+
 	/**
 	 * Updates the SupportCodeLibrary from Cucumber with
 	 * callsite information from tsflow bindings

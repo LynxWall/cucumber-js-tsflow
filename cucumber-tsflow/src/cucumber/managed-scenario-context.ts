@@ -4,13 +4,23 @@ import { ScenarioContext, ScenarioInfo } from '../types/scenario-context';
 import { ContextType } from '../types/types';
 import { World } from '@cucumber/cucumber';
 
+class ActiveInfo {
+	constructor(obj: any, isContext: boolean = false) {
+		this.activeObject = obj;
+		this.isContext = isContext;
+	}
+	activeObject: any;
+	isContext: boolean;
+	initialized: boolean = false;
+}
+
 /**
  * Represents a [[ScenarioContext]] implementation that manages a collection of context objects that
  * are created and used by binding classes during a running Cucumber scenario.
  */
 export class ManagedScenarioContext implements ScenarioContext {
 	private _scenarioInfo: ScenarioInfo;
-	private _activeObjects = new Map<any, any>();
+	private _activeObjects = new Map<any, ActiveInfo>();
 
 	constructor(scenarioTitle: string, tags: string[]) {
 		this._scenarioInfo = new ScenarioInfo(scenarioTitle, tags);
@@ -30,12 +40,31 @@ export class ManagedScenarioContext implements ScenarioContext {
 		});
 	}
 
-	public dispose(): void {
-		this._activeObjects.forEach((value: any) => {
-			if (typeof value.dispose === 'function') {
-				value.dispose();
+	/**
+	 * If context objects are passed into our step, this function will
+	 * call initialize on the context objects only once.
+	 * Using Promise.resolve so that initialize can be synchronous or async.
+	 */
+	public async initialize(): Promise<void> {
+		for (const [_key, value] of this._activeObjects) {
+			if (value.isContext && !value.initialized && typeof value.activeObject.initialize === 'function') {
+				await Promise.resolve(value.activeObject.initialize());
+				value.initialized = true;
 			}
-		});
+		}
+	}
+
+	/**
+	 * All objects support dispose, which is executed when a
+	 * test run is ended. Using Promise.resolve to support
+	 * synchronous or async functions.
+	 */
+	public async dispose(): Promise<void> {
+		for (const [_key, value] of this._activeObjects) {
+			if (typeof value.activeObject.dispose === 'function') {
+				await Promise.resolve(value.activeObject.dispose());
+			}
+		}
 	}
 
 	private activateBindingClass(targetPrototype: any, contextTypes: ContextType[], worldObj: World): any {
@@ -105,7 +134,7 @@ export class ManagedScenarioContext implements ScenarioContext {
 		};
 
 		const contextObjects = _.map(contextTypes, contextType =>
-			this.getOrActivateObject(
+			this.getOrActivateContext(
 				contextType.prototype,
 				(worldObj?: any) => {
 					return new contextType(worldObj);
@@ -117,17 +146,40 @@ export class ManagedScenarioContext implements ScenarioContext {
 		return invokeBindingConstructor(contextObjects);
 	}
 
+	/**
+	 * Get or activate any object
+	 *
+	 * @param targetPrototype prototype for the object
+	 * @param activatorFunc callback function used to create an instance of the object
+	 * @param optional optional parameter passed into constructors
+	 * @returns
+	 */
 	private getOrActivateObject(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
-		let activeObject = this._activeObjects.get(targetPrototype);
-
+		let activeObject = this._activeObjects.get(targetPrototype)?.activeObject;
 		if (activeObject) {
 			return activeObject;
 		}
-
 		activeObject = activatorFunc(optional);
+		this._activeObjects.set(targetPrototype, new ActiveInfo(activeObject));
+		return activeObject;
+	}
 
-		this._activeObjects.set(targetPrototype, activeObject);
-
+	/**
+	 * Get or activate Context objects. Marks an object as a context
+	 * object in ActiveInfo to let the system know it supports an initialize function.
+	 *
+	 * @param targetPrototype prototype for the object
+	 * @param activatorFunc callback function used to create an instance of the object
+	 * @param optional optional parameter passed into constructors
+	 * @returns
+	 */
+	private getOrActivateContext(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
+		let activeObject = this._activeObjects.get(targetPrototype)?.activeObject;
+		if (activeObject) {
+			return activeObject;
+		}
+		activeObject = activatorFunc(optional);
+		this._activeObjects.set(targetPrototype, new ActiveInfo(activeObject, true));
 		return activeObject;
 	}
 }

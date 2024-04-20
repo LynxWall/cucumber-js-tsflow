@@ -122,7 +122,6 @@ export default class MessageCollector {
 			this.storeTestStepResult(envelope.testStepFinished);
 		} else if (envelope.testCaseFinished) {
 			this.storeTestCaseResult(envelope.testCaseFinished);
-			this.endTestCase(envelope.testCaseFinished);
 		}
 	}
 
@@ -233,12 +232,12 @@ export default class MessageCollector {
 	 * this message to dispose and clear the ScenarioContext
 	 * @param testCaseFinished
 	 */
-	private endTestCase(testCaseFinished: messages.TestCaseFinished): void {
-		const testCase = this.testCaseRunningMap[testCaseFinished.testCaseStartedId];
+	public async endTestCase(testCaseStartedId: string): Promise<void> {
+		const testCase = this.testCaseRunningMap[testCaseStartedId];
 		if (testCase) {
 			const scenario = this.getScenarioForTest(testCase.testCaseId);
 			if (scenario && scenario.scenarioContext) {
-				scenario.scenarioContext.dispose();
+				await scenario.scenarioContext.dispose();
 				scenario.scenarioContext = undefined;
 			}
 		}

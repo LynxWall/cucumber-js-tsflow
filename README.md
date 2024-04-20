@@ -538,34 +538,89 @@ Like 'specflow', cucumber-tsflow supports a simple dependency injection framewor
 
 Each scenario in a feature will get a new instance of the *Context* object when the steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the *Context* object created for the scenario.
 
-**New in version 6.4.0:**
+**Recent Updates:**
 
-- The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
+- versions >= 6.5.0
+  - Context classes now support an `initialize()` function that can be defined synchronous or asynchronous. The `initialize()` function is called after the `BeforeAll` hook and before any other hooks or steps. This provides the ability to initialize a scenario context before any tests are executed with support for async operations.
+  - Context classes have always supported a `dispose()` function for cleanup. However, with latest updates the `dispose()` function can be defined synchronously or asynchronously.
 
-**To use context injection:**
+- versions >= 6.4.0
+  - The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
+
+
+### Using Context Injection
+
+With Context Injection you first need to define one or more classes that will be injected into a binding instance. Next, you'll need to add the context types to the `@binding` decorator and implement a constructor that passes initialized instances of the context type into the binding instance.
+
+**Defining a Context class:**
 
 - Create a simple *Context* class representing the shared data. The class can have no constructor or a default empty constructor. However, to access the Cucumber World object you should define a constructor as shown in the example below.
 
-  ```typescript
-  import { World } from '@cucumber/cucumber';
-  
-  export class ScenarioContext {
-  	public world: World;
-  	public someValue = '';
-  
-  	constructor(worldObj: World) {
-  		this.world = worldObj;
-  	}
-  
-  	public dispose(): void {
-  		this.someValue = '';
-  	}
-  }
-  ```
+**Synchronous example:**
 
-- Define a constructor on the `@binding` class with steps that need access to the shared data that accepts one or more context objects as parameters based on initialization of the `@binding` decorator.
+```typescript
+import { World } from '@cucumber/cucumber';
+
+export class ScenarioContext {
+	public world: World;
+	public someValue = '';
+	private id: string = '';
+
+	constructor(worldObj: World) {
+		this.world = worldObj;
+	}
+	public initialize(): void {
+		this.id = this.makeid(5);
+		console.log(`Sync init: ${this.id}`);
+	}
+	public dispose(): void {
+		console.log(`Sync dispose: ${this.id}`);
+	}
+	makeid(length: number) {
+		...
+		return result;
+	}
+}
+```
+
+**Asynchronous example:**
+
+```typescript
+import { World } from '@cucumber/cucumber';
+
+export class ScenarioContext {
+	public world: World;
+	public someValue = '';
+	private id: string = '';
+
+	constructor(worldObj: World) {
+		this.world = worldObj;
+	}
+	public async initialize(): Promise<void> {
+		this.id = this.makeid(5);
+		await this.logTest(`Async init: ${this.id}`);
+	}
+	public async dispose(): Promise<void> {
+		await this.logTest(`Async dispose: ${this.id}`);
+	}
+	async logTest(text: string): Promise<void> {
+		await Promise.resolve(console.log(text));
+	}
+	makeid(length: number) {
+		...
+		return result;
+	}
+}
+```
+
+
+
+**Initialize Binding in Step class:**
 
 - Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class. You can include up to nine separate *Context* objects.
+- Define a constructor on the `@binding` class with steps that need access to the shared data that accepts one or more context objects as parameters based on initialization of the `@binding` decorator.
+
+**Single Context class example:**
 
 ```typescript
 import { binding, given, when } from '@lynxwall/cucumber-tsflow';
@@ -588,6 +643,36 @@ export default class InjectionTestSteps1 {
 	}
 }
 ```
+
+**Multiple Context classes example:**
+
+```typescript
+import { binding, given, when } from '@lynxwall/cucumber-tsflow';
+import { ScenarioContext } from '../fixtures/scenario-context';
+import { SyncContext } from '../fixtures/sync-context';
+import { expect } from 'chai';
+
+@binding([ScenarioContext, SyncContext])
+export default class InjectionTestSteps1 {
+	constructor(private context: ScenarioContext, private syncContext: SyncContext) {}
+
+	@given('The Workspace is available and valid')
+	theWorkspaceIsAvailableAndValid() {
+		expect(this.context).not.to.be.undefined;
+		expect(this.context.world).not.to.be.undefined;
+
+		expect(this.syncContext).not.to.be.undefined;
+		expect(this.syncContext.world).not.to.be.undefined;
+	}
+
+	@when('I change the workspace in one step definition class')
+	whenIChangeTheWorkspaceInOneStep() {
+		this.context.someValue = 'value changed';
+	}
+}
+```
+
+
 
 ### Access to Cucumber.js World object
 

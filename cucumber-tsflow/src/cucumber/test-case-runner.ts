@@ -311,12 +311,15 @@ export default class TestCaseRunner {
 		if (!scenarioContext) throw error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
 
+		// next execute any before step hooks followed by the step if there are no
+		// failures in before step hooks.
 		let stepResult;
 		let stepResults = await this.runStepHooks(this.getBeforeStepHookDefinitions(), pickleStep);
 		if (getWorstTestStepResult(stepResults).status !== messages.TestStepResultStatus.FAILED) {
 			stepResult = await this.invokeStep(pickleStep, stepDefinitions[0]);
 			stepResults.push(stepResult);
 		}
+		// run the after step hooks
 		const afterStepHookResults = await this.runStepHooks(this.getAfterStepHookDefinitions(), pickleStep, stepResult);
 		stepResults = stepResults.concat(afterStepHookResults);
 
@@ -336,7 +339,7 @@ export default class TestCaseRunner {
 	 * @param scenarioContext
 	 */
 	async initializeContext(stepBinding: StepBinding, scenarioContext: ManagedScenarioContext): Promise<void> {
-		const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
+		const contextTypes = this.bindingRegistry.getContextTypesForTarget(stepBinding.targetPrototype);
 		if (contextTypes.length > 0) {
 			scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes, this.world);
 			await scenarioContext.initialize();

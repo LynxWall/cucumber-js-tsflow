@@ -54,6 +54,11 @@ export class ManagedScenarioContext implements ScenarioContext {
 		}
 	}
 
+	/**
+	 * All objects support dispose, which is executed when a
+	 * test run is ended. Using Promise.resolve to support
+	 * synchronous or async functions.
+	 */
 	public async dispose(): Promise<void> {
 		for (const [_key, value] of this._activeObjects) {
 			if (typeof value.activeObject.dispose === 'function') {
@@ -141,6 +146,14 @@ export class ManagedScenarioContext implements ScenarioContext {
 		return invokeBindingConstructor(contextObjects);
 	}
 
+	/**
+	 * Get or activate any object
+	 *
+	 * @param targetPrototype prototype for the object
+	 * @param activatorFunc callback function used to create an instance of the object
+	 * @param optional optional parameter passed into constructors
+	 * @returns
+	 */
 	private getOrActivateObject(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
 		let activeObject = this._activeObjects.get(targetPrototype)?.activeObject;
 		if (activeObject) {
@@ -151,6 +164,15 @@ export class ManagedScenarioContext implements ScenarioContext {
 		return activeObject;
 	}
 
+	/**
+	 * Get or activate Context objects. Marks an object as a context
+	 * object in ActiveInfo to let the system know it supports an initialize function.
+	 *
+	 * @param targetPrototype prototype for the object
+	 * @param activatorFunc callback function used to create an instance of the object
+	 * @param optional optional parameter passed into constructors
+	 * @returns
+	 */
 	private getOrActivateContext(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
 		let activeObject = this._activeObjects.get(targetPrototype)?.activeObject;
 		if (activeObject) {

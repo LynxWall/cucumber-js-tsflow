@@ -4,7 +4,7 @@ import { EventDataCollector } from '@cucumber/cucumber/lib/formatter/helpers';
 import { emitMetaMessage, emitSupportCodeMessages } from '@cucumber/cucumber/lib/cli/helpers';
 import { IRunOptions, IRunEnvironment, IRunResult } from '@cucumber/cucumber/lib/api/types';
 import { resolvePaths } from '@cucumber/cucumber/lib/api/paths';
-import { makeRuntime } from './runtime';
+import { makeRuntime } from './make-runtime';
 import { initializeFormatters } from '@cucumber/cucumber/lib/api/formatters';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';

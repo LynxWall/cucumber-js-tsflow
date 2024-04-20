@@ -1,63 +1,121 @@
-import Runtime, { IRuntime } from '@cucumber/cucumber/lib/runtime/index';
+import * as messages from '@cucumber/messages';
+import { IdGenerator } from '@cucumber/messages';
 import { EventEmitter } from 'events';
 import { EventDataCollector } from '@cucumber/cucumber/lib/formatter/helpers';
-import { IdGenerator } from '@cucumber/messages';
 import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import Coordinator from './parallel/coordinator';
-import { IRunOptionsRuntime } from '@cucumber/cucumber/lib/api/types';
-import { ILogger } from '@cucumber/cucumber/lib/logger';
+import { assembleTestCases } from '@cucumber/cucumber/lib/runtime/assemble_test_cases';
+import { retriesForPickle, shouldCauseFailure } from '@cucumber/cucumber/lib/runtime/helpers';
+import { makeRunTestRunHooks, RunsTestRunHooks } from '@cucumber/cucumber/lib/runtime/run_test_run_hooks';
+import { IStopwatch, create } from '@cucumber/cucumber/lib/runtime/stopwatch';
+import TestCaseRunner from './test-case-runner';
 
-/**
- * Extending this function from cucumber.js to use our own implementation
- * of the Coordinator.
- */
-export function makeRuntime({
-	cwd,
-	logger,
-	eventBroadcaster,
-	eventDataCollector,
-	pickleIds,
-	newId,
-	supportCodeLibrary,
-	requireModules,
-	requirePaths,
-	importPaths,
-	options: { parallel, ...options }
-}: {
-	cwd: string;
-	logger: ILogger;
+export interface IRuntime {
+	start: () => Promise<boolean>;
+}
+
+export interface INewRuntimeOptions {
 	eventBroadcaster: EventEmitter;
 	eventDataCollector: EventDataCollector;
 	newId: IdGenerator.NewId;
+	options: IRuntimeOptions;
 	pickleIds: string[];
 	supportCodeLibrary: ISupportCodeLibrary;
-	requireModules: string[];
-	requirePaths: string[];
-	importPaths: string[];
-	options: IRunOptionsRuntime;
-}): IRuntime {
-	if (parallel > 0) {
-		return new Coordinator({
-			cwd,
-			logger,
-			eventBroadcaster,
-			eventDataCollector,
-			pickleIds,
-			options,
-			newId,
-			supportCodeLibrary,
-			requireModules,
-			requirePaths,
-			importPaths,
-			numberOfWorkers: parallel
-		});
-	}
-	return new Runtime({
+}
+
+export interface IRuntimeOptions {
+	dryRun: boolean;
+	failFast: boolean;
+	filterStacktraces: boolean;
+	retry: number;
+	retryTagFilter: string;
+	strict: boolean;
+	worldParameters: any;
+}
+
+export default class Runtime implements IRuntime {
+	private readonly eventBroadcaster: EventEmitter;
+	private readonly eventDataCollector: EventDataCollector;
+	private readonly stopwatch: IStopwatch;
+	private readonly newId: IdGenerator.NewId;
+	private readonly options: IRuntimeOptions;
+	private readonly pickleIds: string[];
+	private readonly supportCodeLibrary: ISupportCodeLibrary;
+	private success: boolean;
+	private runTestRunHooks: RunsTestRunHooks;
+
+	constructor({
 		eventBroadcaster,
 		eventDataCollector,
 		newId,
+		options,
 		pickleIds,
-		supportCodeLibrary,
-		options
-	});
+		supportCodeLibrary
+	}: INewRuntimeOptions) {
+		this.eventBroadcaster = eventBroadcaster;
+		this.eventDataCollector = eventDataCollector;
+		this.stopwatch = create();
+		this.newId = newId;
+		this.options = options;
+		this.pickleIds = pickleIds;
+		this.supportCodeLibrary = supportCodeLibrary;
+		this.success = true;
+		this.runTestRunHooks = makeRunTestRunHooks(
+			this.options.dryRun,
+			this.supportCodeLibrary.defaultTimeout,
+			(name, location) => `${name} hook errored, process exiting: ${location}`
+		);
+	}
+
+	async runTestCase(pickleId: string, testCase: messages.TestCase): Promise<void> {
+		const pickle = this.eventDataCollector.getPickle(pickleId);
+		const retries = retriesForPickle(pickle, this.options);
+		const skip = this.options.dryRun || (this.options.failFast && !this.success);
+		const testCaseRunner = new TestCaseRunner({
+			eventBroadcaster: this.eventBroadcaster,
+			stopwatch: this.stopwatch,
+			gherkinDocument: this.eventDataCollector.getGherkinDocument(pickle.uri),
+			newId: this.newId,
+			pickle,
+			testCase,
+			retries,
+			skip,
+			filterStackTraces: this.options.filterStacktraces,
+			supportCodeLibrary: this.supportCodeLibrary,
+			worldParameters: this.options.worldParameters
+		});
+		const status = await testCaseRunner.run();
+		if (shouldCauseFailure(status, this.options)) {
+			this.success = false;
+		}
+	}
+
+	async start(): Promise<boolean> {
+		const testRunStarted: messages.Envelope = {
+			testRunStarted: {
+				timestamp: this.stopwatch.timestamp()
+			}
+		};
+		this.eventBroadcaster.emit('envelope', testRunStarted);
+		this.stopwatch.start();
+		await this.runTestRunHooks(this.supportCodeLibrary.beforeTestRunHookDefinitions, 'a BeforeAll');
+		const assembledTestCases = await assembleTestCases({
+			eventBroadcaster: this.eventBroadcaster,
+			newId: this.newId,
+			pickles: this.pickleIds.map(pickleId => this.eventDataCollector.getPickle(pickleId)),
+			supportCodeLibrary: this.supportCodeLibrary
+		});
+		for (const pickleId of this.pickleIds) {
+			await this.runTestCase(pickleId, assembledTestCases[pickleId]);
+		}
+		await this.runTestRunHooks(this.supportCodeLibrary.afterTestRunHookDefinitions.slice(0).reverse(), 'an AfterAll');
+		this.stopwatch.stop();
+		const testRunFinished: messages.Envelope = {
+			testRunFinished: {
+				timestamp: this.stopwatch.timestamp(),
+				success: this.success
+			}
+		};
+		this.eventBroadcaster.emit('envelope', testRunFinished);
+		return this.success;
+	}
 }

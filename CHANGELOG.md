@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.5.1]
+
+### Fixed
+
+- Fixed support for Context initialization when not using parallel configuration settings.
+
 ## [6.5.0]
 
 ### Changed

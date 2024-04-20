@@ -4,7 +4,7 @@ import { retriesForPickle, shouldCauseFailure } from '@cucumber/cucumber/lib/run
 import * as messages from '@cucumber/messages';
 import { EventEmitter } from 'events';
 import { EventDataCollector } from '@cucumber/cucumber/lib/formatter/helpers';
-import { IRuntime, IRuntimeOptions } from '@cucumber/cucumber/lib/runtime';
+import { IRuntime, IRuntimeOptions } from '../runtime';
 import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { ICoordinatorReport, IWorkerCommand } from '@cucumber/cucumber/lib/runtime/parallel/command_types';
 import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';

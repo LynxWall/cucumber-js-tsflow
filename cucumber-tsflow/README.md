@@ -19,18 +19,31 @@ In addition, the following features have been added:
     - **1** - Invalid configuration or Unhandled exception when executing tests.
     - **2** - Implemented scenarios are passing but there are pending, undefined or unknown scenario steps.
     - **3** - One or more scenario steps have failed.
+
 - Typescript and esbuild transpiler support.
+
 - Vue3 transformer used to handle .vue files in tests.
 
   **NOTE**: Supports browserless unit testing of Vue SFC components by loading only the `<template>` and `<script>` blocks. Vue SFC `<style>` blocks are disabled by default. However, when testing Vue components from a compiled library, styles can be enabled with the `enableVueStyle` configuration setting.
+
 - Timeout in step definitions and hooks.
+
 - WrapperOptions in step definitions.
+
 - BeforeStep and AfterStep Hooks.
+
 - Boolean custom definition added to cucumber expressions.
+
 - Support for Parallel execution of tests.
+
 - A behave-json-formatter that fixes json so it can be used with Behave Pro.
+
 - tsflow-snippet-syntax used to format snippet examples.
   - snippets use the [Cucumber Expressions](https://github.com/cucumber/cucumber-expressions#readme) Syntax for parameters.
+
+- [Context Injection](#context-injection) updates with support to initialize the context before each scenario test run and dispose the context after a scenario has finished executing.
+
+  
 
 <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
 <strong><span style="color: #000">Note:</span></strong> With recent updates you must use the <strong><span style="color: #000">cucumber-tsflow</span></strong> command to execute tests. This command executes the same API calls that cucumber-js does and supports all of the options and features as cucumber-js along with new features listed above.
@@ -530,20 +543,27 @@ The following example shows how to configure the bamboo junit formatter in cucum
 }
 ```
 
-## Sharing Data between Steps and Bindings
-
-### Context Injection
+## Context Injection
 
 Like 'specflow', cucumber-tsflow supports a simple dependency injection framework that will instantiate and inject class instances into 'binding' classes for each executing scenario.
+
+### Sharing Data between Steps and Bindings
 
 Each scenario in a feature will get a new instance of the *Context* object when the steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the *Context* object created for the scenario.
 
 **Recent Updates:**
 
+- versions >= 6.5.2
+  - Updated execution of the `initialize()` function to pass in argument that is an object with information about the Test Case (Scenario).
+    - The object passed in will be in the form:
+      `{ pickle, gherkinDocument, testCaseStartedId } : StartTestCaseInfo`
+  - Updated execution of the `dispose()` function to pass in argument that is an object with information about the Test Case (Scenario).
+    - The object passed in will be in the form:
+      `{ pickle, gherkinDocument, result, willBeRetried, testCaseStartedId } : EndTestCaseInfo`
+  
 - versions >= 6.5.0
   - Context classes now support an `initialize()` function that can be defined synchronous or asynchronous. The `initialize()` function is called after the `BeforeAll` hook and before any other hooks or steps. This provides the ability to initialize a scenario context before any tests are executed with support for async operations.
   - Context classes have always supported a `dispose()` function for cleanup. However, with latest updates the `dispose()` function can be defined synchronously or asynchronously.
-
 - versions >= 6.4.0
   - The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
 
@@ -560,6 +580,7 @@ With Context Injection you first need to define one or more classes that will be
 
 ```typescript
 import { World } from '@cucumber/cucumber';
+import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
 	public world: World;
@@ -569,14 +590,20 @@ export class ScenarioContext {
 	constructor(worldObj: World) {
 		this.world = worldObj;
 	}
-	public initialize(): void {
+	public initialize({ pickle, gherkinDocument }: StartTestCaseInfo): void {
 		this.id = this.makeid(5);
 		console.log(`Sync init: ${this.id}`);
+		console.log(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);       
 	}
-	public dispose(): void {
+	public dispose({ pickle, gherkinDocument }: EndTestCaseInfo): void {
 		console.log(`Sync dispose: ${this.id}`);
+		console.log(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
-	makeid(length: number) {
+	private getFeatureAndScenario(path: string, scenario: string): string | undefined {
+		...
+        return `${fileName}: ${scenario.split(' ').join('-')}`;
+	}
+	private makeid(length: number) {
 		...
 		return result;
 	}
@@ -587,6 +614,7 @@ export class ScenarioContext {
 
 ```typescript
 import { World } from '@cucumber/cucumber';
+import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
 	public world: World;
@@ -596,17 +624,23 @@ export class ScenarioContext {
 	constructor(worldObj: World) {
 		this.world = worldObj;
 	}
-	public async initialize(): Promise<void> {
+	public async initialize({ pickle, gherkinDocument }: StartTestCaseInfo): Promise<void> {
 		this.id = this.makeid(5);
 		await this.logTest(`Async init: ${this.id}`);
+		await this.logTest(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
-	public async dispose(): Promise<void> {
+	public async dispose({ pickle, gherkinDocument }: EndTestCaseInfo): Promise<void> {
 		await this.logTest(`Async dispose: ${this.id}`);
+		await this.logTest(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
 	async logTest(text: string): Promise<void> {
 		await Promise.resolve(console.log(text));
 	}
-	makeid(length: number) {
+	private getFeatureAndScenario(path: string, scenario: string): string | undefined {
+		...
+        return `${fileName}: ${scenario.split(' ').join('-')}`;
+	}
+    private makeid(length: number) {
 		...
 		return result;
 	}

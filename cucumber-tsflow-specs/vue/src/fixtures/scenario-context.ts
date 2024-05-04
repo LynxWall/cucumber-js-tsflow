@@ -1,4 +1,5 @@
 import { World } from '@cucumber/cucumber';
+import { StartTestCaseInfo, EndTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
 	public world: World;
@@ -9,20 +10,32 @@ export class ScenarioContext {
 		this.world = worldObj;
 	}
 
-	public async initialize(): Promise<void> {
+	public async initialize({ pickle, gherkinDocument }: StartTestCaseInfo): Promise<void> {
 		this.id = this.makeid(5);
 		await this.logTest(`Async init: ${this.id}`);
+		await this.logTest(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
 
-	public async dispose(): Promise<void> {
+	public async dispose({ pickle, gherkinDocument }: EndTestCaseInfo): Promise<void> {
 		await this.logTest(`Async dispose: ${this.id}`);
+		await this.logTest(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
 
-	async logTest(text: string): Promise<void> {
+	private async logTest(text: string): Promise<void> {
 		await Promise.resolve(console.log(text));
 	}
 
-	makeid(length: number) {
+	private getFeatureAndScenario(path: string, scenario: string): string | undefined {
+		let fileName: string | undefined = path;
+		if (path.indexOf('\\') > 0) {
+			fileName = path.split('\\').pop();
+		} else {
+			fileName = path.split('/').pop();
+		}
+		return `${fileName}: ${scenario.split(' ').join('-')}`;
+	}
+
+	private makeid(length: number) {
 		let result = '';
 		const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 		const charactersLength = characters.length;

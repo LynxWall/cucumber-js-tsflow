@@ -14,7 +14,8 @@ import {
 
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
-import { ContextType, StepPattern, TypeDecorator } from '../types/types';
+import { ContextType } from '../types/context-injection';
+import { StepPattern, TypeDecorator } from '../types/types';
 import { defineParameterType } from '@cucumber/cucumber';
 import _ from 'underscore';
 interface WritableWorld extends World {

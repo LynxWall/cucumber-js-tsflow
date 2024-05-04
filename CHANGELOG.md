@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.5.2]
+
+### Added
+
+- New argument: { pickle, gherkinDocument, testCaseStartedId } : StartTestCaseInfo is now passed to the initialize function of an injected context.
+- New argument: { pickle, gherkinDocument, result, willBeRetried, testCaseStartedId } : EndTestCaseInfo is now passed to the dispose function of an injected context.
+- StartTestCaseInfo and EndTestCaseInfo interfaces are exported from @lynxwall/cucumber-tsflow
+
 ## [6.5.1]
 
 ### Fixed

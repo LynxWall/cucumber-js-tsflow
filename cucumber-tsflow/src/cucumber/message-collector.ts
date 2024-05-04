@@ -6,6 +6,7 @@ import { hasMatchingStep, hasMatchingTags } from './utils';
 import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
+import { EndTestCaseInfo } from '../types/context-injection';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -232,12 +233,12 @@ export default class MessageCollector {
 	 * this message to dispose and clear the ScenarioContext
 	 * @param testCaseFinished
 	 */
-	public async endTestCase(testCaseStartedId: string): Promise<void> {
-		const testCase = this.testCaseRunningMap[testCaseStartedId];
+	public async endTestCase(endTestCase: EndTestCaseInfo): Promise<void> {
+		const testCase = this.testCaseRunningMap[endTestCase.testCaseStartedId];
 		if (testCase) {
 			const scenario = this.getScenarioForTest(testCase.testCaseId);
 			if (scenario && scenario.scenarioContext) {
-				await scenario.scenarioContext.dispose();
+				await scenario.scenarioContext.dispose(endTestCase);
 				scenario.scenarioContext = undefined;
 			}
 		}

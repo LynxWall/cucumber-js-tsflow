@@ -20,6 +20,7 @@ import { BindingRegistry } from './binding-registry';
 import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { error } from 'console';
+import { EndTestCaseInfo, StartTestCaseInfo } from '../types/context-injection';
 
 export default class TestCaseRunner {
 	private readonly attachmentManager: AttachmentManager;
@@ -219,12 +220,21 @@ export default class TestCaseRunner {
 				}
 			});
 		}
+		const worseResult = this.getWorstStepResult();
+		const willBeRetried = worseResult.status === messages.TestStepResultStatus.FAILED && moreAttemptsRemaining;
+
+		const endTestCaseParameter: EndTestCaseInfo = {
+			gherkinDocument: this.gherkinDocument,
+			pickle: this.pickle,
+			testCaseStartedId: this.currentTestCaseStartedId!,
+			result: worseResult,
+			willBeRetried: willBeRetried
+		};
+
 		// End test case will call dispose on all context types
 		// passed into a binding and then end the context.
-		await global.messageCollector.endTestCase(this.currentTestCaseStartedId);
+		await global.messageCollector.endTestCase(endTestCaseParameter);
 
-		const willBeRetried =
-			this.getWorstStepResult().status === messages.TestStepResultStatus.FAILED && moreAttemptsRemaining;
 		const testCaseFinished: messages.Envelope = {
 			testCaseFinished: {
 				testCaseStartedId: this.currentTestCaseStartedId,
@@ -342,7 +352,13 @@ export default class TestCaseRunner {
 		const contextTypes = this.bindingRegistry.getContextTypesForTarget(stepBinding.targetPrototype);
 		if (contextTypes.length > 0) {
 			scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes, this.world);
-			await scenarioContext.initialize();
+
+			const startTestCaseParameter: StartTestCaseInfo = {
+				gherkinDocument: this.gherkinDocument,
+				pickle: this.pickle,
+				testCaseStartedId: this.currentTestCaseStartedId!
+			};
+			await scenarioContext.initialize(startTestCaseParameter);
 		}
 	}
 }

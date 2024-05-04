@@ -1,4 +1,5 @@
 import { World } from '@cucumber/cucumber';
+import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class SyncContext {
 	public world: World;
@@ -9,16 +10,28 @@ export class SyncContext {
 		this.world = worldObj;
 	}
 
-	public initialize(): void {
+	public initialize({ pickle, gherkinDocument }: StartTestCaseInfo): void {
 		this.id = this.makeid(5);
 		console.log(`Sync init: ${this.id}`);
+		console.log(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
 
-	public dispose(): void {
+	public dispose({ pickle, gherkinDocument }: EndTestCaseInfo): void {
 		console.log(`Sync dispose: ${this.id}`);
+		console.log(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
 
-	makeid(length: number) {
+	private getFeatureAndScenario(path: string, scenario: string): string | undefined {
+		let fileName: string | undefined = path;
+		if (path.indexOf('\\') > 0) {
+			fileName = path.split('\\').pop();
+		} else {
+			fileName = path.split('/').pop();
+		}
+		return `${fileName}: ${scenario.split(' ').join('-')}`;
+	}
+
+	private makeid(length: number) {
 		let result = '';
 		const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 		const charactersLength = characters.length;

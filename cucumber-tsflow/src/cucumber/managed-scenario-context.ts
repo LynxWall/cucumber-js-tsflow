@@ -1,7 +1,7 @@
 import _ from 'underscore';
 
 import { ScenarioContext, ScenarioInfo } from '../types/scenario-context';
-import { ContextType } from '../types/types';
+import { ContextType, EndTestCaseInfo, StartTestCaseInfo } from '../types/context-injection';
 import { World } from '@cucumber/cucumber';
 
 class ActiveInfo {
@@ -45,10 +45,10 @@ export class ManagedScenarioContext implements ScenarioContext {
 	 * call initialize on the context objects only once.
 	 * Using Promise.resolve so that initialize can be synchronous or async.
 	 */
-	public async initialize(): Promise<void> {
+	public async initialize(startTestCase: StartTestCaseInfo): Promise<void> {
 		for (const [_key, value] of this._activeObjects) {
 			if (value.isContext && !value.initialized && typeof value.activeObject.initialize === 'function') {
-				await Promise.resolve(value.activeObject.initialize());
+				await Promise.resolve(value.activeObject.initialize(startTestCase));
 				value.initialized = true;
 			}
 		}
@@ -59,10 +59,10 @@ export class ManagedScenarioContext implements ScenarioContext {
 	 * test run is ended. Using Promise.resolve to support
 	 * synchronous or async functions.
 	 */
-	public async dispose(): Promise<void> {
+	public async dispose(endTestCase: EndTestCaseInfo): Promise<void> {
 		for (const [_key, value] of this._activeObjects) {
 			if (typeof value.activeObject.dispose === 'function') {
-				await Promise.resolve(value.activeObject.dispose());
+				await Promise.resolve(value.activeObject.dispose(endTestCase));
 			}
 		}
 	}

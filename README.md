@@ -580,7 +580,7 @@ With Context Injection you first need to define one or more classes that will be
 
 ```typescript
 import { World } from '@cucumber/cucumber';
-import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow/lib/cucumber/message-collector';
+import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
 	public world: World;
@@ -614,7 +614,7 @@ export class ScenarioContext {
 
 ```typescript
 import { World } from '@cucumber/cucumber';
-import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow/lib/cucumber/message-collector';
+import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
 	public world: World;

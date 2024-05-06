@@ -1,16 +1,4 @@
 import * as messages from '@cucumber/messages';
-import { World } from '@cucumber/cucumber';
-
-/**
- * Represents a class that will be injected into a binding class to provide context
- * during the execution of a Cucumber scenario.
- */
-export interface ContextType {
-	/**
-	 * A default constructor.
-	 */
-	new (worldObj: World): any;
-}
 
 /**
  * Parameter passed into initialize() at the

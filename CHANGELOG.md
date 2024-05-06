@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.5.5]
+
+### Fixed
+
+- Moved StartTestCaseInfo and EndTestCaseInfo to a separate type file with limited message imports. Attempting to mitigate type issues during test run that uses new interface types.
+
 ## [6.5.4]
 
 ### Fixed

@@ -20,7 +20,7 @@ import { BindingRegistry } from './binding-registry';
 import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { error } from 'console';
-import { EndTestCaseInfo, StartTestCaseInfo } from '../types/context-injection';
+import { EndTestCaseInfo, StartTestCaseInfo } from './message-collector';
 
 export default class TestCaseRunner {
 	private readonly attachmentManager: AttachmentManager;

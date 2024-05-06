@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [6.5.6]
+
+### Fixed
+
+- Another move of TestCaseInfo exports to attempt fixing issues with imports into other projects.
+
 ## [6.5.5]
 
 ### Fixed

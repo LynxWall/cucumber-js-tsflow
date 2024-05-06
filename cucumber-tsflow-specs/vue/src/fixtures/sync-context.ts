@@ -1,5 +1,5 @@
 import { World } from '@cucumber/cucumber';
-import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
+import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow/lib/cucumber/test-case-info';
 
 export class SyncContext {
 	public world: World;

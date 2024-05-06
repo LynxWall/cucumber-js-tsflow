@@ -6,7 +6,7 @@ import { hasMatchingStep, hasMatchingTags } from './utils';
 import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
-import { EndTestCaseInfo } from '../types/test-case-info';
+import { EndTestCaseInfo } from './test-case-info';
 
 interface ITestCaseAttemptData {
 	attempt: number;

@@ -1,5 +1,5 @@
 import { World } from '@cucumber/cucumber';
-import { StartTestCaseInfo, EndTestCaseInfo } from '@lynxwall/cucumber-tsflow';
+import { StartTestCaseInfo, EndTestCaseInfo } from '@lynxwall/cucumber-tsflow/lib/cucumber/message-collector';
 
 export class ScenarioContext {
 	public world: World;

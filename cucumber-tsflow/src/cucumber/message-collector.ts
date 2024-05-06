@@ -6,7 +6,6 @@ import { hasMatchingStep, hasMatchingTags } from './utils';
 import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
-import { EndTestCaseInfo } from '../types/context-injection';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -30,6 +29,30 @@ export interface ITestCaseAttempt {
 
 interface IScenario extends messages.Pickle {
 	scenarioContext: ManagedScenarioContext | undefined;
+}
+
+/**
+ * Parameter passed into initialize() at the
+ * start of a test case (scenario) before most
+ * hooks and all steps
+ */
+export interface StartTestCaseInfo {
+	gherkinDocument: messages.GherkinDocument;
+	pickle: messages.Pickle;
+	testCaseStartedId: string;
+}
+
+/**
+ * Parameter passed into dispost() at the
+ * end of a test case (scenario) after the
+ * last After hook has executed.
+ */
+export interface EndTestCaseInfo {
+	gherkinDocument: messages.GherkinDocument;
+	pickle: messages.Pickle;
+	result: messages.TestStepResult;
+	willBeRetried: boolean;
+	testCaseStartedId: string;
 }
 
 /**

@@ -1,7 +1,8 @@
 import _ from 'underscore';
 
+import { ContextType } from '../types/types';
 import { ScenarioContext, ScenarioInfo } from '../types/scenario-context';
-import { ContextType, EndTestCaseInfo, StartTestCaseInfo } from '../types/context-injection';
+import { EndTestCaseInfo, StartTestCaseInfo } from './message-collector';
 import { World } from '@cucumber/cucumber';
 
 class ActiveInfo {

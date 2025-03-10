@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createFilter } from '@rollup/pluginutils';
-import type { RollupError, RollupWarning } from 'rollup';
+import type { RollupError, RollupLog } from 'rollup';
 import { resolveCompiler } from './compiler';
 import { parseVueRequest } from './utils/query';
 import { transformMain } from './main';
@@ -41,7 +41,7 @@ class VueTransformer implements VueTransformerContext {
 	};
 
 	public warn = (
-		warning: string | RollupWarning,
+		warning: RollupLog | string,
 		pos?: number | { column: number; line: number } | undefined
 	): void => {};
 

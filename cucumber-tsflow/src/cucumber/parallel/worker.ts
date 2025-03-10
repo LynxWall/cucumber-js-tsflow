@@ -1,136 +1,117 @@
-import * as messages from '@cucumber/messages';
-import { IdGenerator } from '@cucumber/messages';
-import { EventEmitter } from 'events';
-import { pathToFileURL } from 'url';
-import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
-import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import { makeRunTestRunHooks, RunsTestRunHooks } from '@cucumber/cucumber/lib/runtime/run_test_run_hooks';
-import { create } from '@cucumber/cucumber/lib/runtime/stopwatch';
-import TestCaseRunner from '../test-case-runner';
+import { EventEmitter } from 'node:events'
+import { pathToFileURL } from 'node:url'
+import { register } from 'node:module'
+import { Envelope, IdGenerator } from '@cucumber/messages'
+import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder'
+import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types'
+import tryRequire from '@cucumber/cucumber/lib/try_require'
+import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/index'
+import { Worker } from '../worker'
 import {
-	ICoordinatorReport,
-	IWorkerCommand,
-	IWorkerCommandInitialize,
-	IWorkerCommandRun
-} from '@cucumber/cucumber/lib/runtime/parallel/command_types';
-import MessageCollector from '../message-collector';
+  WorkerToCoordinatorEvent,
+  CoordinatorToWorkerCommand,
+  InitializeCommand,
+  RunCommand,
+} from '@cucumber/cucumber/lib/runtime/parallel/types'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { importer } = require('@cucumber/cucumber/lib/importer');
-const { uuid } = IdGenerator;
+const { uuid } = IdGenerator
 
-type IExitFunction = (exitCode: number, error?: Error, message?: string) => void;
-type IMessageSender = (command: ICoordinatorReport) => void;
+type IExitFunction = (exitCode: number, error?: Error, message?: string) => void
+type IMessageSender = (command: WorkerToCoordinatorEvent) => void
 
-/**
- * Modified from cucumber.js to instantiate and initialize
- * a message collector needed for test bindings.
- */
-export default class Worker {
-	private readonly cwd: string;
-	private readonly exit: IExitFunction;
+export class ChildProcessWorker {
+  private readonly cwd: string
+  private readonly exit: IExitFunction
 
-	private readonly id: string;
-	private readonly eventBroadcaster: EventEmitter;
-	private filterStacktraces: boolean = false;
-	private readonly newId: IdGenerator.NewId;
-	private readonly sendMessage: IMessageSender;
-	private supportCodeLibrary?: ISupportCodeLibrary;
-	private worldParameters: any;
-	private runTestRunHooks?: RunsTestRunHooks;
+  private readonly id: string
+  private readonly eventBroadcaster: EventEmitter
+  private readonly newId: IdGenerator.NewId
+  private readonly sendMessage: IMessageSender
+  private options!: RuntimeOptions
+  private supportCodeLibrary!: SupportCodeLibrary
+  private worker!: Worker
 
-	constructor({
-		cwd,
-		exit,
-		id,
-		sendMessage
-	}: {
-		cwd: string;
-		exit: IExitFunction;
-		id: string;
-		sendMessage: IMessageSender;
-	}) {
-		this.id = id;
-		this.newId = uuid();
-		this.cwd = cwd;
-		this.exit = exit;
-		this.sendMessage = sendMessage;
-		this.eventBroadcaster = new EventEmitter();
-		this.eventBroadcaster.on('envelope', (envelope: messages.Envelope) => {
-			this.sendMessage({
-				jsonEnvelope: JSON.stringify(envelope)
-			});
-		});
-		// create an instance of the messageCollector, bind it to the event broadcaster
-		// and then make it global for use in the binding-decorator.
-		const messageCollector = new MessageCollector();
-		this.eventBroadcaster.on('envelope', messageCollector.parseEnvelope.bind(messageCollector));
-		global.messageCollector = messageCollector;
-	}
+  constructor({
+    cwd,
+    exit,
+    id,
+    sendMessage,
+  }: {
+    cwd: string
+    exit: IExitFunction
+    id: string
+    sendMessage: IMessageSender
+  }) {
+    this.id = id
+    this.newId = uuid()
+    this.cwd = cwd
+    this.exit = exit
+    this.sendMessage = sendMessage
+    this.eventBroadcaster = new EventEmitter()
+    this.eventBroadcaster.on('envelope', (envelope: Envelope) =>
+      this.sendMessage({ type: 'ENVELOPE', envelope })
+    )
+  }
 
-	async initialize({
-		filterStacktraces,
-		requireModules,
-		requirePaths,
-		importPaths,
-		supportCodeIds,
-		options
-	}: IWorkerCommandInitialize): Promise<void> {
-		supportCodeLibraryBuilder.reset(this.cwd, this.newId);
-		requireModules.map(module => require(module));
-		requirePaths.map(module => require(module));
-		for (const path of importPaths) {
-			await importer(pathToFileURL(path));
-		}
-		this.supportCodeLibrary = supportCodeLibraryBuilder.finalize(supportCodeIds);
+  async initialize({
+    supportCodeCoordinates,
+    supportCodeIds,
+    options,
+  }: InitializeCommand): Promise<void> {
+    supportCodeLibraryBuilder.reset(
+      this.cwd,
+      this.newId,
+      supportCodeCoordinates
+    )
+    supportCodeCoordinates.requireModules.map((module) => tryRequire(module))
+    supportCodeCoordinates.requirePaths.map((module) => tryRequire(module))
+    for (const specifier of supportCodeCoordinates.loaders) {
+      register(specifier, pathToFileURL('./'))
+    }
+    for (const path of supportCodeCoordinates.importPaths) {
+      await import(pathToFileURL(path).toString())
+    }
+    this.supportCodeLibrary = supportCodeLibraryBuilder.finalize(supportCodeIds)
 
-		this.worldParameters = options.worldParameters;
-		this.filterStacktraces = filterStacktraces;
-		this.runTestRunHooks = makeRunTestRunHooks(
-			options.dryRun,
-			this.supportCodeLibrary.defaultTimeout,
-			(name, location) => `${name} hook errored on worker ${this.id}, process exiting: ${location}`
-		);
-		await this.runTestRunHooks(this.supportCodeLibrary.beforeTestRunHookDefinitions, 'a BeforeAll');
-		this.sendMessage({ ready: true });
-	}
+    this.options = options
+    this.worker = new Worker(
+      this.id,
+      this.eventBroadcaster,
+      this.newId,
+      this.options,
+      this.supportCodeLibrary
+    )
+    await this.worker.runBeforeAllHooks()
+    this.sendMessage({ type: 'READY' })
+  }
 
-	async finalize(): Promise<void> {
-		if (this.supportCodeLibrary && this.runTestRunHooks) {
-			await this.runTestRunHooks(this.supportCodeLibrary.afterTestRunHookDefinitions, 'an AfterAll');
-		}
-		this.exit(0);
-	}
+  async finalize(): Promise<void> {
+    await this.worker.runAfterAllHooks()
+    this.exit(0)
+  }
 
-	async receiveMessage(message: IWorkerCommand): Promise<void> {
-		if (message.initialize) {
-			await this.initialize(message.initialize);
-		} else if (message.finalize) {
-			await this.finalize();
-		} else if (message.run) {
-			await this.runTestCase(message.run);
-		}
-	}
+  async receiveMessage(command: CoordinatorToWorkerCommand): Promise<void> {
+    switch (command.type) {
+      case 'INITIALIZE':
+        await this.initialize(command)
+        break
+      case 'RUN':
+        await this.runTestCase(command)
+        break
+      case 'FINALIZE':
+        await this.finalize()
+        break
+    }
+  }
 
-	async runTestCase({ gherkinDocument, pickle, testCase, elapsed, retries, skip }: IWorkerCommandRun): Promise<void> {
-		// Add the pickle and testCase to the messageCollector that's
-		// initialized in the constructor
-		global.messageCollector.addPickleAndTestCase(pickle, testCase);
-		const stopwatch = create(elapsed);
-		const testCaseRunner = new TestCaseRunner({
-			eventBroadcaster: this.eventBroadcaster,
-			stopwatch,
-			gherkinDocument,
-			newId: this.newId,
-			pickle,
-			testCase,
-			retries,
-			skip,
-			filterStackTraces: this.filterStacktraces,
-			supportCodeLibrary: this.supportCodeLibrary as ISupportCodeLibrary,
-			worldParameters: this.worldParameters
-		});
-		await testCaseRunner.run();
-		this.sendMessage({ ready: true });
-	}
+  async runTestCase(command: RunCommand): Promise<void> {
+    const success = await this.worker.runTestCase(
+      command.assembledTestCase,
+      command.failing
+    )
+    this.sendMessage({
+      type: 'FINISHED',
+      success,
+    })
+  }
 }

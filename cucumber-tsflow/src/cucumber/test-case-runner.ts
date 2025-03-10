@@ -1,12 +1,12 @@
 import { getAmbiguousStepException } from '@cucumber/cucumber/lib/runtime/helpers';
 import { INewTestCaseRunnerOptions } from '@cucumber/cucumber/lib/runtime/test_case_runner';
-import AttachmentManager from '@cucumber/cucumber/lib/runtime/attachment_manager/index';
+import AttachmentManager, { ICreateAttachment } from '@cucumber/cucumber/lib/runtime/attachment_manager/index';
 import StepRunner from '@cucumber/cucumber/lib/runtime/step_runner';
 import * as messages from '@cucumber/messages';
 import { getWorstTestStepResult, IdGenerator } from '@cucumber/messages';
 import { EventEmitter } from 'events';
 import {
-	ISupportCodeLibrary,
+	SupportCodeLibrary,
 	ITestCaseHookParameter,
 	ITestStepHookParameter
 } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -14,20 +14,21 @@ import TestCaseHookDefinition from '@cucumber/cucumber/lib/models/test_case_hook
 import TestStepHookDefinition from '@cucumber/cucumber/lib/models/test_step_hook_definition';
 import { IDefinition } from '@cucumber/cucumber/lib/models/definition';
 import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
-import { IStopwatch } from '@cucumber/cucumber/lib/runtime/stopwatch';
 import StepDefinition from '@cucumber/cucumber/lib/models/step_definition';
 import { BindingRegistry } from './binding-registry';
 import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { error } from 'console';
 import { EndTestCaseInfo, StartTestCaseInfo } from './test-case-info';
+import { IWorldOptions } from '@cucumber/cucumber/lib/support_code_library_builder/world';
+import { timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch';
 
 export default class TestCaseRunner {
+  private readonly workerId: string | undefined
 	private readonly attachmentManager: AttachmentManager;
 	private currentTestCaseStartedId?: string;
 	private currentTestStepId?: string;
 	private readonly eventBroadcaster: EventEmitter;
-	private readonly stopwatch: IStopwatch;
 	private readonly gherkinDocument: messages.GherkinDocument;
 	private readonly newId: IdGenerator.NewId;
 	private readonly pickle: messages.Pickle;
@@ -35,15 +36,15 @@ export default class TestCaseRunner {
 	private readonly maxAttempts: number;
 	private readonly skip: boolean;
 	private readonly filterStackTraces: boolean;
-	private readonly supportCodeLibrary: ISupportCodeLibrary;
+	private readonly supportCodeLibrary: SupportCodeLibrary;
 	private testStepResults?: messages.TestStepResult[];
 	private world: any;
 	private readonly worldParameters: any;
 	private bindingRegistry: BindingRegistry;
 
 	constructor({
+    workerId,
 		eventBroadcaster,
-		stopwatch,
 		gherkinDocument,
 		newId,
 		pickle,
@@ -72,8 +73,28 @@ export default class TestCaseRunner {
 			};
 			this.eventBroadcaster.emit('envelope', attachment);
 		});
+		this.workerId = workerId;
+    this.attachmentManager = new AttachmentManager(
+      ({ data, media, fileName }) => {
+        if (doesNotHaveValue(this.currentTestStepId)) {
+          throw new Error(
+            'Cannot attach when a step/hook is not running. Ensure your step/hook waits for the attach to finish.'
+          )
+        }
+        const attachment: messages.Envelope = {
+          attachment: {
+            body: data,
+            contentEncoding: media.encoding,
+            mediaType: media.contentType,
+            fileName,
+            testCaseStartedId: this.currentTestCaseStartedId,
+            testStepId: this.currentTestStepId,
+          },
+        }
+        this.eventBroadcaster.emit('envelope', attachment)
+      }
+    )
 		this.eventBroadcaster = eventBroadcaster;
-		this.stopwatch = stopwatch;
 		this.gherkinDocument = gherkinDocument;
 		this.maxAttempts = 1 + (skip ? 0 : retries);
 		this.newId = newId;
@@ -89,10 +110,11 @@ export default class TestCaseRunner {
 
 	resetTestProgressData(): void {
 		this.world = new this.supportCodeLibrary.World({
-			attach: this.attachmentManager.create.bind(this.attachmentManager),
+			attach: this.attachmentManager.create.bind(this.attachmentManager) as unknown as ICreateAttachment,
 			log: this.attachmentManager.log.bind(this.attachmentManager),
-			parameters: this.worldParameters
-		});
+      link: this.attachmentManager.link.bind(this.attachmentManager),
+      parameters: structuredClone(this.worldParameters),
+		} satisfies IWorldOptions);
 		this.testStepResults = [];
 	}
 
@@ -148,7 +170,7 @@ export default class TestCaseRunner {
 			testStepStarted: {
 				testCaseStartedId: this.currentTestCaseStartedId!,
 				testStepId,
-				timestamp: this.stopwatch.timestamp()
+				timestamp: timestamp()
 			}
 		};
 		this.eventBroadcaster.emit('envelope', testStepStarted);
@@ -161,7 +183,7 @@ export default class TestCaseRunner {
 				testCaseStartedId: this.currentTestCaseStartedId!,
 				testStepId,
 				testStepResult,
-				timestamp: this.stopwatch.timestamp()
+				timestamp: timestamp()
 			}
 		};
 		this.eventBroadcaster.emit('envelope', testStepFinished);
@@ -188,7 +210,7 @@ export default class TestCaseRunner {
 				attempt,
 				testCaseId: this.testCase.id,
 				id: this.currentTestCaseStartedId,
-				timestamp: this.stopwatch.timestamp()
+				timestamp: timestamp()
 			}
 		};
 		this.eventBroadcaster.emit('envelope', testCaseStarted);
@@ -238,7 +260,7 @@ export default class TestCaseRunner {
 		const testCaseFinished: messages.Envelope = {
 			testCaseFinished: {
 				testCaseStartedId: this.currentTestCaseStartedId,
-				timestamp: this.stopwatch.timestamp(),
+				timestamp: timestamp(),
 				willBeRetried
 			}
 		};
@@ -363,12 +385,12 @@ export default class TestCaseRunner {
 	}
 }
 
-function findHookDefinition(id: string, supportCodeLibrary: ISupportCodeLibrary): TestCaseHookDefinition {
+function findHookDefinition(id: string, supportCodeLibrary: SupportCodeLibrary): TestCaseHookDefinition {
 	return [...supportCodeLibrary.beforeTestCaseHookDefinitions, ...supportCodeLibrary.afterTestCaseHookDefinitions].find(
 		definition => definition.id === id
 	)!;
 }
 
-function findStepDefinition(id: string, supportCodeLibrary: ISupportCodeLibrary): StepDefinition {
+function findStepDefinition(id: string, supportCodeLibrary: SupportCodeLibrary): StepDefinition {
 	return supportCodeLibrary.stepDefinitions.find(definition => definition.id === id)!;
 }

@@ -1,5 +1,5 @@
 import { SFCScriptCompileOptions, SFCStyleCompileOptions, SFCTemplateCompileOptions } from 'vue/compiler-sfc';
-import type { RollupError, RollupWarning } from 'rollup';
+import type { RollupError, RollupLog } from 'rollup';
 import type * as _compiler from 'vue/compiler-sfc';
 
 export interface Options {
@@ -60,5 +60,5 @@ export interface VueResolvedId {
 export interface VueTransformerContext {
 	error: (err: RollupError | string, pos?: number | { column: number; line: number }) => void;
 	resolve: (id: string) => VueResolvedId | null;
-	warn: (warning: RollupWarning | string, pos?: number | { column: number; line: number }) => void;
+	warn: (warning: RollupLog | string, pos?: number | { column: number; line: number }) => void;
 }

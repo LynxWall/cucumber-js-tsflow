@@ -1,4 +1,4 @@
-import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
+import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import _ from 'underscore';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TagName } from '../types/types';
@@ -227,7 +227,7 @@ export class BindingRegistry {
 	 * @param library
 	 * @returns
 	 */
-	public updateSupportCodeLibrary = (library: ISupportCodeLibrary): ISupportCodeLibrary => {
+	public updateSupportCodeLibrary = (library: SupportCodeLibrary): SupportCodeLibrary => {
 		this._targetBindings.forEach(binding => {
 			binding.stepBindings.forEach(stepBinding => {
 				let cucumberDefinition: any | undefined = undefined;

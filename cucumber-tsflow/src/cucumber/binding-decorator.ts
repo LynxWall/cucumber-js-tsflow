@@ -157,12 +157,10 @@ function bindStepDefinition(stepBinding: StepBinding): void {
  * @param stepBinding The [[StepBinding]] that represents a 'before', or 'after', step definition.
  */
 function bindHook(stepBinding: StepBinding): void {
-	const bindingFunc =
-		stepBinding.bindingType == StepBindingFlags.beforeAll || stepBinding.bindingType == StepBindingFlags.afterAll
-			? function (this: any): any {
+	const testBindingFunc = function (this: any): any {
 					return stepBinding.targetPrototype[stepBinding.targetPropertyKey].apply() as () => void;
-			  }
-			: function (this: any, arg: any): any {
+			  };
+	const bindingFunc = function (this: any, arg: any): any {
 					const scenarioContext = global.messageCollector.getHookScenarioContext(arg);
 					if (scenarioContext) {
 						const contextTypes = BindingRegistry.instance.getContextTypesForTarget(stepBinding.targetPrototype);
@@ -186,7 +184,7 @@ function bindHook(stepBinding: StepBinding): void {
 	switch (stepBinding.bindingType) {
 		case StepBindingFlags.beforeAll: {
 			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
-			BeforeAll(options, bindingFunc);
+			BeforeAll(options, testBindingFunc);
 			break;
 		}
 		case StepBindingFlags.before: {
@@ -201,7 +199,7 @@ function bindHook(stepBinding: StepBinding): void {
 		}
 		case StepBindingFlags.afterAll: {
 			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
-			AfterAll(options, bindingFunc);
+			AfterAll(options, testBindingFunc);
 			break;
 		}
 		case StepBindingFlags.after: {

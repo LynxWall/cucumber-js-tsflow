@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import merge from 'lodash.merge';
 import path from 'path';
 import { dialects } from '@cucumber/gherkin';
-import Formatters from '@cucumber/cucumber/lib/formatter/helpers/formatters';
+import { documentation } from '@cucumber/cucumber/lib//formatter/builtin'
 import { version } from '../version';
 import { IConfiguration } from '@cucumber/cucumber/lib/configuration/types';
 
@@ -89,8 +89,12 @@ const ArgvParser = {
 			.option(
 				'-f, --format <TYPE[:PATH]>',
 				'specify the output format, optionally supply PATH to redirect formatter output (repeatable).  Available formats:\n' +
-					Formatters.buildFormattersDocumentationString(),
-				(ArgvParser as any).collect
+          Object.entries(documentation).reduce(
+            (previous, [key, description]) =>
+              previous + `    ${key}: ${description}\n`,
+            ''
+          ),
+        (ArgvParser as any).collect
 			)
 			.option(
 				'--format-options <JSON>',

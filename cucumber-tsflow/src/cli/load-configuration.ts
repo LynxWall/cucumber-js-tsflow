@@ -1,4 +1,4 @@
-import { IRunEnvironment, ILoadConfigurationOptions, IRunConfiguration } from '@cucumber/cucumber/lib/api/types';
+import { ILoadConfigurationOptions, IRunConfiguration } from '@cucumber/cucumber/lib/api/types';
 import { locateFile } from '@cucumber/cucumber/lib/configuration/locate_file';
 import {
 	DEFAULT_CONFIGURATION,
@@ -8,13 +8,11 @@ import {
 } from '@cucumber/cucumber/lib/configuration/index';
 import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/validate_configuration';
 import { convertConfiguration } from '@cucumber/cucumber/lib/api/convert_configuration';
-import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
+import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment';
 import { ITsflowConfiguration } from './argv-parser';
 import chalk from 'chalk';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
-import { ILogger } from '@cucumber/cucumber/lib/logger';
-import { ConsoleLogger } from '@cucumber/cucumber/lib/api/console_logger';
 export interface ITsflowResolvedConfiguration {
 	/**
 	 * The final flat configuration object resolved from the configuration file/profiles plus any extra provided.
@@ -37,12 +35,12 @@ export const loadConfiguration = async (
 	options: ILoadConfigurationOptions = {},
 	environment: IRunEnvironment = {}
 ): Promise<ITsflowResolvedConfiguration> => {
-	const { cwd, stderr, env, debug } = mergeEnvironment(environment);
-	const logger: ILogger = new ConsoleLogger(stderr, debug);
-
-	const configFile = options.file ?? locateFile(cwd);
+  const { cwd, env, logger } = makeEnvironment(environment)
+  const configFile = options.file ?? locateFile(cwd)
 	if (configFile) {
 		logger.debug(`Configuration will be loaded from "${configFile}"`);
+  } else if (configFile === false) {
+    logger.debug('Skipping configuration file resolution')
 	} else {
 		logger.debug('No configuration file found');
 	}
@@ -52,7 +50,8 @@ export const loadConfiguration = async (
 	// to the provided configuration as paths. We need to clear
 	// any paths from configuration so that only the feature passed
 	// in is executed.
-	if (options.provided?.paths && options.provided.paths?.length > 0) {
+	const paths = (options.provided as Partial<IConfiguration>).paths;
+	if (paths && paths?.length > 0) {
 		profileConfiguration.paths = [];
 	}
 

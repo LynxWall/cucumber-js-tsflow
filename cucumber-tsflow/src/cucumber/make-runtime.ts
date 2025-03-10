@@ -1,63 +1,56 @@
-import Runtime, { IRuntime } from './runtime';
-import { EventEmitter } from 'events';
-import { EventDataCollector } from '@cucumber/cucumber/lib/formatter/helpers';
-import { IdGenerator } from '@cucumber/messages';
-import { ISupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import Coordinator from './parallel/coordinator';
-import { IRunOptionsRuntime } from '@cucumber/cucumber/lib/api/types';
-import { ILogger } from '@cucumber/cucumber/lib/logger';
+import { EventEmitter } from 'node:events'
+import { IdGenerator } from '@cucumber/messages'
+import { IRunOptionsRuntime } from '@cucumber/cucumber/lib/api'
+import { ILogger } from '@cucumber/cucumber/lib/environment'
+import { SourcedPickle } from '@cucumber/cucumber/lib/assemble'
+import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types'
+import { IRunEnvironment } from '@cucumber/cucumber/lib/environment'
+import { Runtime, RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types'
+import { ChildProcessAdapter } from './parallel/adapter'
+import { InProcessAdapter } from './serial/adapter'
+import { Coordinator } from './coordinator'
 
 /**
  * Extending this function from cucumber.js to use our own implementation
  * of the Coordinator.
  */
-export function makeRuntime({
-	cwd,
-	logger,
-	eventBroadcaster,
-	eventDataCollector,
-	pickleIds,
-	newId,
-	supportCodeLibrary,
-	requireModules,
-	requirePaths,
-	importPaths,
-	options: { parallel, ...options }
+export async function makeRuntime({
+  environment,
+  logger,
+  eventBroadcaster,
+  sourcedPickles,
+  newId,
+  supportCodeLibrary,
+  options,
 }: {
-	cwd: string;
-	logger: ILogger;
-	eventBroadcaster: EventEmitter;
-	eventDataCollector: EventDataCollector;
-	newId: IdGenerator.NewId;
-	pickleIds: string[];
-	supportCodeLibrary: ISupportCodeLibrary;
-	requireModules: string[];
-	requirePaths: string[];
-	importPaths: string[];
-	options: IRunOptionsRuntime;
-}): IRuntime {
-	if (parallel > 0) {
-		return new Coordinator({
-			cwd,
-			logger,
-			eventBroadcaster,
-			eventDataCollector,
-			pickleIds,
-			options,
-			newId,
-			supportCodeLibrary,
-			requireModules,
-			requirePaths,
-			importPaths,
-			numberOfWorkers: parallel
-		});
-	}
-	return new Runtime({
-		eventBroadcaster,
-		eventDataCollector,
-		newId,
-		pickleIds,
-		supportCodeLibrary,
-		options
-	});
+  environment: IRunEnvironment
+  logger: ILogger
+  eventBroadcaster: EventEmitter
+  newId: IdGenerator.NewId
+  sourcedPickles: ReadonlyArray<SourcedPickle>
+  supportCodeLibrary: SupportCodeLibrary
+  options: IRunOptionsRuntime
+}): Promise<Runtime> {
+  const adapter: RuntimeAdapter =
+    options.parallel > 0
+      ? new ChildProcessAdapter(
+          environment,
+          logger,
+          eventBroadcaster,
+          options,
+          supportCodeLibrary
+        )
+      : new InProcessAdapter(
+          eventBroadcaster,
+          newId,
+          options,
+          supportCodeLibrary
+        )
+  return new Coordinator(
+    eventBroadcaster,
+    newId,
+    sourcedPickles,
+    supportCodeLibrary,
+    adapter
+  )
 }

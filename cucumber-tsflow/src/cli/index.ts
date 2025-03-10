@@ -5,14 +5,13 @@ import { runCucumber } from '../cucumber/run-cucumber';
 import { loadConfiguration } from './load-configuration';
 import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
-import { resolvePaths } from '@cucumber/cucumber/lib/api/paths';
-import { mergeEnvironment } from '@cucumber/cucumber/lib/api/environment';
+import { resolvePaths } from '@cucumber/cucumber/lib/paths';
+import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types'
+import { makeEnvironment,  } from '@cucumber/cucumber/lib/environment';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { BindingRegistry } from '../cucumber/binding-registry';
 import ArgvParser from './argv-parser';
 import debug from 'debug';
-import { ILogger } from '@cucumber/cucumber/lib/logger';
-import { ConsoleLogger } from '@cucumber/cucumber/lib/api/console_logger';
 import { Console } from 'console';
 
 export interface ICliRunResult {
@@ -31,7 +30,7 @@ export default class Cli {
 		argv,
 		cwd,
 		stdout,
-		stderr,
+		stderr = process.stderr,
 		env
 	}: {
 		argv: string[];
@@ -90,25 +89,42 @@ export default class Cli {
 		global.enableVueStyle = configuration.enableVueStyle;
 
 		// get run options
-		const { cwd } = mergeEnvironment(environment);
+		const { cwd, logger } = makeEnvironment(environment);
 		const newId = IdGenerator.uuid();
 		const runOptions = runConfiguration as IRunOptions;
-		const supportCoordinates =
-			'World' in runOptions.support ? runOptions.support.originalCoordinates : runOptions.support;
-		const logger: ILogger = new ConsoleLogger(environment.stderr, enableDebug);
-		const { requirePaths, importPaths } = await resolvePaths(logger, cwd, runOptions.sources, supportCoordinates);
+  const supportCoordinates =
+    'originalCoordinates' in runOptions.support
+      ? runOptions.support.originalCoordinates
+      : Object.assign(
+          {
+            requireModules: [],
+            requirePaths: [],
+            loaders: [],
+            importPaths: [],
+          },
+          runOptions.support
+        )
+  const resolvedPaths = await resolvePaths(
+    logger,
+    cwd,
+    runOptions.sources,
+    supportCoordinates
+  )
+  const { sourcePaths, requirePaths, importPaths } = resolvedPaths
 
 		// Load the step and hook definitions
-		const supportCodeLibrary =
-			'World' in runOptions.support
-				? runOptions.support
-				: await getSupportCodeLibrary({
-						cwd,
-						newId,
-						requirePaths,
-						importPaths,
-						requireModules: supportCoordinates.requireModules
-				  });
+  const supportCodeLibrary =
+    'originalCoordinates' in runOptions.support
+      ? (runOptions.support as SupportCodeLibrary)
+      : await getSupportCodeLibrary({
+          logger,
+          cwd,
+          newId,
+          requirePaths,
+          requireModules: supportCoordinates.requireModules,
+          importPaths,
+          loaders: supportCoordinates.loaders,
+        })
 
 		// Set support to the updated step and hook definitions
 		// in the supportCodeLibrary. We also need to initialize originalCoordinates

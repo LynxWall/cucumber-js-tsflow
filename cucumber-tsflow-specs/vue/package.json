@@ -8,7 +8,7 @@
 	"main": "./index.js",
 	"typings": "./index.d.ts",
 	"dependencies": {
-		"vue": "^3.3.7"
+		"vue": "^3.5.13"
 	},
 	"scripts": {
 		"test:es": "cucumber-tsflow -p esvue",
@@ -16,8 +16,8 @@
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",
-		"@types/chai": "~4.3.9",
-		"@vue/test-utils": "~2.4.1",
-		"chai": "~4.3.10"
+		"@types/chai": "~4.3.20",
+		"@vue/test-utils": "~2.4.6",
+		"chai": "~5.2.0"
 	}
 }

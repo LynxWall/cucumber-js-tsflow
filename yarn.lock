@@ -603,6 +603,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@httptoolkit/esm@npm:^3.3.1":
+  version: 3.3.1
+  resolution: "@httptoolkit/esm@npm:3.3.1"
+  checksum: 02467c59d073e6444b49b37bef0c6e612ba4c3c337474dcabe188aeaa994d03e26b65acbe51b683ee602e80fec871cf055d1ffaec35ad2ebb65f7c549e2bebf2
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.1":
   version: 0.19.1
   resolution: "@humanfs/core@npm:0.19.1"
@@ -712,13 +719,16 @@ __metadata:
   resolution: "@lynxwall/cucumber-tsflow-workspace@workspace:."
   dependencies:
     "@jsdevtools/npm-publish": ~3.1.1
+    "@types/node": ~22.13.10
     "@vue/eslint-config-typescript": ~14.5.0
     eslint: ~9.22.0
     eslint-config-prettier: ~10.1.1
     eslint-plugin-vue: ~10.0.0
     genversion: ~3.2.0
     prettier: ~3.5.3
+    ts-node: ~10.9.2
     typescript: ~5.8.2
+    vue-eslint-parser: 10.1.1
   languageName: unknown
   linkType: soft
 
@@ -737,26 +747,30 @@ __metadata:
     "@types/source-map-support": ~0.5.10
     "@types/underscore": ~1.13.0
     "@types/verror": ~1.10.11
-    chalk: ~5.4.1
+    ansis: ~3.17.0
     commander: ^13.1.0
+    debug: ^4.3.4
     esbuild: ~0.25.1
     glob: ~11.0.1
     hash-sum: ~2.0.0
+    import-sync: ^2.2.2
     jsdom: ~26.0.0
     jsdom-global: ~3.0.2
     lodash.merge: ~4.6.2
     log4js: ~6.9.1
+    polyfill-symbol-metadata: ^0.0.2
     require-extension-hooks: ~0.3.3
     rollup: ~4.35.0
     short-uuid: ~5.2.0
     source-map-support: ~0.5.21
     ts-node: ~10.9.2
     tsconfig-paths: ~4.2.0
+    tslib: 2.8.1
     typescript: ~5.8.2
     underscore: ~1.13.7
     verror: ~1.10.1
   bin:
-    cucumber-tsflow: ./bin/cucumber-tsflow
+    cucumber-tsflow: bin/cucumber-tsflow.js
   languageName: unknown
   linkType: soft
 
@@ -1547,6 +1561,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ansis@npm:~3.17.0":
+  version: 3.17.0
+  resolution: "ansis@npm:3.17.0"
+  checksum: 6fd6bc4d1187b894d9706f4c141c81b788e90766426617385486dae38f8b2f5a1726d8cc754939e44265f92a9db4647d5136cb1425435c39ac42b35e3acf4f3d
+  languageName: node
+  linkType: hard
+
 "any-base@npm:^1.1.0":
   version: 1.1.0
   resolution: "any-base@npm:1.1.0"
@@ -1761,13 +1782,6 @@ __metadata:
     ansi-styles: ^4.1.0
     supports-color: ^7.1.0
   checksum: fe75c9d5c76a7a98d45495b91b2172fa3b7a09e0cc9370e5c8feb1c567b85c4288e2b3fded7cfdd7359ac28d6b3844feb8b82b8686842e93d23c827c417e83fc
-  languageName: node
-  linkType: hard
-
-"chalk@npm:~5.4.1":
-  version: 5.4.1
-  resolution: "chalk@npm:5.4.1"
-  checksum: 0c656f30b782fed4d99198825c0860158901f449a6b12b818b0aabad27ec970389e7e8767d0e00762175b23620c812e70c4fd92c0210e55fc2d993638b74e86e
   languageName: node
   linkType: hard
 
@@ -1993,8 +2007,12 @@ __metadata:
   dependencies:
     "@lynxwall/cucumber-tsflow": "workspace:*"
     "@types/chai": ~4.3.20
+    "@types/node": ~22.13.10
     "@vue/test-utils": ~2.4.6
     chai: ~5.2.0
+    ts-node: ~10.9.2
+    tslib: 2.8.1
+    typescript: ~5.8.2
     vue: ^3.5.13
   languageName: unknown
   linkType: soft
@@ -3017,6 +3035,15 @@ __metadata:
     parent-module: ^1.0.0
     resolve-from: ^4.0.0
   checksum: 2cacfad06e652b1edc50be650f7ec3be08c5e5a6f6d12d035c440a42a8cc028e60a5b99ca08a77ab4d6b1346da7d971915828f33cdab730d3d42f08242d09baa
+  languageName: node
+  linkType: hard
+
+"import-sync@npm:^2.2.2":
+  version: 2.2.3
+  resolution: "import-sync@npm:2.2.3"
+  dependencies:
+    "@httptoolkit/esm": ^3.3.1
+  checksum: bdd68a941e5d6170c0c2c712d03b9b8ca32a20cc830beccd27487cfe3e56837a622b9d2ca746bd8e13017f117378248baea6f0e165b00a13f646200d4cea5cac
   languageName: node
   linkType: hard
 
@@ -4058,6 +4085,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"polyfill-symbol-metadata@npm:^0.0.2":
+  version: 0.0.2
+  resolution: "polyfill-symbol-metadata@npm:0.0.2"
+  checksum: 4f791c206dcf638652f8195916239c6102f5aca63a746b38153faf6f4ebbb18d5f0226210a434716f380cc01e3e00a440c6e375a54a96d102afbfccd55502330
+  languageName: node
+  linkType: hard
+
 "postcss-selector-parser@npm:^6.0.15":
   version: 6.1.2
   resolution: "postcss-selector-parser@npm:6.1.2"
@@ -4906,6 +4940,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:2.8.1":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: e4aba30e632b8c8902b47587fd13345e2827fa639e7c3121074d5ee0880723282411a8838f830b55100cbe4517672f84a2472667d355b81e8af165a55dc6203a
+  languageName: node
+  linkType: hard
+
 "tslib@npm:^2.0.3":
   version: 2.3.1
   resolution: "tslib@npm:2.3.1"
@@ -5108,7 +5149,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vue-eslint-parser@npm:^10.1.1":
+"vue-eslint-parser@npm:10.1.1, vue-eslint-parser@npm:^10.1.1":
   version: 10.1.1
   resolution: "vue-eslint-parser@npm:10.1.1"
   dependencies:

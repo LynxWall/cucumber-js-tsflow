@@ -6,49 +6,19 @@ import { StepBindingFlags } from './step-binding-flags';
  */
 export interface StepBinding {
 	/**
-	 * The step pattern.
-	 */
-	stepPattern: RegExp | string;
-
-	/**
-	 * The step binding type.
-	 */
-	bindingType: StepBindingFlags;
-
-	/**
-	 * The type that is associated with the current step binding.
-	 */
-	targetPrototype: any;
-
-	/**
-	 * The function name that is associated with the current step binding.
-	 */
-	targetPropertyKey: string | symbol;
-
-	/**
-	 * The count of arguments that have been specified on the [[StepBindingDescriptor.targetPropertyKey]].
-	 */
-	argsLength: number;
-
-	/**
-	 * The optional tag(s) that are associated with the current step binding.
-	 */
-	tags?: string;
-
-	/**
-	 * The optiomal timeout that is associated with the current step binding.
-	 */
-	timeout?: number;
-
-	/**
-	 * The wrapper Option passing to cucumber
-	 */
-	wrapperOption?: any;
-
-	/**
 	 * The callsite of the step binding.
 	 */
 	callsite: Callsite;
+
+	/**
+	 * The typescript 'binding' class that is associated with the current step.
+	 */
+	classPrototype: any;
+
+	/**
+	 * The function name that is associated with the current step.
+	 */
+	classPropertyKey: string | symbol;
 
 	/**
 	 * Key passed in with options in cucumber step bindings.
@@ -56,6 +26,48 @@ export interface StepBinding {
 	 * with cucumber step definitions.
 	 */
 	cucumberKey: string;
+
+	/**
+	 * The step binding type.
+	 */
+	bindingType: StepBindingFlags;
+
+	/**
+	 * The step pattern.
+	 */
+	stepPattern: RegExp | string;
+
+	/**
+	 * Function for this step that's passed in from the decorator.
+	 */
+	stepFunction: Function | undefined;
+
+	/**
+	 * Flag to indicate if the target is static or not.
+	 * If true than we don't 'apply' to the class instance.
+	 */
+	stepIsStatic: boolean;
+
+	/**
+	 * The number of arguments for the step, which is captured in
+	 * the decorator using arguments.length.
+	 */
+	stepArgsLength: number;
+
+	/**
+	 * The optional tag(s) that are associated with the current step.
+	 */
+	tags?: string;
+
+	/**
+	 * The optiomal timeout that is associated with the current step.
+	 */
+	timeout?: number;
+
+	/**
+	 * The wrapper Option passing to cucumber
+	 */
+	wrapperOption?: any;
 }
 
 export * from './step-binding-flags';

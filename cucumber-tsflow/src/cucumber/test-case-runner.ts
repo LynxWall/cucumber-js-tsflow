@@ -15,7 +15,7 @@ import TestStepHookDefinition from '@cucumber/cucumber/lib/models/test_step_hook
 import { IDefinition } from '@cucumber/cucumber/lib/models/definition';
 import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import StepDefinition from '@cucumber/cucumber/lib/models/step_definition';
-import { BindingRegistry } from './binding-registry';
+import { BindingRegistry } from '../bindings/binding-registry';
 import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { error } from 'console';
@@ -24,7 +24,7 @@ import { IWorldOptions } from '@cucumber/cucumber/lib/support_code_library_build
 import { timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch';
 
 export default class TestCaseRunner {
-  private readonly workerId: string | undefined
+	private readonly workerId: string | undefined;
 	private readonly attachmentManager: AttachmentManager;
 	private currentTestCaseStartedId?: string;
 	private currentTestStepId?: string;
@@ -43,7 +43,7 @@ export default class TestCaseRunner {
 	private bindingRegistry: BindingRegistry;
 
 	constructor({
-    workerId,
+		workerId,
 		eventBroadcaster,
 		gherkinDocument,
 		newId,
@@ -74,26 +74,24 @@ export default class TestCaseRunner {
 			this.eventBroadcaster.emit('envelope', attachment);
 		});
 		this.workerId = workerId;
-    this.attachmentManager = new AttachmentManager(
-      ({ data, media, fileName }) => {
-        if (doesNotHaveValue(this.currentTestStepId)) {
-          throw new Error(
-            'Cannot attach when a step/hook is not running. Ensure your step/hook waits for the attach to finish.'
-          )
-        }
-        const attachment: messages.Envelope = {
-          attachment: {
-            body: data,
-            contentEncoding: media.encoding,
-            mediaType: media.contentType,
-            fileName,
-            testCaseStartedId: this.currentTestCaseStartedId,
-            testStepId: this.currentTestStepId,
-          },
-        }
-        this.eventBroadcaster.emit('envelope', attachment)
-      }
-    )
+		this.attachmentManager = new AttachmentManager(({ data, media, fileName }) => {
+			if (doesNotHaveValue(this.currentTestStepId)) {
+				throw new Error(
+					'Cannot attach when a step/hook is not running. Ensure your step/hook waits for the attach to finish.'
+				);
+			}
+			const attachment: messages.Envelope = {
+				attachment: {
+					body: data,
+					contentEncoding: media.encoding,
+					mediaType: media.contentType,
+					fileName,
+					testCaseStartedId: this.currentTestCaseStartedId,
+					testStepId: this.currentTestStepId
+				}
+			};
+			this.eventBroadcaster.emit('envelope', attachment);
+		});
 		this.eventBroadcaster = eventBroadcaster;
 		this.gherkinDocument = gherkinDocument;
 		this.maxAttempts = 1 + (skip ? 0 : retries);
@@ -112,8 +110,8 @@ export default class TestCaseRunner {
 		this.world = new this.supportCodeLibrary.World({
 			attach: this.attachmentManager.create.bind(this.attachmentManager) as unknown as ICreateAttachment,
 			log: this.attachmentManager.log.bind(this.attachmentManager),
-      link: this.attachmentManager.link.bind(this.attachmentManager),
-      parameters: structuredClone(this.worldParameters),
+			link: this.attachmentManager.link.bind(this.attachmentManager),
+			parameters: structuredClone(this.worldParameters)
 		} satisfies IWorldOptions);
 		this.testStepResults = [];
 	}
@@ -371,9 +369,9 @@ export default class TestCaseRunner {
 	 * @param scenarioContext
 	 */
 	async initializeContext(stepBinding: StepBinding, scenarioContext: ManagedScenarioContext): Promise<void> {
-		const contextTypes = this.bindingRegistry.getContextTypesForTarget(stepBinding.targetPrototype);
+		const contextTypes = this.bindingRegistry.getContextTypesForClass(stepBinding.classPrototype);
 		if (contextTypes.length > 0) {
-			scenarioContext.getOrActivateBindingClass(stepBinding.targetPrototype, contextTypes, this.world);
+			scenarioContext.getOrActivateBindingClass(stepBinding.classPrototype, contextTypes, this.world);
 
 			const startTestCaseParameter: StartTestCaseInfo = {
 				gherkinDocument: this.gherkinDocument,

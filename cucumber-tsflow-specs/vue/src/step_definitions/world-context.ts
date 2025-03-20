@@ -14,7 +14,7 @@ export default class WorldContext {
 	 * in all tests.
 	 */
 	@before()
-	addWorldBeforeAllScenarios(): any {
+	addWorldBeforeAllScenarios() {
 		const world = this.context.world;
 	}
 
@@ -24,7 +24,7 @@ export default class WorldContext {
 	 * do anything if a component hasn't been rendered.
 	 */
 	@after()
-	cleanupAfterAllScenarios(): any {
+	cleanupAfterAllScenarios() {
 		const world = this.context.world;
 	}
 }

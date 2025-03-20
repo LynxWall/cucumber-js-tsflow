@@ -20,7 +20,7 @@
 			"html:../cucumber_report_tsnode.html",
 			"junitbamboo:../cucumber_report_tsnode.xml"
 		],
-		"parallel": 2,
+		"parallel": 1,
 		"tags": "@node"
 	}
 }

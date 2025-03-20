@@ -1,15 +1,12 @@
 require('ts-node').register({
 	compilerOptions: {
-		module: 'es2020',
-		moduleResolution: 'node',
-		target: 'es2020',
+		module: 'nodeNext',
+		target: 'es2022',
 		strict: true,
-		experimentalDecorators: true,
-		allowSyntheticDefaultImports: true,
 		resolveJsonModule: true,
 		esModuleInterop: true,
 		skipLibCheck: true,
-		lib: ['es2020']
+		lib: ['es2022', 'esnext.decorators']
 	},
 	transpileOnly: true,
 	transpiler: '@lynxwall/cucumber-tsflow/lib/transpilers/esbuild-transpiler'

@@ -2,11 +2,12 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import _ from 'underscore';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import { ContextType, StepPattern, TagName } from '../types/types';
+import logger from '../utils/logger';
 
 /**
  * Describes the binding metadata that is associated with a binding class.
  */
-interface TargetBinding {
+interface ClassBinding {
 	/**
 	 * A reference to the step bindings that are associated with the binding class.
 	 */
@@ -32,8 +33,8 @@ export const DEFAULT_TAG = '*';
  * A metadata registry that captures information about bindings and their bound step bindings.
  */
 export class BindingRegistry {
-	private _bindings = new Map<StepPattern, Map<TagName, StepBinding[]>>();
-	private _targetBindings = new Map<any, TargetBinding>();
+	private _stepBindings = new Map<StepPattern, Map<TagName, StepBinding[]>>();
+	private _classBindings = new Map<any, ClassBinding>();
 
 	/**
 	 * Gets the binding registry singleton.
@@ -56,16 +57,16 @@ export class BindingRegistry {
 	 * Updates the binding registry with information about the context types required by a
 	 * binding class.
 	 *
-	 * @param targetPrototype The class representing the binding (constructor function).
+	 * @param classPrototype The class representing the binding (constructor function).
 	 * @param contextTypes An array of [[ContextType]] that define the types of objects that
 	 * should be injected into the binding class during a scenario execution.
 	 */
-	public registerContextTypesForTarget(targetPrototype: any, contextTypes?: ContextType[]): void {
+	public registerContextTypesForClass(classPrototype: any, contextTypes?: ContextType[]): void {
 		if (!contextTypes) {
 			return;
 		}
 
-		let targetDecorations = this._targetBindings.get(targetPrototype);
+		let targetDecorations = this._classBindings.get(classPrototype);
 
 		if (!targetDecorations) {
 			targetDecorations = {
@@ -73,7 +74,7 @@ export class BindingRegistry {
 				contextTypes: []
 			};
 
-			this._targetBindings.set(targetPrototype, targetDecorations);
+			this._classBindings.set(classPrototype, targetDecorations);
 		}
 
 		targetDecorations.contextTypes = contextTypes;
@@ -82,13 +83,13 @@ export class BindingRegistry {
 	/**
 	 * Retrieves the context types that have been registered for a given binding class.
 	 *
-	 * @param targetPrototype The class representing the binding (constructor function).
+	 * @param classPrototype The class representing the binding (constructor function).
 	 *
 	 * @returns An array of [[ContextType]] that have been registered for the specified
 	 * binding class.
 	 */
-	public getContextTypesForTarget(targetPrototype: any): ContextType[] {
-		const targetBinding = this._targetBindings.get(targetPrototype);
+	public getContextTypesForClass(classPrototype: any): ContextType[] {
+		const targetBinding = this._classBindings.get(classPrototype);
 
 		if (!targetBinding) {
 			return [];
@@ -109,19 +110,19 @@ export class BindingRegistry {
 
 		if (stepBinding.tags !== DEFAULT_TAG && !stepBinding.tags.startsWith('@')) {
 			// tslint:disable-next-line:no-console
-			console.log('tag should start with @; tsflow has stopped to automatically prepend @ for you.');
+			logger.debug('tag should start with @; tsflow has stopped to automatically prepend @ for you.');
 		}
 
 		const stepPattern: StepPattern = stepBinding.stepPattern
 			? stepBinding.stepPattern.toString()
 			: DEFAULT_STEP_PATTERN;
 
-		let tagMap = this._bindings.get(stepPattern);
+		let tagMap = this._stepBindings.get(stepPattern);
 
 		if (!tagMap) {
 			tagMap = new Map<TagName, StepBinding[]>();
 
-			this._bindings.set(stepPattern, tagMap);
+			this._stepBindings.set(stepPattern, tagMap);
 		}
 
 		let stepBindings = tagMap.get(stepBinding.tags);
@@ -138,7 +139,7 @@ export class BindingRegistry {
 
 		// Index the step binding for the target
 
-		let targetBinding = this._targetBindings.get(stepBinding.targetPrototype);
+		let targetBinding = this._classBindings.get(stepBinding.classPrototype);
 
 		if (!targetBinding) {
 			targetBinding = {
@@ -146,7 +147,7 @@ export class BindingRegistry {
 				contextTypes: []
 			};
 
-			this._targetBindings.set(stepBinding.targetPrototype, targetBinding);
+			this._classBindings.set(stepBinding.classPrototype, targetBinding);
 		}
 
 		if (!targetBinding.stepBindings.some(b => isSameStepBinding(stepBinding, b))) {
@@ -172,7 +173,7 @@ export class BindingRegistry {
 	 * binding class.
 	 */
 	public getStepBindingsForTarget(targetPrototype: any): StepBinding[] {
-		const targetBinding = this._targetBindings.get(targetPrototype);
+		const targetBinding = this._classBindings.get(targetPrototype);
 
 		if (!targetBinding) {
 			return [];
@@ -190,7 +191,7 @@ export class BindingRegistry {
 	 * @returns An array of [[StepBinding]] that map to the given step pattern and set of tag names.
 	 */
 	public getStepBindings(stepPattern: StepPattern, tags: TagName[]): StepBinding[] {
-		const tagMap = this._bindings.get(stepPattern);
+		const tagMap = this._stepBindings.get(stepPattern);
 
 		if (!tagMap) {
 			return [];
@@ -207,7 +208,7 @@ export class BindingRegistry {
 
 	public getStepBindingByCucumberKey(cucumberKey: string): StepBinding | undefined {
 		let result: StepBinding | undefined = undefined;
-		for (const [_, binding] of this._targetBindings) {
+		for (const [_, binding] of this._classBindings) {
 			for (const stepBinding of binding.stepBindings) {
 				if (stepBinding.cucumberKey === cucumberKey) {
 					result = stepBinding;
@@ -228,7 +229,7 @@ export class BindingRegistry {
 	 * @returns
 	 */
 	public updateSupportCodeLibrary = (library: SupportCodeLibrary): SupportCodeLibrary => {
-		this._targetBindings.forEach(binding => {
+		this._classBindings.forEach(binding => {
 			binding.stepBindings.forEach(stepBinding => {
 				let cucumberDefinition: any | undefined = undefined;
 				switch (stepBinding.bindingType) {

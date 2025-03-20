@@ -4,15 +4,17 @@ import {
 	DEFAULT_CONFIGURATION,
 	fromFile,
 	IConfiguration,
+	parseConfiguration,
 	mergeConfigurations
 } from '@cucumber/cucumber/lib/configuration/index';
 import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/validate_configuration';
 import { convertConfiguration } from '@cucumber/cucumber/lib/api/convert_configuration';
-import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment';
+import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { ITsflowConfiguration } from './argv-parser';
-import chalk from 'chalk';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
+import chalk from 'ansis';
+
 export interface ITsflowResolvedConfiguration {
 	/**
 	 * The final flat configuration object resolved from the configuration file/profiles plus any extra provided.
@@ -35,12 +37,12 @@ export const loadConfiguration = async (
 	options: ILoadConfigurationOptions = {},
 	environment: IRunEnvironment = {}
 ): Promise<ITsflowResolvedConfiguration> => {
-  const { cwd, env, logger } = makeEnvironment(environment)
-  const configFile = options.file ?? locateFile(cwd)
+	const { cwd, env, logger } = makeEnvironment(environment);
+	const configFile = options.file ?? locateFile(cwd);
 	if (configFile) {
 		logger.debug(`Configuration will be loaded from "${configFile}"`);
-  } else if (configFile === false) {
-    logger.debug('Skipping configuration file resolution')
+	} else if (configFile === false) {
+		logger.debug('Skipping configuration file resolution');
 	} else {
 		logger.debug('No configuration file found');
 	}
@@ -58,7 +60,7 @@ export const loadConfiguration = async (
 	const original = mergeConfigurations(
 		DEFAULT_CONFIGURATION,
 		profileConfiguration,
-		options.provided as Partial<IConfiguration>
+		parseConfiguration(logger, 'Provided', options.provided)
 	) as ITsflowConfiguration;
 
 	switch (original.transpiler) {

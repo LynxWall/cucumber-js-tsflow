@@ -1,5 +1,5 @@
 import * as messages from '@cucumber/messages';
-import { doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
+import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { hasMatchingStep, hasMatchingTags } from './utils';
@@ -7,6 +7,7 @@ import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
 import { EndTestCaseInfo } from './test-case-info';
+import { IMessageData } from '../types/parallel';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -54,6 +55,21 @@ export default class MessageCollector {
 
 	onTestCaseEnd(Handler: (testCaseFinished: messages.TestCaseFinished) => void): void {
 		this.collectorEvents.on('testCaseEnd', Handler);
+	}
+
+	addMessageData(messageData: IMessageData): void {
+		this.gherkinDocumentMap = messageData.gherkinDocumentMap;
+		this.pickleMap = messageData.pickleMap;
+		this.testCaseMap = messageData.testCaseMap;
+	}
+
+	getMessageData(): IMessageData {
+		const data = {} as IMessageData;
+		data.gherkinDocumentMap = this.gherkinDocumentMap;
+		data.pickleMap = this.pickleMap;
+		data.testCaseMap = this.testCaseMap;
+
+		return data;
 	}
 
 	// Used during parallel execution to add the current pickle and testCase
@@ -106,22 +122,22 @@ export default class MessageCollector {
 	}
 
 	parseEnvelope(envelope: messages.Envelope): void {
-		if (envelope.gherkinDocument && envelope.gherkinDocument.uri) {
+		if (doesHaveValue(envelope.gherkinDocument)) {
 			this.gherkinDocumentMap[envelope.gherkinDocument.uri] = envelope.gherkinDocument;
-		} else if (envelope.pickle && envelope.pickle.id) {
+		} else if (doesHaveValue(envelope.pickle)) {
 			this.pickleMap[envelope.pickle.id] = envelope.pickle;
-		} else if (envelope.undefinedParameterType) {
+		} else if (doesHaveValue(envelope.undefinedParameterType)) {
 			this.undefinedParameterTypes.push(envelope.undefinedParameterType);
-		} else if (envelope.testCase && envelope.testCase.id) {
+		} else if (doesHaveValue(envelope.testCase)) {
 			this.testCaseMap[envelope.testCase.id] = envelope.testCase;
-		} else if (envelope.testCaseStarted) {
+		} else if (doesHaveValue(envelope.testCaseStarted)) {
 			this.initTestCaseAttempt(envelope.testCaseStarted);
 			this.startTestCase(envelope.testCaseStarted);
-		} else if (envelope.attachment) {
+		} else if (doesHaveValue(envelope.attachment)) {
 			this.storeAttachment(envelope.attachment);
-		} else if (envelope.testStepFinished) {
+		} else if (doesHaveValue(envelope.testStepFinished)) {
 			this.storeTestStepResult(envelope.testStepFinished);
-		} else if (envelope.testCaseFinished) {
+		} else if (doesHaveValue(envelope.testCaseFinished)) {
 			this.storeTestCaseResult(envelope.testCaseFinished);
 		}
 	}

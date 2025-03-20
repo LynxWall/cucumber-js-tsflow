@@ -1,4 +1,4 @@
-import { CreateTranspilerOptions, TranspileOptions, Transpiler, TranspileOutput } from 'ts-node/dist/transpilers/types';
+import { CreateTranspilerOptions, TranspileOptions, Transpiler, TranspileOutput } from 'ts-node';
 import { transpileCode } from './esbuild';
 
 const create = (_createOptions: CreateTranspilerOptions): Transpiler => {

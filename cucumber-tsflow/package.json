@@ -1,11 +1,11 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
-	"description": "Provides 'specflow' like bindings for CucumberJS 9.6.0+ in TypeScript 5.0+.",
-	"version": "6.6.0",
+	"description": "Provides 'specflow' like bindings for CucumberJS 11.2.0+ in TypeScript 5.8+.",
+	"version": "7.0.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
-	"main": "./lib/index",
-	"types": "./lib/index",
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
 	"keywords": [
 		"testing",
 		"bdd",
@@ -26,23 +26,25 @@
 		"@cucumber/cucumber": "~11.2.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
 		"@rollup/pluginutils": "~5.1.4",
-		"@types/node": "~22.13.10",
-		"chalk": "~5.4.1",
+		"ansis": "~3.17.0",
 		"commander": "^13.1.0",
+		"debug": "^4.3.4",
 		"esbuild": "~0.25.1",
 		"glob": "~11.0.1",
 		"hash-sum": "~2.0.0",
+		"import-sync": "^2.2.2",
 		"jsdom": "~26.0.0",
 		"jsdom-global": "~3.0.2",
 		"lodash.merge": "~4.6.2",
 		"log4js": "~6.9.1",
+		"polyfill-symbol-metadata": "^0.0.2",
 		"require-extension-hooks": "~0.3.3",
 		"rollup": "~4.35.0",
 		"short-uuid": "~5.2.0",
 		"source-map-support": "~0.5.21",
 		"ts-node": "~10.9.2",
 		"tsconfig-paths": "~4.2.0",
-		"typescript": "~5.8.2",
+		"tslib": "2.8.1",
 		"underscore": "~1.13.7",
 		"verror": "~1.10.1"
 	},
@@ -51,9 +53,11 @@
 		"@types/glob": "~8.1.0",
 		"@types/hash-sum": "~1.0.2",
 		"@types/lodash.merge": "~4.6.9",
+		"@types/node": "~22.13.10",
 		"@types/source-map-support": "~0.5.10",
 		"@types/underscore": "~1.13.0",
-		"@types/verror": "~1.10.11"
+		"@types/verror": "~1.10.11",
+		"typescript": "~5.8.2"
 	},
-	"bin": "./bin/cucumber-tsflow"
+	"bin": "bin/cucumber-tsflow.js"
 }

@@ -1,10 +1,8 @@
 /* eslint-disable no-console */
 /* This is one rare place where we're fine to use process/console directly,
  * but other code abstracts those to remain composable and testable. */
-import Cli, { ICliRunResult } from './';
-import VError from 'verror';
+import Cli, { ICliRunResult } from './index';
 import { validateNodeEngineVersion } from '@cucumber/cucumber/lib/cli/validate_node_engine_version';
-import { BindingRegistry } from '../cucumber/binding-registry';
 function logErrorMessageAndExit(message: string): void {
 	console.error(message);
 	process.exit(1);
@@ -32,7 +30,7 @@ export default async function run(): Promise<void> {
 	try {
 		result = await cli.run();
 	} catch (error: any) {
-		logErrorMessageAndExit(VError.fullStack(error));
+		logErrorMessageAndExit(error);
 	}
 
 	// 0 = success, 2 = failed or has pending, undefined or unknown steps

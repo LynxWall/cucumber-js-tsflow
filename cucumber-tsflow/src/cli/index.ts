@@ -1,15 +1,15 @@
 import { IdGenerator } from '@cucumber/messages';
-import { IFormatterStream } from '@cucumber/cucumber/lib/formatter';
+import { IFormatterStream } from '@cucumber/cucumber/lib/formatter/index';
 import { IRunOptions } from '@cucumber/cucumber/lib/api/index';
 import { runCucumber } from '../cucumber/run-cucumber';
 import { loadConfiguration } from './load-configuration';
 import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
-import { resolvePaths } from '@cucumber/cucumber/lib/paths';
-import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types'
-import { makeEnvironment,  } from '@cucumber/cucumber/lib/environment';
+import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
+import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
+import { makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
-import { BindingRegistry } from '../cucumber/binding-registry';
+import { BindingRegistry } from '../bindings/binding-registry';
 import ArgvParser from './argv-parser';
 import debug from 'debug';
 import { Console } from 'console';
@@ -47,7 +47,10 @@ export default class Cli {
 	}
 
 	async run(): Promise<ICliRunResult> {
-		await validateInstall();
+		const debugEnabled = debug.enabled('cucumber');
+		if (debugEnabled) {
+			await validateInstall();
+		}
 
 		const { options, configuration: argvConfiguration } = ArgvParser.parse(this.argv);
 		if (options.i18nLanguages) {
@@ -65,13 +68,12 @@ export default class Cli {
 			};
 		}
 
-		const enableDebug = debug.enabled('cucumber');
 		const environment = {
 			cwd: this.cwd,
 			stdout: this.stdout,
 			stderr: this.stderr,
 			env: this.env,
-			debug: enableDebug
+			debug: debugEnabled
 		};
 		const consoleLogger = new Console(environment.stdout as any, environment.stderr);
 		consoleLogger.info('Loading configuration and step definitions...\n');
@@ -92,39 +94,36 @@ export default class Cli {
 		const { cwd, logger } = makeEnvironment(environment);
 		const newId = IdGenerator.uuid();
 		const runOptions = runConfiguration as IRunOptions;
-  const supportCoordinates =
-    'originalCoordinates' in runOptions.support
-      ? runOptions.support.originalCoordinates
-      : Object.assign(
-          {
-            requireModules: [],
-            requirePaths: [],
-            loaders: [],
-            importPaths: [],
-          },
-          runOptions.support
-        )
-  const resolvedPaths = await resolvePaths(
-    logger,
-    cwd,
-    runOptions.sources,
-    supportCoordinates
-  )
-  const { sourcePaths, requirePaths, importPaths } = resolvedPaths
+		const supportCoordinates =
+			'originalCoordinates' in runOptions.support
+				? runOptions.support.originalCoordinates
+				: Object.assign(
+						{
+							requireModules: [],
+							requirePaths: [],
+							loaders: [],
+							importPaths: []
+						},
+						runOptions.support
+					);
+		const resolvedPaths = await resolvePaths(logger, cwd, runOptions.sources, supportCoordinates);
+		const { sourcePaths, requirePaths, importPaths } = resolvedPaths;
+
+		logger.debug(process.version);
 
 		// Load the step and hook definitions
-  const supportCodeLibrary =
-    'originalCoordinates' in runOptions.support
-      ? (runOptions.support as SupportCodeLibrary)
-      : await getSupportCodeLibrary({
-          logger,
-          cwd,
-          newId,
-          requirePaths,
-          requireModules: supportCoordinates.requireModules,
-          importPaths,
-          loaders: supportCoordinates.loaders,
-        })
+		const supportCodeLibrary =
+			'originalCoordinates' in runOptions.support
+				? (runOptions.support as SupportCodeLibrary)
+				: await getSupportCodeLibrary({
+						logger,
+						cwd,
+						newId,
+						requirePaths,
+						requireModules: supportCoordinates.requireModules,
+						importPaths,
+						loaders: supportCoordinates.loaders
+					});
 
 		// Set support to the updated step and hook definitions
 		// in the supportCodeLibrary. We also need to initialize originalCoordinates

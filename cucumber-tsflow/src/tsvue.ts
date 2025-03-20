@@ -3,16 +3,13 @@ import VueTransformer from './transpilers/vue-sfc';
 
 require('ts-node').register({
 	compilerOptions: {
-		module: 'commonjs',
-		moduleResolution: 'node',
+		module: 'nodeNext',
 		target: 'es2022',
 		strict: true,
-		experimentalDecorators: true,
-		allowSyntheticDefaultImports: true,
 		resolveJsonModule: true,
 		esModuleInterop: true,
 		skipLibCheck: true,
-		lib: ['es2022']
+		lib: ['es2022', 'esnext.decorators']
 	},
 	transpileOnly: true
 });

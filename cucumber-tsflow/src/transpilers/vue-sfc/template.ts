@@ -65,7 +65,7 @@ export const resolveTemplateCompilerOptions = (
 ): Omit<SFCTemplateCompileOptions, 'source'> | undefined => {
 	const block = descriptor.template;
 	if (!block) {
-		return;
+		return undefined;
 	}
 	const resolvedScript = getResolvedScript(descriptor, ssr);
 	const hasScoped = descriptor.styles.some(s => s.scoped);

@@ -2,6 +2,15 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Launch Program",
+			"program": "${workspaceFolder}/cucumber-tsflow/src/cli/run.ts",
+			"request": "launch",
+			"skipFiles": ["<node_internals>/**"],
+			"type": "node"
+			// "preLaunchTask": "tsc: build - cucumber-tsflow/tsconfig.node.json",
+			// "outFiles": ["${workspaceFolder}/cucumber-tsflow/lib/**/*.js"]
+		},
+		{
 			"name": "Debug All",
 			"type": "node",
 			"request": "launch",
@@ -18,17 +27,18 @@
 			"sourceMaps": true
 		},
 		{
-			"name": "Debug Feature",
+			"name": "Debug Vue Feature",
 			"type": "node",
 			"request": "launch",
 			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
-			"args": ["--debug-file", "${file}", "-p", "default"],
-			"cwd": "${workspaceRoot}/cucumber-tsflow-specs",
+			"args": ["--debug-file", "${file}", "-p", "tsnode"],
+			"cwd": "${workspaceRoot}/cucumber-tsflow-specs/node",
 			"runtimeExecutable": null,
 			"runtimeArgs": ["--nolazy"],
 			"env": {
-				"NODE_ENV": "development"
+				"NODE_ENV": "development",
+				"DEBUG": "cucumber"
 			},
 			"console": "integratedTerminal",
 			"sourceMaps": true

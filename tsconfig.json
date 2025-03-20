@@ -1,23 +1,17 @@
 {
 	"compilerOptions": {
-		"baseUrl": ".",
-		"target": "es2022",
-		"module": "es2022",
-		"strict": true,
-		"jsx": "preserve",
-		"moduleResolution": "node",
-		"skipLibCheck": true,
 		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true,
-		"allowJs": true,
-		"experimentalDecorators": true,
+		"lib": ["es2022", "esnext.decorators"],
+		"module": "node18",
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"inlineSources": true,
+		"skipLibCheck": true,
+		"target": "es2022",
 		"typeRoots": ["**/node_modules/@types", "**/node_modules/@cucumber/cucumber/lib/types"]
 	},
-	"files": [],
-	"include": [],
-	"references": [
-		{
-			"path": "./cucumber-tsflow"
-		}
-	]
+	"include": ["**/node_modules/ts-node/dist/transpilers/types.d.ts"]
 }

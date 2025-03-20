@@ -7,7 +7,8 @@
 			["behave", "../cucumber_report_esvue.json"],
 			"html:../cucumber_report_esvue.html",
 			"junitbamboo:../cucumber_report_esvue.xml"
-		]
+		],
+		"parallel": 2
 	},
 	"tsvue": {
 		"transpiler": "tsvue",
@@ -18,6 +19,6 @@
 			"html:../cucumber_report_tsvue.html",
 			"junitbamboo:../cucumber_report_tsvue.xml"
 		],
-		"parallel": 2
+		"parallel": 0
 	}
 }

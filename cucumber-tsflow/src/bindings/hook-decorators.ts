@@ -1,7 +1,7 @@
-import { BindingRegistry } from './binding-registry';
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import shortUuid from 'short-uuid';
+import { addStepBinding } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
@@ -9,7 +9,7 @@ import shortUuid from 'short-uuid';
  *
  * @param timeout Optional timeout in milliseconds
  */
-export function beforeAll(timeout?: number): MethodDecorator {
+export function beforeAll(timeout?: number): any {
 	const callSite = Callsite.capture();
 	return createDecoratorFactory(StepBindingFlags.beforeAll, callSite, undefined, timeout);
 }
@@ -20,7 +20,7 @@ export function beforeAll(timeout?: number): MethodDecorator {
  * @param tags Optional tag or tags associated with a scenario.
  * @param timeout Optional timeout in milliseconds
  */
-export function before(tags?: string, timeout?: number): MethodDecorator {
+export function before(tags?: string, timeout?: number): any {
 	const callSite = Callsite.capture();
 	return createDecoratorFactory(StepBindingFlags.before, callSite, tags, timeout);
 }
@@ -31,7 +31,7 @@ export function before(tags?: string, timeout?: number): MethodDecorator {
  * @param tags Optional tag or tags associated with a scenario.
  * @param timeout Optional timeout in milliseconds
  */
-export function beforeStep(tags?: string, timeout?: number): MethodDecorator {
+export function beforeStep(tags?: string, timeout?: number): any {
 	const callSite = Callsite.capture();
 	return createDecoratorFactory(StepBindingFlags.beforeStep, callSite, tags, timeout);
 }
@@ -42,7 +42,7 @@ export function beforeStep(tags?: string, timeout?: number): MethodDecorator {
  *
  * @param timeout Optional timeout in milliseconds
  */
-export function afterAll(timeout?: number): MethodDecorator {
+export function afterAll(timeout?: number): any {
 	const callSite = Callsite.capture();
 	return createDecoratorFactory(StepBindingFlags.afterAll, callSite, undefined, timeout);
 }
@@ -53,7 +53,7 @@ export function afterAll(timeout?: number): MethodDecorator {
  * @param tags Optional tag or tags associated with a scenario.
  * @param timeout Optional timeout in milliseconds
  */
-export function after(tags?: string, timeout?: number): MethodDecorator {
+export function after(tags?: string, timeout?: number): any {
 	const callSite = Callsite.capture();
 	return createDecoratorFactory(StepBindingFlags.after, callSite, tags, timeout);
 }
@@ -64,7 +64,7 @@ export function after(tags?: string, timeout?: number): MethodDecorator {
  * @param tags Optional tag or tags associated with a scenario.
  * @param timeout Optional timeout in milliseconds
  */
-export function afterStep(tags?: string, timeout?: number): MethodDecorator {
+export function afterStep(tags?: string, timeout?: number): any {
 	const callSite = Callsite.capture();
 	return createDecoratorFactory(StepBindingFlags.afterStep, callSite, tags, timeout);
 }
@@ -74,13 +74,16 @@ function checkTag(tag: string): string {
 }
 
 function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?: string, timeout?: number) {
-	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+	return function hookDecorator(target: Function, context: ClassMethodDecoratorContext) {
 		const stepBinding: StepBinding = {
 			stepPattern: '',
 			bindingType: flag,
-			targetPrototype: target,
-			targetPropertyKey: propertyKey,
-			argsLength: target[propertyKey].length,
+			classPrototype: undefined,
+			classPropertyKey: context.name,
+			stepFunction: target,
+			stepIsStatic: context.static,
+			stepArgsLength: target.length,
+			tags: tag,
 			timeout: timeout,
 			callsite: callSite,
 			cucumberKey: shortUuid().new()
@@ -89,9 +92,8 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 		if (tag) {
 			stepBinding.tags = checkTag(tag);
 		}
+		addStepBinding(context, stepBinding);
 
-		BindingRegistry.instance.registerStepBinding(stepBinding);
-
-		return descriptor;
+		return;
 	};
 }

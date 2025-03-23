@@ -1,5 +1,5 @@
 import { Callsite } from '../utils/our-callsite';
-import { StepBindingFlags } from './step-binding-flags';
+import { StepBindingFlags } from './types';
 
 /**
  * Encapsulates data about a step binding.
@@ -70,4 +70,4 @@ export interface StepBinding {
 	wrapperOption?: any;
 }
 
-export * from './step-binding-flags';
+export { StepBindingFlags } from './types';

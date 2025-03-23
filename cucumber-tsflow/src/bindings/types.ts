@@ -1,4 +1,17 @@
 // tslint:disable:no-bitwise
+import { World } from '@cucumber/cucumber';
+import { Callsite } from '../utils/our-callsite';
+
+/**
+ * A string representation of a [[RegExp]] that defines a Cucumber step pattern.
+ */
+export type StepPattern = string;
+
+/**
+ * A Cucumber tag name.
+ */
+export type TagName = string;
+
 /**
  * The CucumberJS step binding types.
  */
@@ -67,4 +80,15 @@ export enum StepBindingFlags {
 		StepBindingFlags.afterAll |
 		StepBindingFlags.beforeStep |
 		StepBindingFlags.afterStep
+}
+
+/**
+ * Represents a class that will be injected into a binding class to provide context
+ * during the execution of a Cucumber scenario.
+ */
+export interface ContextType {
+	/**
+	 * A default constructor.
+	 */
+	new (worldObj: World): any;
 }

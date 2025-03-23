@@ -2,7 +2,7 @@
 	"private": true,
 	"name": "cucumber-tsflow-vue",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "7.0.0",
+	"version": "7.1.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",
@@ -15,7 +15,6 @@
 		"test:ts": "cucumber-tsflow -p tsvue"
 	},
 	"devDependencies": {
-		"@cucumber/cucumber": "~11.2.0",
 		"@lynxwall/cucumber-tsflow": "workspace:*",
 		"@types/chai": "~4.3.20",
 		"@types/node": "~22.13.10",

@@ -1,4 +1,4 @@
-import { TagName } from './types';
+import { TagName } from '../bindings/types';
 
 /**
  * Provides information about a running Cucumber scenario.

@@ -7,7 +7,6 @@
 		"importHelpers": true,
 		"skipLibCheck": true,
 		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"useDefineForClassFields": true,
 		"inlineSourceMap": true,

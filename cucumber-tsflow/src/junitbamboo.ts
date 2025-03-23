@@ -1,3 +1,3 @@
-import * as junitbamboo from './formatters/junit-bamboo-formatter';
+import * as junitbamboo from './formatter/junit-bamboo-formatter';
 
 module.exports = junitbamboo;

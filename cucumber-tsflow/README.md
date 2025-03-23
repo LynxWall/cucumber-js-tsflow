@@ -2,7 +2,7 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for CucumberJS 11.2.0+ in TypeScript 5.8+.
+Provides 'specflow' like bindings for CucumberJS 11.2.0 in TypeScript 5.8+.
 
 Supports Vue3 files in cucumber tests.
 
@@ -10,9 +10,25 @@ Supports Vue3 files in cucumber tests.
 
 This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. It has had the <https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks> branch merged into it, which adds support for beforeAll and afterAll hooks.
 
-In addition, the following features have been added:
+This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
+
+## Release Updates (7.1.0)
+
+With this latest release, cucumber-tsflow has been refactored to support cucumber-js version 11.2.0 along with other updates that include:
+
+- **Switch to package exports** with both cucumber-tsflow and most of cucumber-js Public types and functions exported. This allows developers to use cucumber-tsflow as a replacement for cucumber-js without requiring a peer installation. Most of the functionality is still executed in cucumber-js, cucumber-tsflow just extends cucumber-js to switch from support functions to support decorators with scoped context. This change is what allows you to use a SpecFlow type of structure for defining code that will execute BDD tests.
+- **API support** that implements and extends the cucumber-js API.
+- Support for Node 22 and Typescript 5.8.
+  - Switched to **official Typescript Decorators** with metadata support implemented in [Typescript 5.2](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#decorator-metadata).
+- Transpiler configuration updates to support node and Typescript changes.
+  - Added a new section to this readme that describes [Transpilers and TypeScript](#transpilers-and-typescript) in more detail.
+
+## Features
+
+This fork of cucumber-tsflow provides the following features that extend the original version:
 
 - Test runner using the cucumber-tsflow command.
+
   - Uses underlying cucumber api to run tests.
   - Returns **four** exit codes:
     - **0** - All scenarios passing.
@@ -38,12 +54,13 @@ In addition, the following features have been added:
 
 - A behave-json-formatter that fixes json so it can be used with Behave Pro.
 
+- A junit-bamboo formatter that generates xml compatible with the Bamboo JUnit plugin.
+
 - tsflow-snippet-syntax used to format snippet examples.
+
   - snippets use the [Cucumber Expressions](https://github.com/cucumber/cucumber-expressions#readme) Syntax for parameters.
 
 - [Context Injection](#context-injection) updates with support to initialize the context before each scenario test run and dispose the context after a scenario has finished executing.
-
-  
 
 <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
 <strong><span style="color: #000">Note:</span></strong> With recent updates you must use the <strong><span style="color: #000">cucumber-tsflow</span></strong> command to execute tests. This command executes the same API calls that cucumber-js does and supports all of the options and features as cucumber-js along with new features listed above.
@@ -134,6 +151,75 @@ If not using one of the [transpilers](#transpiler-and-vue3-supported) listed bel
 Running the cucumber-tsflow command will execute your features along with the support code that you've created in the class.
 
 In this quick example test state is encapsulated directly in the class. As your test suite grows larger and step definitions get shared between multiple classes, you can begin using '[Context Injection](#context-injection)' to share state between running step definitions.
+
+## Transpilers and TypeScript
+
+Cucumber-tsflow provides several [transpilers](#transpiler-and-vue3-supported) that can be used in your configuration. However, you are not required to use them. If a different configuration or transpiler is needed you can copy code from one of the provided transpilers.
+
+This section focuses on the Typescript configuration used to transpile your test code, and any dependencies, into JavaScript that is executed within the cucumber-js test runner.
+
+### CommonJS and ESM
+
+The transpilers included with cucumber-tsflow transpile to **CommonJS** and do not support projects with `"type": "module"` in your `package.json`. However, [esModuleinterop](https://www.typescriptlang.org/tsconfig/#esModuleInterop) is enabled by default, which allows you to write code using ECMAScript (ESM) standards and import ESM modules in your test code.
+
+### TypeScript Configuration
+
+All of the transpilers included with cucumber-tsflow use the same TypeScript configuration, which take precedence when running your tests using one of these transpilers. In other words, while each transpiler is different, they all use the same tsconfig settings, which are shown below:
+
+```json
+	compilerOptions: {
+		module: 'nodeNext',
+		target: 'es2022',
+		strict: true,
+		resolveJsonModule: true,
+		esModuleInterop: true,
+		skipLibCheck: true,
+		lib: ['es2022', 'esnext.decorators']
+	},
+```
+
+When test runs are started, the settings from your local tsconfig.json are loaded first and then the settings from the transpiler will override the specific settings shown above. As a result, you should use these transpilers in projects that will support these settings.
+
+For example, the settings from the cucumber-tsflow vue test project is shown below:
+
+```json
+	"compilerOptions": {
+		"baseUrl": ".",
+		"target": "es2022",
+		"module": "Node18",
+		"strict": true,
+		"importHelpers": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"useDefineForClassFields": true,
+		"inlineSourceMap": true,
+		"allowJs": true,
+		"removeComments": false,
+		"lib": ["es2022", "esnext.decorators"],
+		"typeRoots": ["../../node_modules/@types"]
+	},
+```
+
+These settings are similar to the default transpiler settings, which will not cause an issue. The only change will be the module from Node18 to nodeNext. Any other settings that are not included in the transpiler default will also be applied when the transpiler is executed.
+
+### esbuild Transpilers
+
+Cucumber-tsflow provides two esbuild transpilers: one with esbuild and support for Vue using the vue-sfc transpiler, and another that only uses the esbuild transpiler. Both cucumber-tsflow transpilers use the same esbuild transpiler, which is configured to generate CommonJS, as shown below:
+
+```typescript
+const commonOptions: CommonOptions = {
+	format: 'cjs',
+	logLevel: 'info',
+	target: [`es2020`],
+	minify: false,
+	sourcemap: 'external'
+};
+```
+
+As you can see, this also uses the same target as the typescript configuration. In addition, minify is set to false, which makes it easy to debug and step into code when running tests.
+
+As mentioned at the beginning of this section, there are several transpilers provided, which can be used with your test project. The [transpilers](#transpiler-and-vue3-supported) section below provides information on how to configure your project to use one of these transpilers.
 
 ## Cucumber-tsflow Test Runner
 
@@ -226,19 +312,19 @@ echo $?
 
 ## New Configuration options
 
-As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/configuration.md>
+As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/configuration.md>
 
 In addition to cucumber configuration options the following two options have been added:
 
-| Name             | Type      | Repeatable | CLI Option           | Description                                                  | Default |
-| ---------------- | --------- | ---------- | -------------------- | ------------------------------------------------------------ | ------- |
+| Name             | Type      | Repeatable | CLI Option           | Description                                                   | Default |
+| ---------------- | --------- | ---------- | -------------------- | ------------------------------------------------------------- | ------- |
 | `transpiler`     | `string`  | No         | `--transpiler`       | Name of the transpiler to use: esnode, esvue, tsnode or tsvue | esnode  |
-| `debugFile`      | `string`  | No         | `--debug-file`       | Path to a file with steps for debugging                      |         |
-| `enableVueStyle` | `boolean` | No         | `--enable-vue-style` | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
+| `debugFile`      | `string`  | No         | `--debug-file`       | Path to a file with steps for debugging                       |         |
+| `enableVueStyle` | `boolean` | No         | `--enable-vue-style` | Enable Vue `<style>` block when compiling Vue SFC.            | false   |
 
 ### Transpiler and Vue3 supported
 
-Using TypeScript with CucumberJs requires a couple of tsconfig.json parameters as described here: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with CucumberJS. 
+Using TypeScript with cucumber-js requires setting tsconfig.json parameters as described here: [cucumber-js Transpiling](https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with cucumber-js.
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
 
@@ -254,7 +340,7 @@ The following transpilers are provided:
   - **jsdom** is also loaded globally to support loading and testing Vue SFC components.
 
 <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
-<strong><span style="color: #000">Note:</span></strong> The transpilers provide with cucumber-tsflow will only support CommonJS modules. In other words, if your package.json file has 'type: module' you will not be able to use these transpilers. However, you can use ts-node for transpiling as documented here: <a ref='https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md#esm'>Transpiling</a> 
+<strong><span style="color: #000">Note:</span></strong> The transpilers provide with cucumber-tsflow will only support CommonJS modules. In other words, if your package.json file has 'type: module' you will not be able to use these transpilers. However, you can use ts-node for transpiling as documented here: <a ref='https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md#esm'>Transpiling</a>
 </div>
 
 ##### Using the transpiler configuration option
@@ -426,7 +512,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 }
 ```
 
-**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/support_files/hooks.md>
+**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/support_files/hooks.md>
 
 ## Hooks
 
@@ -527,7 +613,7 @@ If it doesn't already exist, create a file named cucumber.json at the root of yo
 
 #### Using the behave json formatter
 
-The following example shows how to configure the behave formatter in cucumber.json. The tsflow-snippet-syntax module is configured as the default snippet syntax and does not require configuration. However, you can override the snippet syntax as documented here: <https://github.com/cucumber/cucumber-js/blob/v8.0.0/docs/custom_snippet_syntaxes.md>
+The following example shows how to configure the behave formatter in cucumber.json. The tsflow-snippet-syntax module is configured as the default snippet syntax and does not require configuration. However, you can override the snippet syntax as documented here: <https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/custom_snippet_syntaxes.md>
 
 ```typescript
 {
@@ -559,24 +645,24 @@ Like 'specflow', cucumber-tsflow supports a simple dependency injection framewor
 
 ### Sharing Data between Steps and Bindings
 
-Each scenario in a feature will get a new instance of the *Context* object when the steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the *Context* object created for the scenario.
+Each scenario in a feature will get a new instance of the _Context_ object when the steps associated with a scenario are executed. Hooks and steps used by the scenario will have access to the same instance of a "Scenario Context" during execution of the test steps. In addition, if steps of a scenario are implemented in separate bindings, those steps will still have access to the same instance of the _Context_ object created for the scenario.
 
 **Recent Updates:**
 
 - versions >= 6.5.2
+
   - Updated execution of the `initialize()` function to pass in argument that is an object with information about the Test Case (Scenario).
     - The object passed in will be in the form:
       `{ pickle, gherkinDocument, testCaseStartedId } : StartTestCaseInfo`
   - Updated execution of the `dispose()` function to pass in argument that is an object with information about the Test Case (Scenario).
     - The object passed in will be in the form:
       `{ pickle, gherkinDocument, result, willBeRetried, testCaseStartedId } : EndTestCaseInfo`
-  
+
 - versions >= 6.5.0
   - Context classes now support an `initialize()` function that can be defined synchronous or asynchronous. The `initialize()` function is called after the `BeforeAll` hook and before any other hooks or steps. This provides the ability to initialize a scenario context before any tests are executed with support for async operations.
   - Context classes have always supported a `dispose()` function for cleanup. However, with latest updates the `dispose()` function can be defined synchronously or asynchronously.
 - versions >= 6.4.0
   - The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
-
 
 ### Using Context Injection
 
@@ -584,7 +670,7 @@ With Context Injection you first need to define one or more classes that will be
 
 **Defining a Context class:**
 
-- Create a simple *Context* class representing the shared data. The class can have no constructor or a default empty constructor. However, to access the Cucumber World object you should define a constructor as shown in the example below.
+- Create a simple _Context_ class representing the shared data. The class can have no constructor or a default empty constructor. However, to access the Cucumber World object you should define a constructor as shown in the example below.
 
 **Synchronous example:**
 
@@ -603,7 +689,7 @@ export class ScenarioContext {
 	public initialize({ pickle, gherkinDocument }: StartTestCaseInfo): void {
 		this.id = this.makeid(5);
 		console.log(`Sync init: ${this.id}`);
-		console.log(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);       
+		console.log(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
 	}
 	public dispose({ pickle, gherkinDocument }: EndTestCaseInfo): void {
 		console.log(`Sync dispose: ${this.id}`);
@@ -657,11 +743,9 @@ export class ScenarioContext {
 }
 ```
 
-
-
 **Initialize Binding in Step class:**
 
-- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class. You can include up to nine separate *Context* objects.
+- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class. You can include up to nine separate _Context_ objects.
 - Define a constructor on the `@binding` class with steps that need access to the shared data that accepts one or more context objects as parameters based on initialization of the `@binding` decorator.
 
 **Single Context class example:**
@@ -698,7 +782,10 @@ import { expect } from 'chai';
 
 @binding([ScenarioContext, SyncContext])
 export default class InjectionTestSteps1 {
-	constructor(private context: ScenarioContext, private syncContext: SyncContext) {}
+	constructor(
+		private context: ScenarioContext,
+		private syncContext: SyncContext
+	) {}
 
 	@given('The Workspace is available and valid')
 	theWorkspaceIsAvailableAndValid() {
@@ -716,8 +803,6 @@ export default class InjectionTestSteps1 {
 }
 ```
 
-
-
 ### Access to Cucumber.js World object
 
 The context object that you inject can also be configured to access the [World](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/world.md) object from Cucumber.js, which provides the following:
@@ -726,7 +811,7 @@ The context object that you inject can also be configured to access the [World](
 - `log`: a method for [logging](https://github.com/cucumber/cucumber-js/blob/main/docs/support_files/attachments.md#logging) information from hooks/steps
 - `parameters`: an object of parameters passed in via configuration
 
-Starting with version **6.4.0** the Cucumber World object is now passed into a *Context* class as a constructor parameter as shown below:
+Starting with version **6.4.0** the Cucumber World object is now passed into a _Context_ class as a constructor parameter as shown below:
 
 ```typescript
 import { World } from '@cucumber/cucumber';
@@ -749,15 +834,15 @@ In the example shown above, the world object instance passed in to the construct
 
 **NOTE:** `BeforeAll` and `AfterAll` hooks do not have access to the scenario context.
 
-*Context* classes, as demonstrated by the `ScenarioContext` example above, also support a `dispose()` function that is called when the execution of a test scenario is complete. 
+_Context_ classes, as demonstrated by the `ScenarioContext` example above, also support a `dispose()` function that is called when the execution of a test scenario is complete.
 
 With instance initialization, and dispose functionality, you have the ability to initialize common support operations and data needed for scenario test runs, and cleanup any resources when scenario test runs are complete.
 
 ### Access to the World object without using a constructor
 
-**NOTE:** This approach of accessing the Cucumber World object is still supported. However, the ability to access the world object during *Context* initialization provides much better control over when context data is initialized versus relying on execution of a hook. As a result, using a `@before` hook as shown below is not recommended.
+**NOTE:** This approach of accessing the Cucumber World object is still supported. However, the ability to access the world object during _Context_ initialization provides much better control over when context data is initialized versus relying on execution of a hook. As a result, using a `@before` hook as shown below is not recommended.
 
-With this approach, you would define a world property on simple *Context* class that you're injecting:
+With this approach, you would define a world property on simple _Context_ class that you're injecting:
 
 ```typescript
 import { World } from '@cucumber/cucumber';

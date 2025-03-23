@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
-	"description": "Provides 'specflow' like bindings for CucumberJS 11.2.0+ in TypeScript 5.8+.",
-	"version": "7.0.0",
+	"description": "Provides 'specflow' like bindings for CucumberJS 11.2.0 in TypeScript 5.8+.",
+	"version": "7.1.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"keywords": [
@@ -83,9 +83,6 @@
 		"genversion": "~3.2.0",
 		"shx": "0.3.4",
 		"typescript": "~5.8.2"
-	},
-	"peerDependencies": {
-		"@cucumber/cucumber": "~11.2.0"
 	},
 	"scripts": {
 		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",

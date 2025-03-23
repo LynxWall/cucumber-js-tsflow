@@ -1,3 +1,3 @@
-import * as snippet from './formatters/tsflow-snippet-syntax';
+import * as snippet from './formatter/step-definition-snippit-syntax/tsflow-snippet-syntax';
 
 module.exports = snippet;

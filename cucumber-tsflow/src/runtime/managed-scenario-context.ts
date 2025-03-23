@@ -1,7 +1,7 @@
 import _ from 'underscore';
 
-import { ContextType } from '../types/types';
-import { ScenarioContext, ScenarioInfo } from '../types/scenario-context';
+import { ContextType } from '../bindings/types';
+import { ScenarioContext, ScenarioInfo } from './scenario-context';
 import { EndTestCaseInfo, StartTestCaseInfo } from './test-case-info';
 import { World } from '@cucumber/cucumber';
 
@@ -177,4 +177,4 @@ export class ManagedScenarioContext implements ScenarioContext {
 	}
 }
 
-export * from '../types/scenario-context';
+export * from './scenario-context';

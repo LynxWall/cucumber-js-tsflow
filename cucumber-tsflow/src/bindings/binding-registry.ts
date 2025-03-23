@@ -1,7 +1,7 @@
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import _ from 'underscore';
-import { StepBinding, StepBindingFlags } from '../types/step-binding';
-import { ContextType, StepPattern, TagName } from '../types/types';
+import { StepBinding, StepBindingFlags } from './step-binding';
+import { ContextType, StepPattern, TagName } from './types';
 import logger from '../utils/logger';
 
 /**

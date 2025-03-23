@@ -4,7 +4,7 @@
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/esnode.json", "html:../reports/esnode.html", "junitbamboo:../reports/esnode.xml"],
-		"parallel": 2,
+		"parallel": 0,
 		"tags": "@node"
 	},
 	"tsnode": {

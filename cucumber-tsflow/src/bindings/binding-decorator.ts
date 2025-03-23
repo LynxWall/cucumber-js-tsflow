@@ -10,7 +10,6 @@ import {
 	When,
 	World
 } from '@cucumber/cucumber';
-import logger from '../utils/logger';
 import { getStepBindings } from './binding-context';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
@@ -45,7 +44,7 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 	return function classDecorator(target: Function, context: ClassDecoratorContext) {
 		const bindingRegistry = BindingRegistry.instance;
 		bindingRegistry.registerContextTypesForClass(target.prototype, requiredContextTypes);
-		var lib = supportCodeLibraryBuilder;
+		const lib = supportCodeLibraryBuilder;
 		defineParameters();
 
 		// the class decorator is called last when decorators on a type are initialized. All other decorators
@@ -95,7 +94,7 @@ const defineParameters = _.once(() => {
  * @param stepBinding The [[StepBinding]] that represents a 'given', 'when', or 'then' step definition.
  */
 function bindStepDefinition(stepBinding: StepBinding): void {
-	const bindingFunc = function (this: WritableWorld): any {
+	const stepFunction = function (this: WritableWorld): any {
 		const bindingRegistry = BindingRegistry.instance;
 
 		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
@@ -140,7 +139,7 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 		}
 	};
 
-	Object.defineProperty(bindingFunc, 'length', {
+	Object.defineProperty(stepFunction, 'length', {
 		value: stepBinding.stepArgsLength
 	});
 
@@ -152,11 +151,11 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 	};
 	// call appropriate step
 	if (stepBinding.bindingType & StepBindingFlags.given) {
-		Given(stepBinding.stepPattern, options, bindingFunc);
+		Given(stepBinding.stepPattern, options, stepFunction);
 	} else if (stepBinding.bindingType & StepBindingFlags.when) {
-		When(stepBinding.stepPattern, options, bindingFunc);
+		When(stepBinding.stepPattern, options, stepFunction);
 	} else if (stepBinding.bindingType & StepBindingFlags.then) {
-		Then(stepBinding.stepPattern, options, bindingFunc);
+		Then(stepBinding.stepPattern, options, stepFunction);
 	}
 }
 
@@ -168,7 +167,7 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 function bindHook(stepBinding: StepBinding): void {
 	// beforeAll and afterAll are called before and after all tests.
 	// these can be class instance or static functions
-	const globalBindingFunc = function (this: any): any {
+	const globalHookFunction = function (this: any): any {
 		// if the function is static we need to add it to the associated class first
 		if (stepBinding.stepIsStatic && !stepBinding.classPrototype[stepBinding.classPropertyKey]) {
 			stepBinding.classPrototype[stepBinding.classPropertyKey] = stepBinding.stepFunction;
@@ -176,7 +175,7 @@ function bindHook(stepBinding: StepBinding): void {
 		return stepBinding.classPrototype[stepBinding.classPropertyKey].apply() as () => void;
 	};
 	// Main binding for all other steps
-	const bindingFunc = function (this: any, arg: any): any {
+	const hookFunction = function (this: any, arg: any): any {
 		const scenarioContext = global.messageCollector.getHookScenarioContext(arg);
 		if (scenarioContext) {
 			const contextTypes = BindingRegistry.instance.getContextTypesForClass(stepBinding.classPrototype);
@@ -190,10 +189,10 @@ function bindHook(stepBinding: StepBinding): void {
 	// length values need to be added to our binding functions.
 	// These are used in cucumber to determine if the function is
 	// a callback or promise.
-	Object.defineProperty(globalBindingFunc, 'length', {
+	Object.defineProperty(globalHookFunction, 'length', {
 		value: stepBinding.stepArgsLength
 	});
-	Object.defineProperty(bindingFunc, 'length', {
+	Object.defineProperty(hookFunction, 'length', {
 		value: stepBinding.stepArgsLength
 	});
 
@@ -204,32 +203,32 @@ function bindHook(stepBinding: StepBinding): void {
 	switch (stepBinding.bindingType) {
 		case StepBindingFlags.beforeAll: {
 			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
-			BeforeAll(options, globalBindingFunc);
+			BeforeAll(options, globalHookFunction);
 			break;
 		}
 		case StepBindingFlags.before: {
 			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
-			Before(options, bindingFunc);
+			Before(options, hookFunction);
 			break;
 		}
 		case StepBindingFlags.beforeStep: {
 			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
-			BeforeStep(options, bindingFunc);
+			BeforeStep(options, hookFunction);
 			break;
 		}
 		case StepBindingFlags.afterAll: {
 			const options = { cucumberKey: stepBinding.cucumberKey, timeout: stepBinding.timeout };
-			AfterAll(options, globalBindingFunc);
+			AfterAll(options, globalHookFunction);
 			break;
 		}
 		case StepBindingFlags.after: {
 			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
-			After(options, bindingFunc);
+			After(options, hookFunction);
 			break;
 		}
 		case StepBindingFlags.afterStep: {
 			const options = { cucumberKey: stepBinding.cucumberKey, tags: tags, timeout: stepBinding.timeout };
-			AfterStep(options, bindingFunc);
+			AfterStep(options, hookFunction);
 			break;
 		}
 	}

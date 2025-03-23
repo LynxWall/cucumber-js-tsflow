@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<testsuite failures="0" skipped="0" name="cucumber-js" time="0.105810763" tests="15">
+  <testcase classname="Test Background Feature" name="Search a product and add the first product to the User basket" time="0.018875395000000003">
+    <system-out><![CDATA[Given I navigate to the login page........................................passed
+When I submit username and password.......................................passed
+Then I should be logged in................................................passed
+Given User search for Lenovo Laptop.......................................passed
+When Add the first laptop that appears in the search result to the bask...passed
+Then User basket should display with added item...........................passed]]></system-out>
+  </testcase>
+  <testcase classname="Test Background Feature" name="Navigate to a product and add the same to the User basket" time="0.020655996000000003">
+    <system-out><![CDATA[Given I navigate to the login page........................................passed
+When I submit username and password.......................................passed
+Then I should be logged in................................................passed
+Given User navigate for Lenovo Laptop.....................................passed
+When Add the laptop to the basket.........................................passed
+Then User basket should display with added item...........................passed]]></system-out>
+  </testcase>
+  <testcase classname="Basic Test Feature" name="Basic test scenario" time="0.004756199">
+    <system-out><![CDATA[Given some step to be executed............................................passed
+When the condition is right...............................................passed
+Then we can see the result correctly......................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Basic Test Feature" name="Boolean type supported" time="0.008148796">
+    <system-out><![CDATA[Given I pass true into a step.............................................passed
+When checking the boolean value...........................................passed
+Then we can see that true was passed in...................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Basic Test Feature" name="Adding two numbers" time="0.009624194999999999">
+    <system-out><![CDATA[Given I enter 2 and 8.....................................................passed
+When checking the results.................................................passed
+Then I receive the result 10..............................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Test Features with injection support." name="change can be seen among the shared workspace" time="0.005703098">
+    <system-out><![CDATA[Given The Workspace is available and valid................................passed
+When I change the workspace in one step definition class..................passed
+Then I can see changed state in another step definition class.............passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="A student can choose a module" time="0.007311298000000001">
+    <system-out><![CDATA[Given A student has selected the "Course Schedule" module.................passed
+Then The "Course Schedule" module is available............................passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="A student can choose a module [1]" time="0.007783498">
+    <system-out><![CDATA[Given A student has selected the "My Academic Team" module................passed
+Then The "My Academic Team" module is available...........................passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="A student can choose a module [2]" time="0.001209399">
+    <system-out><![CDATA[Given A student has selected the "My Billing" module......................passed
+Then The "My Billing" module is available.................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="Pressing buttons" time="0.0058774990000000004">
+    <system-out><![CDATA[Given I push the "RED" button.............................................passed
+Then I should see the 0 page..............................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="Pressing buttons [1]" time="0.0043274">
+    <system-out><![CDATA[Given I push the "BLUE" button............................................passed
+Then I should see the 1 page..............................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="Pressing buttons [2]" time="0.001585898">
+    <system-out><![CDATA[Given I push the "INFO" button............................................passed
+Then I should see the 3 page..............................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Scenario Outlines" name="Pressing buttons [3]" time="0.001277397">
+    <system-out><![CDATA[Given I push the "YELLOW" button..........................................passed
+Then I should see the 2 page..............................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Test Features with Tagging support." name="Test step definitions without tags" time="0.004231098">
+    <system-out><![CDATA[Given some step to be executed............................................passed
+When the condition is right...............................................passed
+Then we can see the result correctly......................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Test Features with Tagging support." name="Test step definitions with tags" time="0.0044435970000000005">
+    <system-out><![CDATA[Given some step to be executed with tag...................................passed
+When the condition is right with tag......................................passed
+Then we can see the result correctly with tag.............................passed]]></system-out>
+  </testcase>
+</testsuite>

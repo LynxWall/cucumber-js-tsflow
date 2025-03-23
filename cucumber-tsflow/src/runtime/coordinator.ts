@@ -1,10 +1,10 @@
-import { EventEmitter } from 'node:events'
-import { Envelope, IdGenerator } from '@cucumber/messages'
-import { assembleTestCases, SourcedPickle } from '@cucumber/cucumber/lib/assemble/index'
-import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types'
-import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types'
-import { timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch'
-import { Runtime } from '@cucumber/cucumber/lib/runtime/index'
+import { EventEmitter } from 'node:events';
+import { Envelope, IdGenerator } from '@cucumber/messages';
+import { assembleTestCases, SourcedPickle } from '@cucumber/cucumber/lib/assemble/index';
+import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
+import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
+import { timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch';
+import { Runtime } from '@cucumber/cucumber/lib/runtime/index';
 
 export class Coordinator implements Runtime {
   constructor(
@@ -16,14 +16,14 @@ export class Coordinator implements Runtime {
   ) {}
 
   async run(): Promise<boolean> {
-    const testRunStartedId = this.newId()
+    const testRunStartedId = this.newId();
 
     this.eventBroadcaster.emit('envelope', {
       testRunStarted: {
         id: testRunStartedId,
         timestamp: timestamp(),
       },
-    } satisfies Envelope)
+    } satisfies Envelope);
 
     const assembledTestCases = await assembleTestCases(
       testRunStartedId,
@@ -31,9 +31,9 @@ export class Coordinator implements Runtime {
       this.newId,
       this.sourcedPickles,
       this.supportCodeLibrary
-    )
+    );
 
-    const success = await this.adapter.run(assembledTestCases)
+    const success = await this.adapter.run(assembledTestCases);
 
     this.eventBroadcaster.emit('envelope', {
       testRunFinished: {
@@ -41,8 +41,8 @@ export class Coordinator implements Runtime {
         timestamp: timestamp(),
         success,
       },
-    } satisfies Envelope)
+    } satisfies Envelope);
 
-    return success
+    return success;
   }
 }

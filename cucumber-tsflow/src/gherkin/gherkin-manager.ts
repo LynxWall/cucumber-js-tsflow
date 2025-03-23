@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import GherkinFeature from './gherkin-feature';
 import { ParsedFeature } from './models';
 import { hasStringValue } from '../utils/helpers';
-import { hasMatchingStep, hasMatchingTags } from '../cucumber/utils';
+import { hasMatchingStep, hasMatchingTags } from '../runtime/utils';
 
 class StepInfo {
 	constructor(name: string) {

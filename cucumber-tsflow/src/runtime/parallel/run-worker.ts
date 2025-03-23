@@ -5,7 +5,7 @@ import 'polyfill-symbol-metadata';
 function run(): void {
 	const exit = (exitCode: number, error?: Error, message?: string): void => {
 		if (doesHaveValue(error)) {
-			console.error(new Error(message, { cause: error })); // eslint-disable-line no-console
+			console.error(new Error(message, { cause: error }));  
 		}
 		process.exit(exitCode);
 	};

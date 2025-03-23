@@ -9,10 +9,9 @@ import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/index';
 import { Worker } from '../worker';
 import { WorkerToCoordinatorEvent, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import logger from '../../utils/logger';
-import { ISourcesCoordinates } from '@cucumber/cucumber/api';
 import { resolvePaths } from '@cucumber/cucumber/lib/paths/paths';
 import { BindingRegistry } from '../../bindings/binding-registry';
-import { InitializeTsflowCommand, CoordinatorToWorkerCommand } from '../../types/parallel';
+import { InitializeTsflowCommand, CoordinatorToWorkerCommand } from './types';
 import MessageCollector from '../message-collector';
 
 const { uuid } = IdGenerator;
@@ -20,6 +19,9 @@ const { uuid } = IdGenerator;
 type IExitFunction = (exitCode: number, error?: Error, message?: string) => void;
 type IMessageSender = (command: WorkerToCoordinatorEvent) => void;
 
+/**
+ * Represents a child process running in parallel executions
+ */
 export class ChildProcessWorker {
 	private readonly cwd: string;
 	private readonly exit: IExitFunction;
@@ -49,23 +51,30 @@ export class ChildProcessWorker {
 		this.exit = exit;
 		this.sendMessage = sendMessage;
 		this.eventBroadcaster = new EventEmitter();
-		global.messageCollector = new MessageCollector();
-		this.eventBroadcaster.on('envelope', (envelope: Envelope) => {
-			global.messageCollector.parseEnvelope(envelope);
-			this.sendMessage({ type: 'ENVELOPE', envelope });
-		});
+
+		// initialize a message collector for this process to handle our
+		// integration with event data
+		global.messageCollector = new MessageCollector(this.eventBroadcaster);
+
+		// pass any envelope messages up to the parent process to keep our main
+		// message collector in sync with this one.
+		this.eventBroadcaster.on('envelope', (envelope: Envelope) => this.sendMessage({ type: 'ENVELOPE', envelope }));
 	}
 
+	/**
+	 * Initialize this child process worker
+	 */
 	async initialize({
 		supportCodeCoordinates,
 		supportCodeIds,
 		options,
-		collectorData
+		messageData
 	}: InitializeTsflowCommand): Promise<void> {
-		global.messageCollector.addMessageData(collectorData);
+		// reset the message collector with message data passed in
+		global.messageCollector.reset(messageData);
 
-		const sources = { paths: [] } as ISourcesCoordinates;
-		const resolvedPaths = await resolvePaths(logger, this.cwd, sources, supportCodeCoordinates);
+		// Get correct paths and reset the support code library
+		const resolvedPaths = await resolvePaths(logger, this.cwd, messageData.coordinates, supportCodeCoordinates);
 		const { requirePaths, importPaths } = resolvedPaths;
 		supportCodeLibraryBuilder.reset(this.cwd, this.newId, {
 			requirePaths,
@@ -73,8 +82,8 @@ export class ChildProcessWorker {
 			importPaths,
 			loaders: supportCodeCoordinates.loaders
 		});
+		// Load any require modules for CommonJS or loaders and imports for ESM
 		supportCodeCoordinates.requireModules.map(module => tryRequire(module));
-		logger.debug(process.version);
 		requirePaths.map(module => tryRequire(module));
 		for (const specifier of supportCodeCoordinates.loaders) {
 			register(specifier, pathToFileURL('./'));
@@ -82,20 +91,31 @@ export class ChildProcessWorker {
 		for (const path of supportCodeCoordinates.importPaths) {
 			await import(pathToFileURL(path).toString());
 		}
+		// Finalize the support code library with IDs passed in and
+		// update entries in the library with info from our binding registry.
 		this.supportCodeLibrary = supportCodeLibraryBuilder.finalize(supportCodeIds);
-		BindingRegistry.instance.updateSupportCodeLibrary(this.supportCodeLibrary);
+		this.supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(this.supportCodeLibrary);
 
+		// Initialize a worker and run BeforeAll hooks
 		this.options = options;
 		this.worker = new Worker(this.id, this.eventBroadcaster, this.newId, this.options, this.supportCodeLibrary);
 		await this.worker.runBeforeAllHooks();
 		this.sendMessage({ type: 'READY' });
 	}
 
+	/**
+	 * Finialize the worker, which runs AfterAll hooks
+	 */
 	async finalize(): Promise<void> {
 		await this.worker.runAfterAllHooks();
 		this.exit(0);
 	}
 
+	/**
+	 * Interaction with the main process and child workers is done through IPC communications
+	 * This receives commands from the parent process and calls appropriate child operations.
+	 * @param command commands sent to this worker
+	 */
 	async receiveMessage(command: CoordinatorToWorkerCommand): Promise<void> {
 		switch (command.type) {
 			case 'INITIALIZE':
@@ -110,6 +130,10 @@ export class ChildProcessWorker {
 		}
 	}
 
+	/**
+	 * Run all test cases on the worker
+	 * @param command RunCommand
+	 */
 	async runTestCase(command: RunCommand): Promise<void> {
 		const success = await this.worker.runTestCase(command.assembledTestCase, command.failing);
 		this.sendMessage({

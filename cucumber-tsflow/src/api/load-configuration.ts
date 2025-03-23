@@ -10,10 +10,11 @@ import {
 import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/validate_configuration';
 import { convertConfiguration } from '@cucumber/cucumber/lib/api/convert_configuration';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
-import { ITsflowConfiguration } from './argv-parser';
+import { ITsflowConfiguration } from '../cli/argv-parser';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
 import chalk from 'ansis';
+import logger from '../utils/logger';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -80,19 +81,19 @@ export const loadConfiguration = async (
 	}
 	// set the snippet syntax
 	if (!original.formatOptions.snippetSyntax) {
-		original.formatOptions.snippetSyntax = '@lynxwall/cucumber-tsflow/lib/snippet.js';
+		original.formatOptions.snippetSyntax = '@lynxwall/cucumber-tsflow/snippet';
 	}
 	// look for behave format
 	for (let idx = 0; idx < original.format.length; idx++) {
 		if (typeof original.format[idx] === 'string') {
 			const formatItem = original.format[idx] as string;
 			if (formatItem.startsWith('behave:')) {
-				original.format[idx] = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/lib/behave.js');
+				original.format[idx] = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/behave');
 			}
 		} else if (original.format[idx].length > 0) {
 			const formatItem = original.format[idx][0] as string;
 			if (formatItem.startsWith('behave')) {
-				const newVal = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/lib/behave.js');
+				const newVal = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/behave');
 				original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
 			}
 		}
@@ -103,12 +104,12 @@ export const loadConfiguration = async (
 		if (typeof original.format[idx] === 'string') {
 			const formatItem = original.format[idx] as string;
 			if (formatItem.startsWith('junitbamboo:')) {
-				original.format[idx] = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/lib/junitbamboo.js');
+				original.format[idx] = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
 			}
 		} else if (original.format[idx].length > 0) {
 			const formatItem = original.format[idx][0] as string;
 			if (formatItem.startsWith('junitbamboo')) {
-				const newVal = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/lib/junitbamboo.js');
+				const newVal = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
 				original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
 			}
 		}
@@ -135,6 +136,9 @@ export const loadConfiguration = async (
 	if (original.enableVueStyle === null || original.enableVueStyle === undefined) {
 		original.enableVueStyle = false;
 	}
+	// set our global parameter used by the Vue transpiler
+	// to determine if Vue Style Blocks should be enabled
+	global.enableVueStyle = original.enableVueStyle;
 
 	validateConfiguration(original, logger);
 	const runnable = await convertConfiguration(logger, original, env);

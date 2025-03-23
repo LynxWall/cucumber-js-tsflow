@@ -1,0 +1,1288 @@
+[
+  {
+    "description": "\tDescription: The purpose of this feature is to test the Background keyword",
+    "elements": [
+      {
+        "description": "",
+        "id": "test-background-feature;search-a-product-and-add-the-first-product-to-the-user-basket",
+        "keyword": "Scenario",
+        "line": 10,
+        "name": "Search a product and add the first product to the User basket",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 798000
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 132200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:15"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 7112300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 7,
+            "name": "I submit username and password",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2785399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 8,
+            "name": "I should be logged in",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:24"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1373499
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 11,
+            "name": "User search for Lenovo Laptop",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:31"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2315099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 12,
+            "name": "Add the first laptop that appears in the search result to the basket",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:37"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2627299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 13,
+            "name": "User basket should display with added item",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:57"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1731599
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "test-background-feature;navigate-to-a-product-and-add-the-same-to-the-user-basket",
+        "keyword": "Scenario",
+        "line": 15,
+        "name": "Navigate to a product and add the same to the User basket",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 716799
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 84500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "I navigate to the login page",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:15"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 11171199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 7,
+            "name": "I submit username and password",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2542500
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 8,
+            "name": "I should be logged in",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:24"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1421799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 16,
+            "name": "User navigate for Lenovo Laptop",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:44"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1921800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 17,
+            "name": "Add the laptop to the basket",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:50"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1695200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 18,
+            "name": "User basket should display with added item",
+            "match": {
+              "location": "src\\step_definitions\\background-test.ts:57"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1102199
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "test-background-feature",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Test Background Feature",
+    "tags": [
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "..\\features\\background-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "basic-test-feature;basic-test-scenario",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Basic test scenario",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 158100
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 266500
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 91200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "some step to be executed",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:82"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1114800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "the condition is right",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:87"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 844000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 7,
+            "name": "we can see the result correctly",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:92"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1445699
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 835900
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@basic",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "basic-test-feature;boolean-type-supported",
+        "keyword": "Scenario",
+        "line": 19,
+        "name": "Boolean type supported",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 91899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 47800
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 55399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 20,
+            "name": "I pass true into a step",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:123"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3263099
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 21,
+            "name": "checking the boolean value",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:129"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1481600
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "we can see that true was passed in",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:135"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2692999
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 516000
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@basic",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "\t\tStep definitions that are tagged will only be used in scenarios\n\t\tor features that have the same tag [addNumbers].",
+        "id": "basic-test-feature;adding-two-numbers",
+        "keyword": "Scenario",
+        "line": 10,
+        "name": "Adding two numbers",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 156600
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 255899
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 93800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 15,
+            "name": "I enter 2 and 8",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:97"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 4514399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "checking the results",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:105"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1956098
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 17,
+            "name": "I receive the result 10",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:113"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2109799
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 537600
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@basic",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          },
+          {
+            "name": "@addNumbers",
+            "line": 9
+          },
+          {
+            "name": "@1234",
+            "line": 9
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "basic-test-feature",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Basic Test Feature",
+    "tags": [
+      {
+        "name": "@basic",
+        "line": 1
+      },
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "..\\features\\basic-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "test-features-with-injection-support.;change-can-be-seen-among-the-shared-workspace",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "change can be seen among the shared workspace",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 74200
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 41999
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "The Workspace is available and valid",
+            "match": {
+              "location": "src\\step_definitions\\injection-test1.ts:9"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1525300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 6,
+            "name": "I change the workspace in one step definition class",
+            "match": {
+              "location": "src\\step_definitions\\injection-test1.ts:15"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1727000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 7,
+            "name": "I can see changed state in another step definition class",
+            "match": {
+              "location": "src\\step_definitions\\injection-test2.ts:9"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2334599
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@injection",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "test-features-with-injection-support.",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Test Features with injection support.",
+    "tags": [
+      {
+        "name": "@injection",
+        "line": 1
+      },
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "..\\features\\injection-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "scenario-outlines;a-student-can-choose-a-module",
+        "keyword": "Scenario Outline",
+        "line": 9,
+        "name": "A student can choose a module",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 105900
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 54700
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "A student has selected the \"Course Schedule\" module",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:10"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 4043799
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 6,
+            "name": "The \"Course Schedule\" module is available",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:14"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3106899
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "scenario-outlines;a-student-can-choose-a-module",
+        "keyword": "Scenario Outline",
+        "line": 10,
+        "name": "A student can choose a module",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 68500
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 37900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "A student has selected the \"My Academic Team\" module",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:10"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 4365299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 6,
+            "name": "The \"My Academic Team\" module is available",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:14"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3311799
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "scenario-outlines;a-student-can-choose-a-module",
+        "keyword": "Scenario Outline",
+        "line": 11,
+        "name": "A student can choose a module",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 61100
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 119300
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "A student has selected the \"My Billing\" module",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:10"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 575199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 6,
+            "name": "The \"My Billing\" module is available",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:14"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 453800
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "scenario-outlines;pressing-buttons",
+        "keyword": "Scenario Outline",
+        "line": 18,
+        "name": "Pressing buttons",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 106300
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 47199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 14,
+            "name": "I push the \"RED\" button",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3355900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 15,
+            "name": "I should see the 0 page",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:25"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2368100
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "scenario-outlines;pressing-buttons",
+        "keyword": "Scenario Outline",
+        "line": 19,
+        "name": "Pressing buttons",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 88500
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 50200
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 14,
+            "name": "I push the \"BLUE\" button",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2689000
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 15,
+            "name": "I should see the 1 page",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:25"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1499700
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "scenario-outlines;pressing-buttons",
+        "keyword": "Scenario Outline",
+        "line": 21,
+        "name": "Pressing buttons",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 102700
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 146299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 14,
+            "name": "I push the \"INFO\" button",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 698599
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 15,
+            "name": "I should see the 3 page",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:25"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 638300
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "scenario-outlines;pressing-buttons",
+        "keyword": "Scenario Outline",
+        "line": 20,
+        "name": "Pressing buttons",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 66399
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 45299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 14,
+            "name": "I push the \"YELLOW\" button",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:19"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 595199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 15,
+            "name": "I should see the 2 page",
+            "match": {
+              "location": "src\\step_definitions\\scenario-outline-test.ts:25"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 570500
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@node",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "scenario-outlines",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Scenario Outlines",
+    "tags": [
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "..\\features\\scenario-outline-test.feature"
+  },
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "\t\tBecause in 'basic-test.ts' step definition is not tagged,\n\t\tthe step definition will be used here as well.",
+        "id": "test-features-with-tagging-support.;test-step-definitions-without-tags",
+        "keyword": "Scenario",
+        "line": 5,
+        "name": "Test step definitions without tags",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 83100
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 50399
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 9,
+            "name": "some step to be executed",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:82"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1293299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 10,
+            "name": "the condition is right",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:87"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 720800
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 11,
+            "name": "we can see the result correctly",
+            "match": {
+              "location": "src\\step_definitions\\basic-test.ts:92"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1459100
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 624400
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@tags",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          },
+          {
+            "name": "@tag1",
+            "line": 4
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "\t\tStep definitions that are tagged will only be in scenarios or features that have the same tag.\n\t\tOne step can have multiple tags associated with it, for example, in this case, this\n\t\tscenario has tags [tags, tag2]. A step definition that has a tag matching any of them\n\t\twill be picked as candidate for execution.",
+        "id": "test-features-with-tagging-support.;test-step-definitions-with-tags",
+        "keyword": "Scenario",
+        "line": 14,
+        "name": "Test step definitions with tags",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 71299
+            }
+          },
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 41199
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 21,
+            "name": "some step to be executed with tag",
+            "match": {
+              "location": "src\\step_definitions\\tag-test.ts:16"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1751900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 22,
+            "name": "the condition is right with tag",
+            "match": {
+              "location": "src\\step_definitions\\tag-test.ts:22"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1065299
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 23,
+            "name": "we can see the result correctly with tag",
+            "match": {
+              "location": "src\\step_definitions\\tag-test.ts:27"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 1050600
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "name": "",
+            "result": {
+              "status": "passed",
+              "duration": 463300
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@tags",
+            "line": 1
+          },
+          {
+            "name": "@node",
+            "line": 1
+          },
+          {
+            "name": "@tag2",
+            "line": 13
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "test-features-with-tagging-support.",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Test Features with Tagging support.",
+    "tags": [
+      {
+        "name": "@tags",
+        "line": 1
+      },
+      {
+        "name": "@node",
+        "line": 1
+      }
+    ],
+    "uri": "..\\features\\tagging-test.feature"
+  }
+]

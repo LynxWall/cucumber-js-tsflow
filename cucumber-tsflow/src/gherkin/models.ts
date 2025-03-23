@@ -1,4 +1,5 @@
-import { ManagedScenarioContext } from '../cucumber/managed-scenario-context';
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+import { ManagedScenarioContext } from '../runtime/managed-scenario-context';
 import { Options } from './configuration';
 
 export type StepFromStepDefinitions = {

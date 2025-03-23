@@ -1,15 +1,9 @@
-import { IdGenerator } from '@cucumber/messages';
+/* eslint-disable no-undef */
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter/index';
-import { IRunOptions } from '@cucumber/cucumber/lib/api/index';
-import { runCucumber } from '../cucumber/run-cucumber';
-import { loadConfiguration } from './load-configuration';
+import { runCucumber } from '../api/run-cucumber';
+import { loadConfiguration } from '../api/load-configuration';
 import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
-import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
-import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import { makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
-import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
-import { BindingRegistry } from '../bindings/binding-registry';
 import ArgvParser from './argv-parser';
 import debug from 'debug';
 import { Console } from 'console';
@@ -76,7 +70,7 @@ export default class Cli {
 			debug: debugEnabled
 		};
 		const consoleLogger = new Console(environment.stdout as any, environment.stderr);
-		consoleLogger.info('Loading configuration and step definitions...\n');
+		consoleLogger.info('Loading configuration...');
 
 		const { useConfiguration: configuration, runConfiguration } = await loadConfiguration(
 			{
@@ -86,53 +80,10 @@ export default class Cli {
 			},
 			environment
 		);
-		// set our global parameter used by the Vue transpiler
-		// to determine if Vue Style Blocks should be enabled
-		global.enableVueStyle = configuration.enableVueStyle;
-
-		// get run options
-		const { cwd, logger } = makeEnvironment(environment);
-		const newId = IdGenerator.uuid();
-		const runOptions = runConfiguration as IRunOptions;
-		const supportCoordinates =
-			'originalCoordinates' in runOptions.support
-				? runOptions.support.originalCoordinates
-				: Object.assign(
-						{
-							requireModules: [],
-							requirePaths: [],
-							loaders: [],
-							importPaths: []
-						},
-						runOptions.support
-					);
-		const resolvedPaths = await resolvePaths(logger, cwd, runOptions.sources, supportCoordinates);
-		const { sourcePaths, requirePaths, importPaths } = resolvedPaths;
-
-		logger.debug(process.version);
-
-		// Load the step and hook definitions
-		const supportCodeLibrary =
-			'originalCoordinates' in runOptions.support
-				? (runOptions.support as SupportCodeLibrary)
-				: await getSupportCodeLibrary({
-						logger,
-						cwd,
-						newId,
-						requirePaths,
-						requireModules: supportCoordinates.requireModules,
-						importPaths,
-						loaders: supportCoordinates.loaders
-					});
-
-		// Set support to the updated step and hook definitions
-		// in the supportCodeLibrary. We also need to initialize originalCoordinates
-		// to support parallel execution.
-		runOptions.support = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
-		runOptions.support = { ...runOptions.support, ...{ originalCoordinates: supportCoordinates } };
+		consoleLogger.info('Loading Steps and Running Cucumber...\n');
 
 		// now we can run cucumber
-		const { success } = await runCucumber(runOptions, environment);
+		const { success } = await runCucumber(runConfiguration, environment);
 		return {
 			shouldExitImmediately: configuration.forceExit,
 			success

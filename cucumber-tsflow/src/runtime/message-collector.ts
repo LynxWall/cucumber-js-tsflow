@@ -7,7 +7,7 @@ import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
 import { EndTestCaseInfo } from './test-case-info';
-import { IMessageData } from '../types/parallel';
+import { IMessageData } from './parallel/types';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -48,21 +48,30 @@ export default class MessageCollector {
 	private pickleMap: Record<string, messages.Pickle> = {};
 	private testCaseMap: Record<string, messages.TestCase> = {};
 	private testCaseAttemptDataMap: Record<string, ITestCaseAttemptData> = {};
-	readonly undefinedParameterTypes: messages.UndefinedParameterType[] = [];
+	private undefinedParameterTypes: messages.UndefinedParameterType[] = [];
 	private testCaseRunningMap: Record<string, messages.TestCaseStarted> = {};
 
-	private collectorEvents = new EventEmitter();
-
-	onTestCaseEnd(Handler: (testCaseFinished: messages.TestCaseFinished) => void): void {
-		this.collectorEvents.on('testCaseEnd', Handler);
+	constructor(eventBroadcaster: EventEmitter) {
+		eventBroadcaster.on('envelope', this.parseEnvelope.bind(this));
 	}
 
-	addMessageData(messageData: IMessageData): void {
+	/**
+	 * Reset this message collector for a new parallel test run.
+	 * @param messageData Gerkin information from initial load
+	 */
+	reset(messageData: IMessageData): void {
 		this.gherkinDocumentMap = messageData.gherkinDocumentMap;
 		this.pickleMap = messageData.pickleMap;
 		this.testCaseMap = messageData.testCaseMap;
+		this.testCaseAttemptDataMap = {};
+		this.undefinedParameterTypes = [];
+		this.testCaseRunningMap = {};
 	}
 
+	/**
+	 * Get Gerkin message data for parallel runs
+	 * @returns Gerkin informaion loaded during startup
+	 */
 	getMessageData(): IMessageData {
 		const data = {} as IMessageData;
 		data.gherkinDocumentMap = this.gherkinDocumentMap;
@@ -72,13 +81,10 @@ export default class MessageCollector {
 		return data;
 	}
 
-	// Used during parallel execution to add the current pickle and testCase
-	// to a new Worker instance of the MessageCollector
-	addPickleAndTestCase(pickle: messages.Pickle, testCase: messages.TestCase) {
-		this.pickleMap[pickle.id] = pickle;
-		this.testCaseMap[testCase.id] = testCase;
-	}
-
+	/**
+	 * Check for failures in a test run
+	 * @returns true if there are failures in the last test case attempt
+	 */
 	hasFailures(): boolean {
 		for (const caseKey in this.testCaseAttemptDataMap) {
 			const stepResults = this.testCaseAttemptDataMap[caseKey].stepResults;

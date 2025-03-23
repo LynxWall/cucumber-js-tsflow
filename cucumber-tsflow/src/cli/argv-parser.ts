@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import merge from 'lodash.merge';
 import path from 'path';
 import { dialects } from '@cucumber/gherkin';
-import { documentation } from '@cucumber/cucumber/lib/formatter/builtin/index'
+import { documentation } from '@cucumber/cucumber/lib/formatter/builtin/index';
 import { version } from '../version';
 import { IConfiguration } from '@cucumber/cucumber/lib/configuration/types';
 

@@ -5,9 +5,9 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
-import { IRunOptionsRuntime } from '@cucumber/cucumber/lib/api/index';
+import { IRunOptionsRuntime, ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
 import { FinalizeCommand, RunCommand, WorkerToCoordinatorEvent } from '@cucumber/cucumber/lib/runtime/parallel/types';
-import { InitializeTsflowCommand } from '../../types/parallel';
+import { InitializeTsflowCommand } from './types';
 
 const runWorkerPath = path.resolve(__dirname, 'run-worker');
 
@@ -44,7 +44,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly logger: ILogger,
 		private readonly eventBroadcaster: EventEmitter,
 		private readonly options: IRunOptionsRuntime,
-		private readonly supportCodeLibrary: SupportCodeLibrary
+		private readonly supportCodeLibrary: SupportCodeLibrary,
+		private readonly coordinates: ISourcesCoordinates
 	) {}
 
 	parseWorkerMessage(worker: ManagedWorker, message: WorkerToCoordinatorEvent): void {
@@ -104,7 +105,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 			this.onWorkerProcessClose(exitCode!);
 		});
 
-		const collector = global.messageCollector;
+		const messageData = global.messageCollector.getMessageData();
+		messageData.coordinates = this.coordinates;
 
 		worker.process.send({
 			type: 'INITIALIZE',
@@ -115,7 +117,7 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				afterTestCaseHookDefinitionIds: this.supportCodeLibrary.afterTestCaseHookDefinitions.map(h => h.id)
 			},
 			options: this.options,
-			collectorData: collector.getMessageData()
+			messageData: messageData
 		} satisfies InitializeTsflowCommand);
 	}
 

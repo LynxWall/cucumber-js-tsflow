@@ -5,16 +5,17 @@ import { emitMetaMessage, emitSupportCodeMessages } from '@cucumber/cucumber/lib
 import { IRunOptions, IRunResult } from '@cucumber/cucumber/lib/api/types';
 import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import { makeRuntime } from './make-runtime';
+import { makeRuntime } from '../runtime/make-runtime';
 import { initializeFormatters } from '@cucumber/cucumber/lib/api/formatters';
 import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { getPicklesAndErrors } from '@cucumber/cucumber/lib/api/gherkin';
-import MessageCollector from './message-collector';
+import MessageCollector from '../runtime/message-collector';
 import { version } from '../version';
 import { initializeForRunCucumber } from '@cucumber/cucumber/lib/api/plugins';
 import { IFilterablePickle } from '@cucumber/cucumber/lib/filter/index';
 import 'polyfill-symbol-metadata';
+import { BindingRegistry } from '../bindings/binding-registry';
 
 /**
  * Execute a Cucumber test run.
@@ -67,7 +68,12 @@ Running from: ${__dirname}
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { sourcePaths, requirePaths, importPaths } = resolvedPaths;
 
-	const supportCodeLibrary =
+	/**
+	 * The support code library contains all of the hook and step definitions.
+	 * These are loaded into the library when calling getSupportCodeLibrary,
+	 * which loads all of the step definitions using require or import.
+	 */
+	let supportCodeLibrary =
 		'originalCoordinates' in options.support
 			? (options.support as SupportCodeLibrary)
 			: await getSupportCodeLibrary({
@@ -80,6 +86,13 @@ Running from: ${__dirname}
 					loaders: supportCoordinates.loaders
 				});
 
+	// Set support to the updated step and hook definitions
+	// in the supportCodeLibrary. We also need to initialize originalCoordinates
+	// to support parallel execution.
+	supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
+	supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
+	options.support = supportCodeLibrary;
+
 	const eventBroadcaster = new EventEmitter();
 	if (onMessage) {
 		eventBroadcaster.on('envelope', onMessage);
@@ -89,8 +102,7 @@ Running from: ${__dirname}
 	// create a global instance of the message collector and bind it
 	// to the event broadcaster. This is used by cucumber and for tests
 	// that are not running in parallel.
-	global.messageCollector = new MessageCollector();
-	eventBroadcaster.on('envelope', global.messageCollector.parseEnvelope.bind(global.messageCollector));
+	global.messageCollector = new MessageCollector(eventBroadcaster);
 
 	// cast the MessageCollector to an EventDataCollector
 	const eventDataCollector = global.messageCollector as unknown as EventDataCollector;
@@ -150,7 +162,8 @@ Running from: ${__dirname}
 		sourcedPickles: filteredPickles,
 		newId,
 		supportCodeLibrary,
-		options: options.runtime
+		options: options.runtime,
+		coordinates: options.sources
 	});
 	const success = await runtime.run();
 	await pluginManager.cleanup();

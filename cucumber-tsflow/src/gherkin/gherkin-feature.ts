@@ -143,7 +143,7 @@ export default class GherkinFeature {
 				return processedStepText.replace(new RegExp(`<${nextTableColumn}>`, 'g'), exampleTableRow[nextTableColumn]);
 			}, scenarioStep.stepText);
 
-			let stepArgument: string | {} = '';
+			let stepArgument: string | object = '';
 
 			if (scenarioStep.stepArgument) {
 				if (Array.isArray(scenarioStep.stepArgument)) {

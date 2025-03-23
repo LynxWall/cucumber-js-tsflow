@@ -32,8 +32,8 @@
 			"request": "launch",
 			"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
 			"stopOnEntry": true,
-			"args": ["--debug-file", "${file}", "-p", "tsnode"],
-			"cwd": "${workspaceRoot}/cucumber-tsflow-specs/node",
+			"args": ["--debug-file", "${file}", "-p", "esvue"],
+			"cwd": "${workspaceRoot}/cucumber-tsflow-specs/vue",
 			"runtimeExecutable": null,
 			"runtimeArgs": ["--nolazy"],
 			"env": {

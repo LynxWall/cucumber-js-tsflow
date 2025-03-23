@@ -4,8 +4,6 @@
 	"version": "7.0.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
-	"main": "./lib/index.js",
-	"types": "./lib/index.d.ts",
 	"keywords": [
 		"testing",
 		"bdd",
@@ -18,10 +16,37 @@
 		"tsflow",
 		"vue3"
 	],
+	"installConfig": {
+		"hoistingLimits": "workspaces"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
+	"directories": {
+		"lib": "./lib"
+	},
+	"main": "./lib/index.js",
+	"exports": {
+		".": {
+			"import": "./lib/wrapper.mjs",
+			"require": "./lib/index.js",
+			"types": "./lib/index.d.ts"
+		},
+		"./api": {
+			"import": "./lib/api/wrapper.mjs",
+			"require": "./lib/api/index.js",
+			"types": "./lib/api/index.d.ts"
+		},
+		"./lib/*": {
+			"require": "./lib/*.js"
+		},
+		"./package.json": "./package.json",
+		"./snippet": "./lib/snippet.js",
+		"./behave": "./lib/behave.js",
+		"./junitbamboo": "./lib/junitbamboo.js"
+	},
+	"types": "./lib/index.d.ts",
 	"dependencies": {
 		"@cucumber/cucumber": "~11.2.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
@@ -57,7 +82,18 @@
 		"@types/source-map-support": "~0.5.10",
 		"@types/underscore": "~1.13.0",
 		"@types/verror": "~1.10.11",
+		"genversion": "~3.2.0",
+		"shx": "0.3.4",
 		"typescript": "~5.8.2"
 	},
-	"bin": "bin/cucumber-tsflow.js"
+	"scripts": {
+		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",
+		"build:watch": "tsc --build tsconfig.node.json --watch"
+	},
+	"bin": "bin/cucumber-tsflow.js",
+	"files": [
+		"api/",
+		"bin/",
+		"lib/"
+	]
 }

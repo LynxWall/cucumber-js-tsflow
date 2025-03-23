@@ -10,6 +10,7 @@
 		"test:ts": "cucumber-tsflow -p tsnode"
 	},
 	"devDependencies": {
+		"@cucumber/cucumber": "~11.2.0",
 		"@lynxwall/cucumber-tsflow": "workspace:*",
 		"@types/chai": "~4.3.20",
 		"chai": "~5.2.0"

@@ -1,4 +1,3 @@
- 
 import { createFilter } from '@rollup/pluginutils';
 import type { RollupError, RollupLog } from 'rollup';
 import { resolveCompiler } from './compiler';
@@ -40,10 +39,7 @@ class VueTransformer implements VueTransformerContext {
 		return null;
 	};
 
-	public warn = (
-		warning: RollupLog | string,
-		pos?: number | { column: number; line: number } | undefined
-	): void => {};
+	public warn = (warning: RollupLog | string, pos?: number | { column: number; line: number } | undefined): void => {};
 
 	public transformCode = (code: string, filename: string) => {
 		const ssr = this.isSSR(false);

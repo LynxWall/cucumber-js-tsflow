@@ -1,5 +1,5 @@
 import { after, before, binding } from '@lynxwall/cucumber-tsflow';
-import type { World } from '@cucumber/cucumber';
+import type { World } from '@lynxwall/cucumber-tsflow';
 import { ScenarioContext } from '../fixtures/scenario-context';
 
 @binding([ScenarioContext])

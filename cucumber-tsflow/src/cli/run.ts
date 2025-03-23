@@ -1,4 +1,3 @@
- 
 /* This is one rare place where we're fine to use process/console directly,
  * but other code abstracts those to remain composable and testable. */
 import Cli, { ICliRunResult } from './index';

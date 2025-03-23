@@ -1,4 +1,4 @@
-import { binding, given, then, when } from '@lynxwall/cucumber-tsflow';
+import { binding, given, then } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
 
 @binding()

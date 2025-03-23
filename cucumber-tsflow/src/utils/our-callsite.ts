@@ -12,7 +12,10 @@ export class Callsite {
 	 * @param filename The filename of the callsite.
 	 * @param lineNumber The line number of the callsite.
 	 */
-	constructor(public filename: string, public lineNumber: number) {}
+	constructor(
+		public filename: string,
+		public lineNumber: number
+	) {}
 
 	/**
 	 * Returns a string representation of the callsite.

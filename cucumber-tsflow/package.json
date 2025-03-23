@@ -16,12 +16,9 @@
 		"tsflow",
 		"vue3"
 	],
-	"installConfig": {
-		"hoistingLimits": "workspaces"
-	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
+		"url": "git+https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
 	"directories": {
 		"lib": "./lib"
@@ -41,16 +38,19 @@
 		"./lib/*": {
 			"require": "./lib/*.js"
 		},
-		"./package.json": "./package.json",
-		"./snippet": "./lib/snippet.js",
 		"./behave": "./lib/behave.js",
-		"./junitbamboo": "./lib/junitbamboo.js"
+		"./esnode": "./lib/esnode.js",
+		"./esvue": "./lib/esvue.js",
+		"./junitbamboo": "./lib/junitbamboo.js",
+		"./snippet": "./lib/snippet.js",
+		"./tsnode": "./lib/tsnode.js",
+		"./tsvue": "./lib/tsvue.js",
+		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",
 	"dependencies": {
 		"@cucumber/cucumber": "~11.2.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
-		"@rollup/pluginutils": "~5.1.4",
 		"ansis": "~3.17.0",
 		"commander": "^13.1.0",
 		"debug": "^4.3.4",
@@ -61,7 +61,6 @@
 		"jsdom": "~26.0.0",
 		"jsdom-global": "~3.0.2",
 		"lodash.merge": "~4.6.2",
-		"log4js": "~6.9.1",
 		"polyfill-symbol-metadata": "^0.0.2",
 		"require-extension-hooks": "~0.3.3",
 		"rollup": "~4.35.0",
@@ -70,10 +69,10 @@
 		"ts-node": "~10.9.2",
 		"tsconfig-paths": "~4.2.0",
 		"tslib": "2.8.1",
-		"underscore": "~1.13.7",
-		"verror": "~1.10.1"
+		"underscore": "~1.13.7"
 	},
 	"devDependencies": {
+		"@rollup/pluginutils": "~5.1.4",
 		"@types/debug": "~4.1.12",
 		"@types/glob": "~8.1.0",
 		"@types/hash-sum": "~1.0.2",
@@ -81,10 +80,12 @@
 		"@types/node": "~22.13.10",
 		"@types/source-map-support": "~0.5.10",
 		"@types/underscore": "~1.13.0",
-		"@types/verror": "~1.10.11",
 		"genversion": "~3.2.0",
 		"shx": "0.3.4",
 		"typescript": "~5.8.2"
+	},
+	"peerDependencies": {
+		"@cucumber/cucumber": "~11.2.0"
 	},
 	"scripts": {
 		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",

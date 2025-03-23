@@ -76,7 +76,7 @@ export const resolveTemplateCompilerOptions = (
 	// compiler-sfc should export `AssetURLOptions`
 	// build: force all asset urls into import requests so that they go through
 	// the assets plugin for asset registration
-	 
+
 	const assetUrlOptions = {
 		includeAbsolute: true
 	};

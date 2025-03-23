@@ -1,5 +1,4 @@
-import { World } from '@cucumber/cucumber';
-import { StartTestCaseInfo, EndTestCaseInfo } from '@lynxwall/cucumber-tsflow';
+import { StartTestCaseInfo, EndTestCaseInfo, World } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
 	public world: World;

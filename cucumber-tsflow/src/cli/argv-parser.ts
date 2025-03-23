@@ -89,12 +89,11 @@ const ArgvParser = {
 			.option(
 				'-f, --format <TYPE[:PATH]>',
 				'specify the output format, optionally supply PATH to redirect formatter output (repeatable).  Available formats:\n' +
-          Object.entries(documentation).reduce(
-            (previous, [key, description]) =>
-              previous + `    ${key}: ${description}\n`,
-            ''
-          ),
-        (ArgvParser as any).collect
+					Object.entries(documentation).reduce(
+						(previous, [key, description]) => previous + `    ${key}: ${description}\n`,
+						''
+					),
+				(ArgvParser as any).collect
 			)
 			.option(
 				'--format-options <JSON>',

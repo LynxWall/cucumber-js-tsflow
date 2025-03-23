@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.0.0]
+
+### Added
+
+- API Support that mirrors the Cucumber.JS API
+
+### Changed
+
+- Upgraded to cucumber.js 11.2.0, which has several [breaking changes](https://github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md) since the last tsflow release.
+- Update to latest Node 22 LTS release
+- Switched from experimental decorators in Typescript to official decorators published in Typescript 5.2.
+- Upgraded packages to latest stable versions
+- Updated transpiler configurations.
+- Added exports to package.json.
+
 ## [6.5.7]
 
 ### Fixed

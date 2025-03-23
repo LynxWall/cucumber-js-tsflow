@@ -1,4 +1,4 @@
-import { StepBinding } from '../types/step-binding';
+import { StepBinding } from './step-binding';
 
 /**
  * Add a StepBinding to the DecoratorContext metadata

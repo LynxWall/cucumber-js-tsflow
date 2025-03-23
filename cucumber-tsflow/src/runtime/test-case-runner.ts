@@ -16,7 +16,7 @@ import { IDefinition } from '@cucumber/cucumber/lib/models/definition';
 import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import StepDefinition from '@cucumber/cucumber/lib/models/step_definition';
 import { BindingRegistry } from '../bindings/binding-registry';
-import { StepBinding } from '../types/step-binding';
+import { StepBinding } from '../bindings/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { error } from 'console';
 import { EndTestCaseInfo, StartTestCaseInfo } from './test-case-info';
@@ -55,24 +55,6 @@ export default class TestCaseRunner {
 		supportCodeLibrary,
 		worldParameters
 	}: INewTestCaseRunnerOptions) {
-		this.attachmentManager = new AttachmentManager(({ data, media, fileName }) => {
-			if (doesNotHaveValue(this.currentTestStepId)) {
-				throw new Error(
-					'Cannot attach when a step/hook is not running. Ensure your step/hook waits for the attach to finish.'
-				);
-			}
-			const attachment: messages.Envelope = {
-				attachment: {
-					body: data,
-					contentEncoding: media.encoding,
-					mediaType: media.contentType,
-					fileName,
-					testCaseStartedId: this.currentTestCaseStartedId,
-					testStepId: this.currentTestStepId
-				}
-			};
-			this.eventBroadcaster.emit('envelope', attachment);
-		});
 		this.workerId = workerId;
 		this.attachmentManager = new AttachmentManager(({ data, media, fileName }) => {
 			if (doesNotHaveValue(this.currentTestStepId)) {
@@ -140,11 +122,10 @@ export default class TestCaseRunner {
 	}
 
 	async invokeStep(
-		stepParam: messages.PickleStep | null,
+		step: messages.PickleStep,
 		stepDefinition: IDefinition,
-		hookParameter?: any
+		hookParameter?: ITestCaseHookParameter
 	): Promise<messages.TestStepResult> {
-		const step = stepParam!;
 		return await StepRunner.run({
 			defaultTimeout: this.supportCodeLibrary.defaultTimeout,
 			filterStackTraces: this.filterStackTraces,
@@ -174,7 +155,7 @@ export default class TestCaseRunner {
 		this.eventBroadcaster.emit('envelope', testStepStarted);
 		this.currentTestStepId = testStepId;
 		const testStepResult = await runStepFn();
-		this.currentTestStepId = undefined;
+		this.currentTestStepId = null;
 		this.testStepResults?.push(testStepResult);
 		const testStepFinished: messages.Envelope = {
 			testStepFinished: {
@@ -211,6 +192,9 @@ export default class TestCaseRunner {
 				timestamp: timestamp()
 			}
 		};
+		if (this.workerId) {
+			testCaseStarted.testCaseStarted.workerId = this.workerId;
+		}
 		this.eventBroadcaster.emit('envelope', testCaseStarted);
 		// used to determine whether a hook is a Before or After
 		let didWeRunStepsYet = false;

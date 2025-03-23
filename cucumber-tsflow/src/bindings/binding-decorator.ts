@@ -13,8 +13,8 @@ import {
 import { getStepBindings } from './binding-context';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
-import { StepBinding, StepBindingFlags } from '../types/step-binding';
-import { ContextType, StepPattern } from '../types/types';
+import { StepBinding, StepBindingFlags } from './step-binding';
+import { ContextType, StepPattern } from './types';
 import { defineParameterType } from '@cucumber/cucumber';
 import _ from 'underscore';
 

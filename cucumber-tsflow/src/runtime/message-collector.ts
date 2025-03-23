@@ -1,6 +1,6 @@
 import * as messages from '@cucumber/messages';
 import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
-import { StepBinding } from '../types/step-binding';
+import { StepBinding } from '../bindings/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { hasMatchingStep, hasMatchingTags } from './utils';
 import { hasStringValue } from '../utils/helpers';

@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.1.0]
+
+### Changed
+
+- Removed peerDependency on cucumber-js. Emphasizing that cucumber-tsflow extends cucumber-js and would be used in-place-of, not along-side cucumber-js.
+- Updated exports to include most of the User exports from cucumber-js along with cucumber-tsflow exports that extend or override cucumber-js.
+- Code Refactoring: Moved non-d.ts types closer to usage, some reorganization of code.
+
 ## [7.0.0]
 
 ### Added
 
-- API Support that mirrors the Cucumber.JS API
+- API Support that implements and extends the cucumber-js API to support cucumber-tsflow bindings.
 
 ### Changed
 

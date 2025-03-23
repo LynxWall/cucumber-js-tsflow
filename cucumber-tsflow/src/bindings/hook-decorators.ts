@@ -1,5 +1,5 @@
 import { Callsite } from '../utils/our-callsite';
-import { StepBinding, StepBindingFlags } from '../types/step-binding';
+import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
 import { addStepBinding } from './binding-context';
 

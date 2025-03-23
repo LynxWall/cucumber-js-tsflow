@@ -35,9 +35,9 @@ export class ManagedScenarioContext implements ScenarioContext {
 		return this._scenarioInfo;
 	}
 
-	public getOrActivateBindingClass(targetPrototype: any, contextTypes: ContextType[], worldObj: World): any {
-		return this.getOrActivateObject(targetPrototype, () => {
-			return this.activateBindingClass(targetPrototype, contextTypes, worldObj);
+	public getOrActivateBindingClass(classPrototype: any, contextTypes: ContextType[], worldObj: World): any {
+		return this.getOrActivateObject(classPrototype, () => {
+			return this.activateBindingClass(classPrototype, contextTypes, worldObj);
 		});
 	}
 
@@ -68,35 +68,27 @@ export class ManagedScenarioContext implements ScenarioContext {
 		}
 	}
 
-	private activateBindingClass(targetPrototype: any, contextTypes: ContextType[], worldObj: World): any {
+	private activateBindingClass(classPrototype: any, contextTypes: ContextType[], worldObj: World): any {
 		const invokeBindingConstructor = (args: any[]): any => {
 			switch (contextTypes.length) {
 				case 0:
-					return new (targetPrototype.constructor as any)();
+					return new (classPrototype.constructor as any)();
 				case 1:
-					return new (targetPrototype.constructor as any)(args[0]);
+					return new (classPrototype.constructor as any)(args[0]);
 				case 2:
-					return new (targetPrototype.constructor as any)(args[0], args[1]);
+					return new (classPrototype.constructor as any)(args[0], args[1]);
 				case 3:
-					return new (targetPrototype.constructor as any)(args[0], args[1], args[2]);
+					return new (classPrototype.constructor as any)(args[0], args[1], args[2]);
 				case 4:
-					return new (targetPrototype.constructor as any)(args[0], args[1], args[2], args[3]);
+					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3]);
 				case 5:
-					return new (targetPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4]);
+					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4]);
 				case 6:
-					return new (targetPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4], args[5]);
+					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4], args[5]);
 				case 7:
-					return new (targetPrototype.constructor as any)(
-						args[0],
-						args[1],
-						args[2],
-						args[3],
-						args[4],
-						args[5],
-						args[6]
-					);
+					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
 				case 8:
-					return new (targetPrototype.constructor as any)(
+					return new (classPrototype.constructor as any)(
 						args[0],
 						args[1],
 						args[2],
@@ -107,7 +99,7 @@ export class ManagedScenarioContext implements ScenarioContext {
 						args[7]
 					);
 				case 9:
-					return new (targetPrototype.constructor as any)(
+					return new (classPrototype.constructor as any)(
 						args[0],
 						args[1],
 						args[2],
@@ -119,7 +111,7 @@ export class ManagedScenarioContext implements ScenarioContext {
 						args[8]
 					);
 				case 10:
-					return new (targetPrototype.constructor as any)(
+					return new (classPrototype.constructor as any)(
 						args[0],
 						args[1],
 						args[2],
@@ -150,18 +142,18 @@ export class ManagedScenarioContext implements ScenarioContext {
 	/**
 	 * Get or activate any object
 	 *
-	 * @param targetPrototype prototype for the object
+	 * @param classPrototype prototype for the object
 	 * @param activatorFunc callback function used to create an instance of the object
 	 * @param optional optional parameter passed into constructors
 	 * @returns
 	 */
-	private getOrActivateObject(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
-		let activeObject = this._activeObjects.get(targetPrototype)?.activeObject;
+	private getOrActivateObject(classPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
+		let activeObject = this._activeObjects.get(classPrototype)?.activeObject;
 		if (activeObject) {
 			return activeObject;
 		}
 		activeObject = activatorFunc(optional);
-		this._activeObjects.set(targetPrototype, new ActiveInfo(activeObject));
+		this._activeObjects.set(classPrototype, new ActiveInfo(activeObject));
 		return activeObject;
 	}
 
@@ -169,18 +161,18 @@ export class ManagedScenarioContext implements ScenarioContext {
 	 * Get or activate Context objects. Marks an object as a context
 	 * object in ActiveInfo to let the system know it supports an initialize function.
 	 *
-	 * @param targetPrototype prototype for the object
+	 * @param classPrototype prototype for the object
 	 * @param activatorFunc callback function used to create an instance of the object
 	 * @param optional optional parameter passed into constructors
 	 * @returns
 	 */
-	private getOrActivateContext(targetPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
-		let activeObject = this._activeObjects.get(targetPrototype)?.activeObject;
+	private getOrActivateContext(classPrototype: any, activatorFunc: (...args: any[]) => any, optional?: any): any {
+		let activeObject = this._activeObjects.get(classPrototype)?.activeObject;
 		if (activeObject) {
 			return activeObject;
 		}
 		activeObject = activatorFunc(optional);
-		this._activeObjects.set(targetPrototype, new ActiveInfo(activeObject, true));
+		this._activeObjects.set(classPrototype, new ActiveInfo(activeObject, true));
 		return activeObject;
 	}
 }

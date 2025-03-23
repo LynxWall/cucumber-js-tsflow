@@ -1,23 +1,16 @@
 {
 	"compilerOptions": {
-		"composite": true,
-		"module": "commonjs",
-		"moduleResolution": "node",
-		"target": "es2022",
-		"strict": true,
-		"jsx": "preserve",
-		"skipLibCheck": true,
-		"removeComments": false,
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
+		"esModuleInterop": true,
+		"lib": ["es2022", "esnext.decorators"],
+		"module": "node18",
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
-		"inlineSourceMap": true,
-		"esModuleInterop": true,
-		"lib": ["es2022"],
-		"typeRoots": ["../node_modules/@types", "../node_modules/@cucumber/cucumber/lib/types", "./src/types"],
-		"outDir": "lib",
-		"rootDir": "src"
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"inlineSources": true,
+		"skipLibCheck": true,
+		"target": "es2022",
+		"typeRoots": ["../node_modules/@types", "./src/types"]
 	}
 }

@@ -3,7 +3,7 @@
 	"name": "@lynxwall/cucumber-tsflow-workspace",
 	"description": "Workspace for cucumber-tsflow",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
-	"version": "6.4.0",
+	"version": "7.0.0",
 	"license": "MIT",
 	"workspaces": [
 		"cucumber-tsflow",
@@ -15,10 +15,10 @@
 		"url": "https://github.com/lynxwall/cucumber-js-tsflow.git"
 	},
 	"scripts": {
-		"build": "genversion --es6 cucumber-tsflow/src/version.ts && tsc --build",
-		"build:watch": "tsc --build --watch",
+		"build": "yarn workspace @lynxwall/cucumber-tsflow build",
+		"build:watch": "yarn workspace @lynxwall/cucumber-tsflow build:watch",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
-		"lint": "eslint --fix --ext .js,.ts,.vue --ignore-path .eslintignore cucumber-tsflow/src",
+		"lint": "eslint --fix --ext .js,.ts,.vue cucumber-tsflow/src",
 		"test:all": "yarn test:vue:es && yarn test:vue:ts && yarn test:node:es && yarn test:node:ts",
 		"test:vue:es": "yarn workspace cucumber-tsflow-vue test:es",
 		"test:vue:ts": "yarn workspace cucumber-tsflow-vue test:ts",
@@ -26,14 +26,20 @@
 		"test:node:ts": "yarn workspace cucumber-tsflow-node test:ts"
 	},
 	"devDependencies": {
-		"@jsdevtools/npm-publish": "~1.4.3",
-		"@vue/eslint-config-typescript": "~11.0.3",
-		"eslint": "~8.52.0",
-		"eslint-config-prettier": "~8.8.0",
-		"eslint-plugin-vue": "~9.18.0",
-		"genversion": "~3.1.1",
-		"prettier": "~2.8.8",
-		"typescript": "~5.2.2"
+		"@eslint/eslintrc": "^3.3.1",
+		"@eslint/js": "^9.23.0",
+		"@jsdevtools/npm-publish": "~3.1.1",
+		"@types/node": "~22.13.10",
+		"@vue/eslint-config-typescript": "~14.5.0",
+		"eslint": "~9.22.0",
+		"eslint-config-prettier": "~10.1.1",
+		"eslint-plugin-vue": "~10.0.0",
+		"genversion": "~3.2.0",
+		"prettier": "~3.5.3",
+		"shx": "0.3.4",
+		"ts-node": "~10.9.2",
+		"typescript": "~5.8.2",
+		"vue-eslint-parser": "10.1.1"
 	},
 	"packageManager": "yarn@3.5.0"
 }

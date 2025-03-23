@@ -1,5 +1,5 @@
 import * as messages from '@cucumber/messages';
-import { doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
+import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import { StepBinding } from '../types/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { hasMatchingStep, hasMatchingTags } from './utils';
@@ -7,6 +7,7 @@ import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
 import { EndTestCaseInfo } from './test-case-info';
+import { IMessageData } from './parallel/types';
 
 interface ITestCaseAttemptData {
 	attempt: number;
@@ -47,22 +48,43 @@ export default class MessageCollector {
 	private pickleMap: Record<string, messages.Pickle> = {};
 	private testCaseMap: Record<string, messages.TestCase> = {};
 	private testCaseAttemptDataMap: Record<string, ITestCaseAttemptData> = {};
-	readonly undefinedParameterTypes: messages.UndefinedParameterType[] = [];
+	private undefinedParameterTypes: messages.UndefinedParameterType[] = [];
 	private testCaseRunningMap: Record<string, messages.TestCaseStarted> = {};
 
-	private collectorEvents = new EventEmitter();
-
-	onTestCaseEnd(Handler: (testCaseFinished: messages.TestCaseFinished) => void): void {
-		this.collectorEvents.on('testCaseEnd', Handler);
+	constructor(eventBroadcaster: EventEmitter) {
+		eventBroadcaster.on('envelope', this.parseEnvelope.bind(this));
 	}
 
-	// Used during parallel execution to add the current pickle and testCase
-	// to a new Worker instance of the MessageCollector
-	addPickleAndTestCase(pickle: messages.Pickle, testCase: messages.TestCase) {
-		this.pickleMap[pickle.id] = pickle;
-		this.testCaseMap[testCase.id] = testCase;
+	/**
+	 * Reset this message collector for a new parallel test run.
+	 * @param messageData Gerkin information from initial load
+	 */
+	reset(messageData: IMessageData): void {
+		this.gherkinDocumentMap = messageData.gherkinDocumentMap;
+		this.pickleMap = messageData.pickleMap;
+		this.testCaseMap = messageData.testCaseMap;
+		this.testCaseAttemptDataMap = {};
+		this.undefinedParameterTypes = [];
+		this.testCaseRunningMap = {};
 	}
 
+	/**
+	 * Get Gerkin message data for parallel runs
+	 * @returns Gerkin informaion loaded during startup
+	 */
+	getMessageData(): IMessageData {
+		const data = {} as IMessageData;
+		data.gherkinDocumentMap = this.gherkinDocumentMap;
+		data.pickleMap = this.pickleMap;
+		data.testCaseMap = this.testCaseMap;
+
+		return data;
+	}
+
+	/**
+	 * Check for failures in a test run
+	 * @returns true if there are failures in the last test case attempt
+	 */
 	hasFailures(): boolean {
 		for (const caseKey in this.testCaseAttemptDataMap) {
 			const stepResults = this.testCaseAttemptDataMap[caseKey].stepResults;
@@ -106,22 +128,22 @@ export default class MessageCollector {
 	}
 
 	parseEnvelope(envelope: messages.Envelope): void {
-		if (envelope.gherkinDocument && envelope.gherkinDocument.uri) {
+		if (doesHaveValue(envelope.gherkinDocument)) {
 			this.gherkinDocumentMap[envelope.gherkinDocument.uri] = envelope.gherkinDocument;
-		} else if (envelope.pickle && envelope.pickle.id) {
+		} else if (doesHaveValue(envelope.pickle)) {
 			this.pickleMap[envelope.pickle.id] = envelope.pickle;
-		} else if (envelope.undefinedParameterType) {
+		} else if (doesHaveValue(envelope.undefinedParameterType)) {
 			this.undefinedParameterTypes.push(envelope.undefinedParameterType);
-		} else if (envelope.testCase && envelope.testCase.id) {
+		} else if (doesHaveValue(envelope.testCase)) {
 			this.testCaseMap[envelope.testCase.id] = envelope.testCase;
-		} else if (envelope.testCaseStarted) {
+		} else if (doesHaveValue(envelope.testCaseStarted)) {
 			this.initTestCaseAttempt(envelope.testCaseStarted);
 			this.startTestCase(envelope.testCaseStarted);
-		} else if (envelope.attachment) {
+		} else if (doesHaveValue(envelope.attachment)) {
 			this.storeAttachment(envelope.attachment);
-		} else if (envelope.testStepFinished) {
+		} else if (doesHaveValue(envelope.testStepFinished)) {
 			this.storeTestStepResult(envelope.testStepFinished);
-		} else if (envelope.testCaseFinished) {
+		} else if (doesHaveValue(envelope.testCaseFinished)) {
 			this.storeTestCaseResult(envelope.testCaseFinished);
 		}
 	}

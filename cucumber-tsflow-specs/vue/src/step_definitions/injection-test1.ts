@@ -5,7 +5,10 @@ import { expect } from 'chai';
 
 @binding([ScenarioContext, SyncContext])
 export default class InjectionTestSteps1 {
-	constructor(private context: ScenarioContext, private syncContext: SyncContext) {}
+	constructor(
+		private context: ScenarioContext,
+		private syncContext: SyncContext
+	) {}
 
 	@given('The Workspace is available and valid')
 	theWorkspaceIsAvailableAndValid() {

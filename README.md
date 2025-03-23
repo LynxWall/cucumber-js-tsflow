@@ -2,7 +2,7 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for CucumberJS 9.6.0+ in TypeScript 5.0+.
+Provides 'specflow' like bindings for CucumberJS 11.2.0+ in TypeScript 5.8+.
 
 Supports Vue3 files in cucumber tests.
 
@@ -20,7 +20,7 @@ In addition, the following features have been added:
     - **2** - Implemented scenarios are passing but there are pending, undefined or unknown scenario steps.
     - **3** - One or more scenario steps have failed.
 
-- Typescript and esbuild transpiler support.
+- CommonJS transpilers using either esbuild or ts-node.
 
 - Vue3 transformer used to handle .vue files in tests.
 
@@ -59,6 +59,12 @@ cucumber-tsflow uses TypeScript Decorators to create SpecFlow like bindings for 
 
 ```bash
 npm install @lynxwall/cucumber-tsflow --save-dev
+```
+
+#### pnpm
+
+```bash
+pnpm add @lynxwall/cucumber-tsflow --save-dev
 ```
 
 #### yarn
@@ -230,9 +236,9 @@ In addition to cucumber configuration options the following two options have bee
 | `debugFile`      | `string`  | No         | `--debug-file`       | Path to a file with steps for debugging                      |         |
 | `enableVueStyle` | `boolean` | No         | `--enable-vue-style` | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 
-#### Transpiler and Vue3 supported
+### Transpiler and Vue3 supported
 
-Using TypeScript with cucumberJs requires a couple of tsconfig.json parameters as described here: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v9.1.0/docs/transpiling.md)
+Using TypeScript with CucumberJs requires a couple of tsconfig.json parameters as described here: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with CucumberJS. 
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
 
@@ -246,6 +252,10 @@ The following transpilers are provided:
 - **tsnode**: Uses typescript to transpile TypeScript code for node test execution.
 - **tsvue**: Uses typescript to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into commonJS.
   - **jsdom** is also loaded globally to support loading and testing Vue SFC components.
+
+<div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
+<strong><span style="color: #000">Note:</span></strong> The transpilers provide with cucumber-tsflow will only support CommonJS modules. In other words, if your package.json file has 'type: module' you will not be able to use these transpilers. However, you can use ts-node for transpiling as documented here: <a ref='https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md#esm'>Transpiling</a> 
+</div>
 
 ##### Using the transpiler configuration option
 
@@ -266,12 +276,12 @@ You can also use the `requireModule` parameter to configure a transpiler. The fo
 ```json
 {
 	"default": {
-		"requireModule": ["@lynxwall/cucumber-tsflow/lib/esvue"]
+		"requireModule": ["@lynxwall/cucumber-tsflow/esvue"]
 	}
 }
 ```
 
-#### Debug File support
+### Debug File support
 
 The new `debugFile` configuration option allows you to specify a .ts file with step definitions that you want to debug. This will search for a matching feature and execute the tests in that feature. This option is helpful when debugging tests and you don't want to run all of the tests.
 
@@ -284,9 +294,9 @@ If using VSCode to edit your project the following launch configurations can be 
 	"name": "Debug All",
 	"type": "node",
 	"request": "launch",
-	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
+	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow/vue",
 	"stopOnEntry": true,
-	"args": ["-p", "default"],
+	"args": ["-p", "esvue"],
 	"cwd": "${workspaceRoot}",
 	"runtimeExecutable": null,
 	"runtimeArgs": ["--nolazy"],
@@ -305,9 +315,9 @@ If using VSCode to edit your project the following launch configurations can be 
 	"name": "Debug Feature",
 	"type": "node",
 	"request": "launch",
-	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow",
+	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow/vue",
 	"stopOnEntry": true,
-	"args": ["--debug-file", "${file}", "-p", "default"],
+	"args": ["--debug-file", "${file}", "-p", "esvue"],
 	"cwd": "${workspaceRoot}",
 	"runtimeExecutable": null,
 	"runtimeArgs": ["--nolazy"],

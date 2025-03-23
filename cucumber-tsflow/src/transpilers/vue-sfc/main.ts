@@ -159,7 +159,7 @@ const genTemplateCode = (
 		const renderFnName = ssr ? 'ssrRender' : 'render';
 		return {
 			code: `import { ${renderFnName} as _sfc_${renderFnName} } from ${request}`,
-			map: undefined
+			map: undefined as any
 		};
 	}
 };

@@ -85,12 +85,12 @@ export default class TestSteps {
 	}
 
 	@when('the condition is right')
-	whenTheConditionIsRight() {
+	whenTheConditionIsRight(): any {
 		this.whenIsCalled = true;
 	}
 
 	@then('we can see the result correctly')
-	thenWeCanSeeTheResult() {
+	thenWeCanSeeTheResult(): any {
 		//test updates
 		this.thenIsCalled = true;
 	}

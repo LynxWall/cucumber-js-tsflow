@@ -6,13 +6,13 @@ export type TranspileOptions = {
 	esbuild?: CommonOptions & TransformOptions & BuildOptions;
 };
 const defaultOptions: TranspileOptions = {
-	debug: false
+	debug: true
 };
 
 const commonOptions: CommonOptions = {
 	format: 'cjs',
-	logLevel: 'error',
-	target: [`node${process.version.slice(1)}`],
+	logLevel: 'info',
+	target: [`es2020`],
 	minify: false,
 	sourcemap: 'external'
 };

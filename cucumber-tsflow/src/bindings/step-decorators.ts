@@ -1,7 +1,7 @@
-import { BindingRegistry } from './binding-registry';
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from '../types/step-binding';
 import shortUuid from 'short-uuid';
+import { addStepBinding } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.
@@ -10,31 +10,27 @@ import shortUuid from 'short-uuid';
  * @param tag An optional tag.
  * @param timeout An optional timeout.
  */
-export function given(
-	stepPattern: RegExp | string,
-	tag?: string,
-	timeout?: number,
-	wrapperOption?: any
-): MethodDecorator {
+export function given(stepPattern: RegExp | string, tag?: string, timeout?: number, wrapperOption?: any): any {
 	const callsite = Callsite.capture();
 
-	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+	return function givenDecorator(target: Function, context: ClassMethodDecoratorContext) {
 		const stepBinding: StepBinding = {
 			stepPattern: stepPattern,
 			bindingType: StepBindingFlags.given,
-			targetPrototype: target,
-			targetPropertyKey: propertyKey,
-			argsLength: target[propertyKey].length,
+			classPrototype: undefined,
+			classPropertyKey: context.name,
+			stepFunction: target,
+			stepIsStatic: context.static,
+			stepArgsLength: target.length,
 			tags: tag,
 			timeout: timeout,
 			wrapperOption: wrapperOption,
 			callsite: callsite,
 			cucumberKey: shortUuid().new()
 		};
+		addStepBinding(context, stepBinding);
 
-		BindingRegistry.instance.registerStepBinding(stepBinding);
-
-		return descriptor;
+		return;
 	};
 }
 
@@ -45,31 +41,27 @@ export function given(
  * @param tag An optional tag.
  * @param timeout An optional timeout.
  */
-export function when(
-	stepPattern: RegExp | string,
-	tag?: string,
-	timeout?: number,
-	wrapperOption?: any
-): MethodDecorator {
+export function when(stepPattern: RegExp | string, tag?: string, timeout?: number, wrapperOption?: any): any {
 	const callsite = Callsite.capture();
 
-	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+	return function whenDecorator(target: Function, context: ClassMethodDecoratorContext) {
 		const stepBinding: StepBinding = {
 			stepPattern: stepPattern,
 			bindingType: StepBindingFlags.when,
-			targetPrototype: target,
-			targetPropertyKey: propertyKey,
-			argsLength: target[propertyKey].length,
+			classPrototype: undefined,
+			classPropertyKey: context.name,
+			stepFunction: target,
+			stepIsStatic: context.static,
+			stepArgsLength: target.length,
 			tags: tag,
 			timeout: timeout,
 			wrapperOption: wrapperOption,
 			callsite: callsite,
 			cucumberKey: shortUuid().new()
 		};
+		addStepBinding(context, stepBinding);
 
-		BindingRegistry.instance.registerStepBinding(stepBinding);
-
-		return descriptor;
+		return;
 	};
 }
 
@@ -80,30 +72,26 @@ export function when(
  * @param tag An optional tag.
  * @param timeout An optional timeout.
  */
-export function then(
-	stepPattern: RegExp | string,
-	tag?: string,
-	timeout?: number,
-	wrapperOption?: any
-): MethodDecorator {
+export function then(stepPattern: RegExp | string, tag?: string, timeout?: number, wrapperOption?: any): any {
 	const callsite = Callsite.capture();
 
-	return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+	return function thenDecorator(target: Function, context: ClassMethodDecoratorContext) {
 		const stepBinding: StepBinding = {
 			stepPattern: stepPattern,
 			bindingType: StepBindingFlags.then,
-			targetPrototype: target,
-			targetPropertyKey: propertyKey,
-			argsLength: target[propertyKey].length,
+			classPrototype: undefined,
+			classPropertyKey: context.name,
+			stepFunction: target,
+			stepIsStatic: context.static,
+			stepArgsLength: target.length,
 			tags: tag,
 			timeout: timeout,
 			wrapperOption: wrapperOption,
 			callsite: callsite,
 			cucumberKey: shortUuid().new()
 		};
+		addStepBinding(context, stepBinding);
 
-		BindingRegistry.instance.registerStepBinding(stepBinding);
-
-		return descriptor;
+		return;
 	};
 }

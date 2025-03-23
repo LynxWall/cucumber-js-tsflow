@@ -39,7 +39,6 @@ export const resolveScript = (
 		id: descriptor.id,
 		isProd: options.isProduction,
 		inlineTemplate: isUseInlineTemplate(descriptor, true),
-		reactivityTransform: options.reactivityTransform !== false,
 		templateOptions: resolveTemplateCompilerOptions(descriptor, options, ssr),
 		sourceMap: options.sourceMap
 	});

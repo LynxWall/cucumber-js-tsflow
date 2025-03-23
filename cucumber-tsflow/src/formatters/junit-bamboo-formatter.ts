@@ -137,7 +137,7 @@ export default class JunitBambooFormatter extends Formatter {
 							type: exception?.type,
 							message: exception?.message,
 							detail: message
-					  } as IJUnitTestCaseFailure)
+						} as IJUnitTestCaseFailure)
 					: undefined
 		};
 	}

@@ -1,6 +1,7 @@
-import * as log4js from 'log4js';
-const logger = log4js.getLogger('cucumber-js.tsflow');
+import { ConsoleLogger } from '@cucumber/cucumber/lib/environment/console_logger';
+import debug from 'debug';
 
-logger.level = 'debug'; // default level is OFF - which means no logs at all.
+const debugEnabled = debug.enabled('cucumber');
+const logger = new ConsoleLogger(process.stderr, debugEnabled);
 
 export default logger;

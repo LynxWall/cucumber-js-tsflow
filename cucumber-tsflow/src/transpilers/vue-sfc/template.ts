@@ -65,7 +65,7 @@ export const resolveTemplateCompilerOptions = (
 ): Omit<SFCTemplateCompileOptions, 'source'> | undefined => {
 	const block = descriptor.template;
 	if (!block) {
-		return;
+		return undefined;
 	}
 	const resolvedScript = getResolvedScript(descriptor, ssr);
 	const hasScoped = descriptor.styles.some(s => s.scoped);
@@ -76,7 +76,7 @@ export const resolveTemplateCompilerOptions = (
 	// compiler-sfc should export `AssetURLOptions`
 	// build: force all asset urls into import requests so that they go through
 	// the assets plugin for asset registration
-	// eslint-disable-next-line prefer-const
+
 	const assetUrlOptions = {
 		includeAbsolute: true
 	};

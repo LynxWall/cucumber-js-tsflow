@@ -2,7 +2,7 @@ import { formatLocation, PickleParser } from '@cucumber/cucumber/lib/formatter/h
 import * as messages from '@cucumber/messages';
 import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import JsonFormatter from '@cucumber/cucumber/lib/formatter/json_formatter';
-import { ILineAndUri } from '@cucumber/cucumber/lib/types';
+import { ILineAndUri } from '@cucumber/cucumber/lib/types/index';
 const { getStepKeyword } = PickleParser;
 
 export interface IJsonFeature {

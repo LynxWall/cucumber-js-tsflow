@@ -1,4 +1,4 @@
-import MessageCollector from '../cucumber/message-collector';
+import MessageCollector from '../runtime/message-collector';
 
 declare global {
 	// eslint-disable-next-line no-var

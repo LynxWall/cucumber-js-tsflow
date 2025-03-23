@@ -11,5 +11,8 @@ export class ScenarioInfo {
 	 * @param tags An array of [[TagName]] representing the tags that are in scope for the currently
 	 * running Cucumber scenario.
 	 */
-	constructor(public scenarioTitle: string, public tags: TagName[]) {}
+	constructor(
+		public scenarioTitle: string,
+		public tags: TagName[]
+	) {}
 }

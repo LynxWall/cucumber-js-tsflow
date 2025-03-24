@@ -20,6 +20,7 @@ With this latest release, cucumber-tsflow has been refactored to support cucumbe
 - **API support** that implements and extends the cucumber-js API.
 - Support for Node 22 and Typescript 5.8.
   - Switched to **official Typescript Decorators** with metadata support implemented in [Typescript 5.2](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#decorator-metadata).
+    **NOTE:** Please **remove *experimentalDecorators*** from your TypeScript configuration as it is no longer supported with the update to use official decorators, which are very different.
 - Transpiler configuration updates to support node and Typescript changes.
   - Added a new section to this readme that describes [Transpilers and TypeScript](#transpilers-and-typescript) in more detail.
 
@@ -166,7 +167,7 @@ The transpilers included with cucumber-tsflow transpile to **CommonJS** and do n
 
 All of the transpilers included with cucumber-tsflow use the same TypeScript configuration, which take precedence when running your tests using one of these transpilers. In other words, while each transpiler is different, they all use the same tsconfig settings, which are shown below:
 
-```json
+```typescript
 	compilerOptions: {
 		module: 'nodeNext',
 		target: 'es2022',

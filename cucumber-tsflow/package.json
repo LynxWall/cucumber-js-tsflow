@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 11.2.0 in TypeScript 5.8+.",
-	"version": "7.1.0",
+	"version": "7.1.1",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"keywords": [
@@ -51,6 +51,7 @@
 	"dependencies": {
 		"@cucumber/cucumber": "~11.2.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
+		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",
 		"commander": "^13.1.0",
 		"debug": "^4.3.4",
@@ -69,6 +70,7 @@
 		"ts-node": "~10.9.2",
 		"tsconfig-paths": "~4.2.0",
 		"tslib": "2.8.1",
+		"typescript": "~5.8.2",
 		"underscore": "~1.13.7"
 	},
 	"devDependencies": {
@@ -77,12 +79,10 @@
 		"@types/glob": "~8.1.0",
 		"@types/hash-sum": "~1.0.2",
 		"@types/lodash.merge": "~4.6.9",
-		"@types/node": "~22.13.10",
 		"@types/source-map-support": "~0.5.10",
 		"@types/underscore": "~1.13.0",
 		"genversion": "~3.2.0",
-		"shx": "0.3.4",
-		"typescript": "~5.8.2"
+		"shx": "0.3.4"
 	},
 	"scripts": {
 		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",

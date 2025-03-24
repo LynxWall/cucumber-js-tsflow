@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.1.1]
+
+### Changed
+
+- Moved ts-node dependencies: @types/node and typescript from devDependencies to dependencies. These are used by the transpilers when running tests.
+
 ## [7.1.0]
 
 ### Changed

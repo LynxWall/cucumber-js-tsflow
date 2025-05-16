@@ -1994,6 +1994,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cucumber-tsflow-node-exp@workspace:cucumber-tsflow-specs/node-exp":
+  version: 0.0.0-use.local
+  resolution: "cucumber-tsflow-node-exp@workspace:cucumber-tsflow-specs/node-exp"
+  dependencies:
+    "@lynxwall/cucumber-tsflow": "workspace:*"
+    "@types/chai": ~4.3.20
+    chai: ~5.2.0
+  languageName: unknown
+  linkType: soft
+
 "cucumber-tsflow-node@workspace:cucumber-tsflow-specs/node":
   version: 0.0.0-use.local
   resolution: "cucumber-tsflow-node@workspace:cucumber-tsflow-specs/node"
@@ -2001,6 +2011,22 @@ __metadata:
     "@lynxwall/cucumber-tsflow": "workspace:*"
     "@types/chai": ~4.3.20
     chai: ~5.2.0
+  languageName: unknown
+  linkType: soft
+
+"cucumber-tsflow-vue-exp@workspace:cucumber-tsflow-specs/vue-exp":
+  version: 0.0.0-use.local
+  resolution: "cucumber-tsflow-vue-exp@workspace:cucumber-tsflow-specs/vue-exp"
+  dependencies:
+    "@lynxwall/cucumber-tsflow": "workspace:*"
+    "@types/chai": ~4.3.20
+    "@types/node": ~22.13.10
+    "@vue/test-utils": ~2.4.6
+    chai: ~5.2.0
+    ts-node: ~10.9.2
+    tslib: 2.8.1
+    typescript: ~5.8.2
+    vue: ^3.5.13
   languageName: unknown
   linkType: soft
 

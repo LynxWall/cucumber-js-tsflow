@@ -1,0 +1,27 @@
+{
+	"private": true,
+	"name": "cucumber-tsflow-vue-exp",
+	"description": "Specification for 'cucumber-tsflow'.",
+	"version": "7.1.2",
+	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
+	"license": "MIT",
+	"main": "./index.js",
+	"typings": "./index.d.ts",
+	"dependencies": {
+		"vue": "^3.5.13"
+	},
+	"scripts": {
+		"test:es": "cucumber-tsflow -p esvue",
+		"test:ts": "cucumber-tsflow -p tsvue"
+	},
+	"devDependencies": {
+		"@lynxwall/cucumber-tsflow": "workspace:*",
+		"@types/chai": "~4.3.20",
+		"@types/node": "~22.13.10",
+		"@vue/test-utils": "~2.4.6",
+		"chai": "~5.2.0",
+		"ts-node": "~10.9.2",
+		"tslib": "2.8.1",
+		"typescript": "~5.8.2"
+	}
+}

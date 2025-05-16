@@ -17,6 +17,7 @@ import { IFilterablePickle } from '@cucumber/cucumber/lib/filter/index';
 import 'polyfill-symbol-metadata';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { ITsFlowRunOptionsRuntime } from '../runtime/types';
+import { Console } from 'console';
 
 export interface ITsFlowRunOptions extends IRunOptions {
 	runtime: ITsFlowRunOptionsRuntime;
@@ -45,6 +46,15 @@ export async function runCucumber(
 Working directory: ${cwd}
 Running from: ${__dirname}
 `);
+	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+	if (options.runtime.experimentalDecorators) {
+		consoleLogger.info('Using Experimental Decorators.');
+	}
+	if (options.runtime.parallel > 0) {
+		consoleLogger.info(`Running Cucumber-TsFlow in Parallel with ${options.runtime.parallel} workers.\n`);
+	} else {
+		consoleLogger.info('Running Cucumber-TsFlow in Serial.\n');
+	}
 
 	const newId = IdGenerator.uuid();
 

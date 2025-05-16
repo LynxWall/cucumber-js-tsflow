@@ -1,5 +1,5 @@
 const hooks = require('require-extension-hooks');
-import VueTransformer from './transpilers/vue-sfc';
+import VueTransformer from './vue-sfc';
 
 require('ts-node').register({
 	compilerOptions: {

@@ -6,7 +6,6 @@ import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
 import ArgvParser from './argv-parser';
 import debug from 'debug';
-import { Console } from 'console';
 
 export interface ICliRunResult {
 	shouldExitImmediately: boolean;
@@ -69,9 +68,8 @@ export default class Cli {
 			env: this.env,
 			debug: debugEnabled
 		};
-		const consoleLogger = new Console(environment.stdout as any, environment.stderr);
-		consoleLogger.info('Loading configuration...');
 
+		// load the configuration
 		const { useConfiguration: configuration, runConfiguration } = await loadConfiguration(
 			{
 				file: options.config,
@@ -80,7 +78,6 @@ export default class Cli {
 			},
 			environment
 		);
-		consoleLogger.info('Loading Steps and Running Cucumber...\n');
 
 		// now we can run cucumber
 		const { success } = await runCucumber(runConfiguration, environment);

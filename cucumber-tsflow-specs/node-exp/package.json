@@ -2,7 +2,7 @@
 	"private": true,
 	"name": "cucumber-tsflow-node-exp",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "7.1.2",
+	"version": "7.2.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"scripts": {
@@ -12,6 +12,7 @@
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",
 		"@types/chai": "~4.3.20",
-		"chai": "~5.2.0"
+		"chai": "~5.2.0",
+		"class-validator": "~0.14.1"
 	}
 }

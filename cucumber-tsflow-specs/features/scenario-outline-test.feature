@@ -1,4 +1,4 @@
-@node
+@node @node-exp @vue @vue-exp
 Feature: Scenario Outlines
 
 	Scenario Outline: A student can choose a module

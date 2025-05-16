@@ -2,7 +2,7 @@
 	"private": true,
 	"name": "cucumber-tsflow-vue-exp",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "7.1.2",
+	"version": "7.2.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",
@@ -20,6 +20,7 @@
 		"@types/node": "~22.13.10",
 		"@vue/test-utils": "~2.4.6",
 		"chai": "~5.2.0",
+		"class-validator": "~0.14.1",
 		"ts-node": "~10.9.2",
 		"tslib": "2.8.1",
 		"typescript": "~5.8.2"

@@ -25,6 +25,13 @@ if (global.experimentalDecorators) {
 			strict: true
 		}
 	};
+} else {
+	commonOptions.tsconfigRaw = {
+		compilerOptions: {
+			importsNotUsedAsValues: 'remove',
+			strict: true
+		}
+	};
 }
 
 export type TranspileResults = {

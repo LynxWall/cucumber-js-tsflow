@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.2.0]
+
+### Fixed
+
+- Issue with passing a test file on command line throwing invalid args error. Was caused by upgrading Commander. Backed down to version used by Cucumber-JS.
+
+### Changed
+
+- Upgraded to Cucumber-JS 11.3.0
+- Implemented support for Experimental Decorators using a new configuration flag named experimentalDecorators. When true Experimental Decorators will be supported. When false TypeScript 5.x Official Decorators will be used.
+- Added class-validator tests. Class-validator is a decorator based validation utility that uses experimental decorators and the main reason for adding support for them.
+- Doubled the number of tests to cover Official and Experimental Decorators with all tests. 
+
 ## [7.1.2]
 
 ### Fixed

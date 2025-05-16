@@ -1,4 +1,4 @@
-@tags @node
+@tags @node @node-exp @vue @vue-exp
 Feature: Test Features with Tagging support.
 
 	@tag1

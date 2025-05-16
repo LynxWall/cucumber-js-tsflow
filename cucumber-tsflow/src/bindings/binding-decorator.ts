@@ -51,22 +51,11 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 			// This will get all those bindings and then clear metadata for the next type that's loaded.
 			const allBindings: StepBinding[] = getStepBindingsExp();
 			allBindings.forEach(stepBinding => {
-				// register the binding with the prototype
+				// register the binding
 				bindingRegistry.registerStepBinding(stepBinding);
 
-				if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
-					let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
-					if (stepBindingFlags === undefined) {
-						stepBindingFlags = StepBindingFlags.none;
-					}
-					if (stepBindingFlags & stepBinding.bindingType) {
-						return;
-					}
-					bindStepDefinition(stepBinding);
-					stepPatternRegistrations.set(stepBinding.stepPattern.toString(), stepBindingFlags | stepBinding.bindingType);
-				} else if (stepBinding.bindingType & StepBindingFlags.Hooks) {
-					bindHook(stepBinding);
-				}
+				// add the step binding to the binding registry
+				addStepBinding(stepBinding);
 			});
 		};
 	} else {
@@ -84,19 +73,8 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 				stepBinding.classPrototype = target.prototype;
 				bindingRegistry.registerStepBinding(stepBinding);
 
-				if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
-					let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
-					if (stepBindingFlags === undefined) {
-						stepBindingFlags = StepBindingFlags.none;
-					}
-					if (stepBindingFlags & stepBinding.bindingType) {
-						return;
-					}
-					bindStepDefinition(stepBinding);
-					stepPatternRegistrations.set(stepBinding.stepPattern.toString(), stepBindingFlags | stepBinding.bindingType);
-				} else if (stepBinding.bindingType & StepBindingFlags.Hooks) {
-					bindHook(stepBinding);
-				}
+				// add the step binding to the binding registry
+				addStepBinding(stepBinding);
 			});
 			return target;
 		};
@@ -116,6 +94,27 @@ const defineParameters = _.once(() => {
 		transformer: s => (s === 'true' ? true : false)
 	});
 });
+
+/**
+ * Common helper used to add StepBindings to the binding registry
+ * @param stepBinding
+ * @returns
+ */
+function addStepBinding(stepBinding: StepBinding): void {
+	if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
+		let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
+		if (stepBindingFlags === undefined) {
+			stepBindingFlags = StepBindingFlags.none;
+		}
+		if (stepBindingFlags & stepBinding.bindingType) {
+			return;
+		}
+		bindStepDefinition(stepBinding);
+		stepPatternRegistrations.set(stepBinding.stepPattern.toString(), stepBindingFlags | stepBinding.bindingType);
+	} else if (stepBinding.bindingType & StepBindingFlags.Hooks) {
+		bindHook(stepBinding);
+	}
+}
 
 /**
  * Binds a step definition to Cucumber.

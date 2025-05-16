@@ -15,6 +15,7 @@ import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
 import chalk from 'ansis';
 import { ITsFlowRunConfiguration } from '../runtime/types';
+import { Console } from 'console';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -40,13 +41,19 @@ export const loadConfiguration = async (
 ): Promise<ITsflowResolvedConfiguration> => {
 	const { cwd, env, logger } = makeEnvironment(environment);
 	const configFile = options.file ?? locateFile(cwd);
+	let msg = '';
 	if (configFile) {
-		logger.debug(`Configuration will be loaded from "${configFile}"`);
+		msg = `Loading configuration from "${configFile}".`;
 	} else if (configFile === false) {
-		logger.debug('Skipping configuration file resolution');
+		msg = 'Skipping configuration file resolution';
 	} else {
-		logger.debug('No configuration file found');
+		msg = 'No configuration file found';
 	}
+	// log this to debug and console
+	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+	logger.debug(msg);
+	consoleLogger.log(msg);
+
 	const profileConfiguration = configFile ? await fromFile(logger, cwd, configFile, options.profiles) : {};
 
 	// if a feature was passed in on command line it's added
@@ -65,26 +72,29 @@ export const loadConfiguration = async (
 	) as ITsflowConfiguration;
 
 	// Get the experimental decorators setting
+	if (original.experimentalDecorators === undefined) {
+		original.experimentalDecorators = false;
+	}
 	const experimentalDecorators = original.experimentalDecorators;
 	global.experimentalDecorators = experimentalDecorators;
 
 	switch (original.transpiler) {
 		case 'esvue':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/esvue');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esvue');
 			break;
 		case 'tsvue': {
 			const module = experimentalDecorators ? 'tsvue-exp' : 'tsvue';
-			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/${module}`);
+			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 			break;
 		}
 		case 'tsnode': {
 			const module = experimentalDecorators ? 'tsnode-exp' : 'tsnode';
-			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/${module}`);
+			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 			break;
 		}
 		default:
 			// defaulting to esnode
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/esnode');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esnode');
 			break;
 	}
 	// set the snippet syntax

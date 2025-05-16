@@ -13,8 +13,8 @@ export const addStepBindingExp = (binding: StepBinding): void => {
 };
 
 /**
- * Get all step bindings in DecoratorContext metadata and then reset
- * stepBindings in the metadata to an empty array if reset = true (default)
+ * Get all step bindings in the local array and then reset
+ * to an empty array if reset = true (default)
  *
  * @param context Current DecoratorContext
  * @param reset Reset metadata on the context. Default=true

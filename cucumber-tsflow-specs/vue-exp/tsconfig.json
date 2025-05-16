@@ -18,7 +18,10 @@
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,
 		"lib": ["es2022"],
-		"typeRoots": ["../../node_modules/@types"]
+		"typeRoots": ["../../node_modules/@types"],
+		"paths": {
+			"@fixtures/*": ["./src/fixtures/*"]
+		}
 	},
 	"include": ["./src/**/*.ts", "./src/**/*.vue"]
 }

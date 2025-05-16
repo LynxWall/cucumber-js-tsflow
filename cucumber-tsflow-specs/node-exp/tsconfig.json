@@ -2,18 +2,26 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"target": "es2022",
-		"module": "Node18",
+		"module": "es2022",
 		"strict": true,
+		"jsx": "preserve",
 		"importHelpers": true,
+		"moduleResolution": "node",
 		"skipLibCheck": true,
 		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"useDefineForClassFields": true,
 		"inlineSourceMap": true,
 		"allowJs": true,
 		"removeComments": false,
-		"lib": ["es2022", "esnext.decorators"],
-		"typeRoots": ["../../node_modules/@types"]
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"lib": ["es2022"],
+		"typeRoots": ["../../node_modules/@types"],
+		"paths": {
+			"@fixtures/*": ["./src/fixtures/*"]
+		}
 	},
 	"include": ["./src/**/*.ts", "./src/**/*.vue"]
 }

@@ -1,8 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding } from './binding-context';
-import { property } from 'underscore';
+import { addStepBinding, addStepBindingExp } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.
@@ -15,7 +14,23 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 	const callsite = Callsite.capture();
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
-			const key = propertyKey;
+			const stepBinding: StepBinding = {
+				stepPattern: stepPattern,
+				bindingType: StepBindingFlags.given,
+				classPrototype: target,
+				classPropertyKey: propertyKey,
+				stepFunction: target[propertyKey],
+				stepIsStatic: false,
+				stepArgsLength: target[propertyKey].length,
+				tags: tag,
+				timeout: timeout,
+				wrapperOption: wrapperOption,
+				callsite: callsite,
+				cucumberKey: shortUuid().new()
+			};
+			addStepBindingExp(stepBinding);
+
+			return descriptor;
 		};
 	} else {
 		return function givenDecorator(target: Function, context: ClassMethodDecoratorContext) {
@@ -52,7 +67,23 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
-			const key = propertyKey;
+			const stepBinding: StepBinding = {
+				stepPattern: stepPattern,
+				bindingType: StepBindingFlags.when,
+				classPrototype: target,
+				classPropertyKey: propertyKey,
+				stepFunction: target[propertyKey],
+				stepIsStatic: false,
+				stepArgsLength: target[propertyKey].length,
+				tags: tag,
+				timeout: timeout,
+				wrapperOption: wrapperOption,
+				callsite: callsite,
+				cucumberKey: shortUuid().new()
+			};
+			addStepBindingExp(stepBinding);
+
+			return descriptor;
 		};
 	} else {
 		return function whenDecorator(target: Function, context: ClassMethodDecoratorContext) {
@@ -89,7 +120,23 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
-			const key = propertyKey;
+			const stepBinding: StepBinding = {
+				stepPattern: stepPattern,
+				bindingType: StepBindingFlags.then,
+				classPrototype: target,
+				classPropertyKey: propertyKey,
+				stepFunction: target[propertyKey],
+				stepIsStatic: false,
+				stepArgsLength: target[propertyKey].length,
+				tags: tag,
+				timeout: timeout,
+				wrapperOption: wrapperOption,
+				callsite: callsite,
+				cucumberKey: shortUuid().new()
+			};
+			addStepBindingExp(stepBinding);
+
+			return descriptor;
 		};
 	} else {
 		return function thenDecorator(target: Function, context: ClassMethodDecoratorContext) {

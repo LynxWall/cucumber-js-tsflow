@@ -53,7 +53,7 @@
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
 		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",
-		"commander": "^13.1.0",
+		"commander": "^10.0.1",
 		"debug": "^4.3.4",
 		"esbuild": "~0.25.1",
 		"glob": "~11.0.1",
@@ -88,9 +88,7 @@
 		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",
 		"build:watch": "tsc --build tsconfig.node.json --watch"
 	},
-	"bin": {
-		"cucumber-tsflow": "bin/cucumber-tsflow.js"
-	},
+	"bin": "bin/cucumber-tsflow.js",
 	"files": [
 		"api/",
 		"bin/",

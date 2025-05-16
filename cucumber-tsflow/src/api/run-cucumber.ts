@@ -16,6 +16,11 @@ import { initializeForRunCucumber } from '@cucumber/cucumber/lib/api/plugins';
 import { IFilterablePickle } from '@cucumber/cucumber/lib/filter/index';
 import 'polyfill-symbol-metadata';
 import { BindingRegistry } from '../bindings/binding-registry';
+import { ITsFlowRunOptionsRuntime } from '../runtime/types';
+
+export interface ITsFlowRunOptions extends IRunOptions {
+	runtime: ITsFlowRunOptionsRuntime;
+}
 
 /**
  * Execute a Cucumber test run.
@@ -29,7 +34,7 @@ import { BindingRegistry } from '../bindings/binding-registry';
  * @param onMessage - Callback fired each time Cucumber emits a message.
  */
 export async function runCucumber(
-	options: IRunOptions,
+	options: ITsFlowRunOptions,
 	environment: IRunEnvironment = {},
 	onMessage?: (message: Envelope) => void
 ): Promise<IRunResult> {

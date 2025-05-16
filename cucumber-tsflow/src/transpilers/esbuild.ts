@@ -1,4 +1,4 @@
-import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions } from 'esbuild';
+import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions, TsconfigRaw } from 'esbuild';
 import path from 'path';
 
 export type TranspileOptions = {
@@ -12,10 +12,20 @@ const defaultOptions: TranspileOptions = {
 const commonOptions: CommonOptions = {
 	format: 'cjs',
 	logLevel: 'info',
-	target: [`es2020`],
+	target: [`es2022`],
 	minify: false,
 	sourcemap: 'external'
 };
+
+if (global.experimentalDecorators) {
+	commonOptions.tsconfigRaw = {
+		compilerOptions: {
+			experimentalDecorators: true,
+			importsNotUsedAsValues: 'remove',
+			strict: true
+		}
+	};
+}
 
 export type TranspileResults = {
 	output: string;

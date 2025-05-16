@@ -4,6 +4,7 @@
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
+		"experimentalDecorators": true,
 		"parallel": 2
 	},
 	"tsvue": {
@@ -11,6 +12,7 @@
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/tsvue.json", "html:../reports/tsvue.html", "junitbamboo:../reports/tsvue.xml"],
+		"experimentalDecorators": true,
 		"parallel": 0
 	}
 }

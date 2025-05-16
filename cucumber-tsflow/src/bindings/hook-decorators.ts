@@ -74,26 +74,32 @@ function checkTag(tag: string): string {
 }
 
 function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?: string, timeout?: number) {
-	return function hookDecorator(target: Function, context: ClassMethodDecoratorContext) {
-		const stepBinding: StepBinding = {
-			stepPattern: '',
-			bindingType: flag,
-			classPrototype: undefined,
-			classPropertyKey: context.name,
-			stepFunction: target,
-			stepIsStatic: context.static,
-			stepArgsLength: target.length,
-			tags: tag,
-			timeout: timeout,
-			callsite: callSite,
-			cucumberKey: shortUuid().new()
+	if (global.experimentalDecorators) {
+		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const key = propertyKey;
 		};
+	} else {
+		return function hookDecorator(target: Function, context: ClassMethodDecoratorContext) {
+			const stepBinding: StepBinding = {
+				stepPattern: '',
+				bindingType: flag,
+				classPrototype: undefined,
+				classPropertyKey: context.name,
+				stepFunction: target,
+				stepIsStatic: context.static,
+				stepArgsLength: target.length,
+				tags: tag,
+				timeout: timeout,
+				callsite: callSite,
+				cucumberKey: shortUuid().new()
+			};
 
-		if (tag) {
-			stepBinding.tags = checkTag(tag);
-		}
-		addStepBinding(context, stepBinding);
+			if (tag) {
+				stepBinding.tags = checkTag(tag);
+			}
+			addStepBinding(context, stepBinding);
 
-		return;
-	};
+			return;
+		};
+	}
 }

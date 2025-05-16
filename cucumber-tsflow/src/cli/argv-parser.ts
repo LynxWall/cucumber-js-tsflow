@@ -17,6 +17,7 @@ export interface ITsflowConfiguration extends IConfiguration {
 	debugFile: string;
 	transpiler: string;
 	enableVueStyle: boolean;
+	experimentalDecorators: boolean;
 }
 
 export interface IParsedArgv {
@@ -84,6 +85,10 @@ const ArgvParser = {
 			.option(
 				'--exit, --force-exit',
 				'force shutdown of the event loop when the test run has finished: cucumber will call process.exit'
+			)
+			.option(
+				'--experimental-decorators',
+				'Enable TypeScript Experimental Decorators when transpiling. Defaults to false.'
 			)
 			.option('--fail-fast', 'abort the run on first failure')
 			.option(

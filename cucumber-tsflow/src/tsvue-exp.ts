@@ -2,8 +2,19 @@ const hooks = require('require-extension-hooks');
 import VueTransformer from './transpilers/vue-sfc';
 
 require('ts-node').register({
-	transpileOnly: true,
-	transpiler: '@lynxwall/cucumber-tsflow/lib/transpilers/esbuild-transpiler'
+	compilerOptions: {
+		module: 'commonjs',
+		moduleResolution: 'node',
+		target: 'es2022',
+		strict: true,
+		experimentalDecorators: true,
+		allowSyntheticDefaultImports: true,
+		resolveJsonModule: true,
+		esModuleInterop: true,
+		skipLibCheck: true,
+		lib: ['es2022']
+	},
+	transpileOnly: true
 });
 
 require('tsconfig-paths').register();

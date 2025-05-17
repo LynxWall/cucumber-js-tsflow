@@ -3,8 +3,11 @@ require('ts-node').register({
 		module: 'nodeNext',
 		target: 'es2022',
 		strict: true,
-		resolveJsonModule: true,
+		allowJs: true,
+		allowSyntheticDefaultImports: true,
 		esModuleInterop: true,
+		experimentalDecorators: false,
+		resolveJsonModule: true,
 		skipLibCheck: true,
 		lib: ['es2022', 'esnext.decorators']
 	},

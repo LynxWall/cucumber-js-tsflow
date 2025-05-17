@@ -3,14 +3,14 @@ import VueTransformer from './vue-sfc';
 
 require('ts-node').register({
 	compilerOptions: {
-		module: 'commonjs',
-		moduleResolution: 'node',
+		module: 'nodeNext',
 		target: 'es2022',
 		strict: true,
-		experimentalDecorators: true,
+		allowJs: true,
 		allowSyntheticDefaultImports: true,
-		resolveJsonModule: true,
 		esModuleInterop: true,
+		experimentalDecorators: true,
+		resolveJsonModule: true,
 		skipLibCheck: true,
 		lib: ['es2022']
 	},

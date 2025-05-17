@@ -13,7 +13,7 @@ import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environ
 import { ITsflowConfiguration } from '../cli/argv-parser';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
-import chalk from 'ansis';
+import ansis from 'ansis';
 import { ITsFlowRunConfiguration } from '../runtime/types';
 import { Console } from 'console';
 
@@ -52,7 +52,7 @@ export const loadConfiguration = async (
 	// log this to debug and console
 	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
 	logger.debug(msg);
-	consoleLogger.log(msg);
+	consoleLogger.log(ansis.cyanBright(msg));
 
 	const profileConfiguration = configFile ? await fromFile(logger, cwd, configFile, options.profiles) : {};
 
@@ -144,8 +144,8 @@ export const loadConfiguration = async (
 			features.forEach(x => original.paths.push(x.featureFile));
 		} else {
 			// log a message if the feature path is not found
-			logger.warn(chalk.yellow(`\nUnable to find feature for debugFile: ${original.debugFile}`));
-			logger.warn(chalk.yellow('All tests will be executed\n'));
+			logger.warn(ansis.yellow(`\nUnable to find feature for debugFile: ${original.debugFile}`));
+			logger.warn(ansis.yellow('All tests will be executed\n'));
 		}
 	}
 

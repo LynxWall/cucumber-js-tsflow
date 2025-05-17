@@ -39,8 +39,14 @@
 			"require": "./lib/*.js"
 		},
 		"./behave": "./lib/behave.js",
+		"./esnode": "./lib/transpilers/esnode.js",
+		"./esvue": "./lib/transpilers/esvue.js",
 		"./junitbamboo": "./lib/junitbamboo.js",
 		"./snippet": "./lib/snippet.js",
+		"./tsnode-exp": "./lib/transpilers/tsnode-exp.js",
+		"./tsnode": "./lib/transpilers/tsnode.js",
+		"./tsvue-exp": "./lib/transpilers/tsvue-exp.js",
+		"./tsvue": "./lib/transpilers/tsvue.js",
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",

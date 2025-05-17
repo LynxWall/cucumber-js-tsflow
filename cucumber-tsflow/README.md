@@ -2,7 +2,7 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for CucumberJS 11.2.0 in TypeScript 5.8+.
+Provides 'specflow' like bindings for Cucumber-JS 11.3.0 in TypeScript 5.8+.
 
 Supports Vue3 files in cucumber tests.
 
@@ -12,6 +12,14 @@ This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. 
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
 
+## Release Updates (7.2.0)
+
+With this release, support for **Experimental Decorators** was added for backwards compatibility with any code under test that is using experimental decorators.
+
+- Cucumber-JS updated to version 11.3.0
+- New configuration parameter named **experimentalDecorators** that can be used to enable support for older experimental decorators.
+- Issue with using the companion [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=lynxwall.cucumber-tsflow-vscode) has been resolved.
+
 ## Release Updates (7.1.0)
 
 With this latest release, cucumber-tsflow has been refactored to support cucumber-js version 11.2.0 along with other updates that include:
@@ -20,7 +28,6 @@ With this latest release, cucumber-tsflow has been refactored to support cucumbe
 - **API support** that implements and extends the cucumber-js API.
 - Support for Node 22 and Typescript 5.8.
   - Switched to **official Typescript Decorators** with metadata support implemented in [Typescript 5.2](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-2.html#decorator-metadata).
-    **NOTE:** Please **remove *experimentalDecorators*** from your TypeScript configuration as it is no longer supported with the update to use official decorators, which are very different.
 - Transpiler configuration updates to support node and Typescript changes.
   - Added a new section to this readme that describes [Transpilers and TypeScript](#transpilers-and-typescript) in more detail.
 
@@ -38,6 +45,8 @@ This fork of cucumber-tsflow provides the following features that extend the ori
     - **3** - One or more scenario steps have failed.
 
 - CommonJS transpilers using either esbuild or ts-node.
+
+- Support for both Official and Experimental Decorators in TypeScript.
 
 - Vue3 transformer used to handle .vue files in tests.
 
@@ -69,7 +78,7 @@ This fork of cucumber-tsflow provides the following features that extend the ori
 
 ## Quick Start
 
-cucumber-tsflow uses TypeScript Decorators to create SpecFlow like bindings for TypeScript classes and methods that allow those classes and methods to be used in your CucumberJS support files. As such, cucumber-tsflow has a dependency on CucumberJS and extends CucumberJS functionality. However, you run your specifications using the cucumber-tsflow command line tool.
+cucumber-tsflow uses TypeScript Decorators to create bindings for TypeScript classes and methods that allow those classes and methods to be used in your Cucumber-JS support files. As such, cucumber-tsflow has a dependency on Cucumber-JS and extends Cucumber-JS functionality. However, you run your specifications using the cucumber-tsflow command line tool.
 
 ### Install @lynxwall/cucumber-tsflow
 
@@ -95,7 +104,7 @@ yarn add --dev @lynxwall/cucumber-tsflow
 
 ### Create .feature files to describe your specifications
 
-By default, CucumberJS looks for .feature files in a folder called 'features', so create that folder and then create a new file called 'my_feature.feature':
+By default, Cucumber-JS looks for .feature files in a folder called 'features', so create that folder and then create a new file called 'my_feature.feature':
 
 ```gherkin
 # features/my_feature.feature
@@ -111,7 +120,11 @@ Feature: Example Feature
 
 ### Create the Support Files to support the Feature
 
-By default, CucumberJS looks for support files beneath the 'features' folder. You can override this on the cucumber-tsflow command line by specifying the '-r' option. However, let's work with the default and create our code in the default location. We need to write step definitions to support the three steps that we created above.
+<div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
+<strong><span style="color: #000">Note:</span></strong> Cucumber-JS refers to any files that are used to implement tests (step definitions) along with any fixtures or utilities used in your tests as <strong><span style="color: #000">Support Files</span></strong>. As a result, any time you see references to support files or support code it is referring to test code.
+</div>
+
+By default, Cucumber-JS looks for support files beneath the 'features' folder. You can override this on the cucumber-tsflow command line by specifying the '-r' option. However, let's work with the default and create our code in the default location. We need to write step definitions to support the three steps that we created above.
 
 Create a new 'ArithmeticSteps.ts' file:
 
@@ -147,17 +160,15 @@ export default class ArithmeticSteps {
 
 ### Compiling your TypeScript Support Code
 
-If not using one of the [transpilers](#transpiler-and-vue3-supported) listed below you'll need a `tsconfig.json` file to compile your code. You'll also need to ensure that the `"moduleResolution": "node"` compiler option is set in order to bring in the typings that are shipped with cucumber-tsflow.
+All support code, which includes your step definition files along with any test fixtures, utilities and references to source code are transpiled on the fly using transpilers that are included with cucumber-tsflow. This eliminates the requirement to prebuild any test code along with associated management of those builds. 
 
-Running the cucumber-tsflow command will execute your features along with the support code that you've created in the class.
-
-In this quick example test state is encapsulated directly in the class. As your test suite grows larger and step definitions get shared between multiple classes, you can begin using '[Context Injection](#context-injection)' to share state between running step definitions.
+If not using one of the [transpilers](#transpiler-and-vue3-supported) listed below you'll need to implement your own transpiler using guidance found in Cucumber-JS documentation: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v11.3.0/docs/transpiling.md)
 
 ## Transpilers and TypeScript
 
 Cucumber-tsflow provides several [transpilers](#transpiler-and-vue3-supported) that can be used in your configuration. However, you are not required to use them. If a different configuration or transpiler is needed you can copy code from one of the provided transpilers.
 
-This section focuses on the Typescript configuration used to transpile your test code, and any dependencies, into JavaScript that is executed within the cucumber-js test runner.
+This section focuses on the configuration used to transpile your test code, and any dependencies, into JavaScript that is executed within the Cucumber-JS test runner.
 
 ### CommonJS and ESM
 
@@ -165,19 +176,45 @@ The transpilers included with cucumber-tsflow transpile to **CommonJS** and do n
 
 ### TypeScript Configuration
 
-All of the transpilers included with cucumber-tsflow use the same TypeScript configuration, which take precedence when running your tests using one of these transpilers. In other words, while each transpiler is different, they all use the same tsconfig settings, which are shown below:
+There are two different bundlers, or transpilers, used in cucumber-tsflow: **ts-node** and **esbuild**. This section covers the typescript configuration used for each bundler. Included with cucumber-ts are six variations of these transpilers used to support different types of projects. However, there are only two variations of typescript configurations used for each bundler, one that uses official decorators and one that uses experimental decorators.
+
+#### ts-node 
+
+The following typescript configuration is used in the ts-node transpilers configured for official decorators:
 
 ```typescript
 	compilerOptions: {
 		module: 'nodeNext',
 		target: 'es2022',
 		strict: true,
-		resolveJsonModule: true,
+		allowJs: true,
+		allowSyntheticDefaultImports: true,
 		esModuleInterop: true,
+		experimentalDecorators: false,
+		resolveJsonModule: true,
 		skipLibCheck: true,
 		lib: ['es2022', 'esnext.decorators']
-	},
+	}
 ```
+
+This next typescript configuration is used in the ts-node transpilers configured for official decorators:
+
+```typescript
+	compilerOptions: {
+		module: 'nodeNext',
+		target: 'es2022',
+		strict: true,
+		allowJs: true,
+		allowSyntheticDefaultImports: true,
+		esModuleInterop: true,
+		experimentalDecorators: true,
+		resolveJsonModule: true,
+		skipLibCheck: true,
+		lib: ['es2022']
+	}
+```
+
+As you can see the only difference is the setting for experimentalDecorators and the lib imports.
 
 When test runs are started, the settings from your local tsconfig.json are loaded first and then the settings from the transpiler will override the specific settings shown above. As a result, you should use these transpilers in projects that will support these settings.
 
@@ -186,39 +223,69 @@ For example, the settings from the cucumber-tsflow vue test project is shown bel
 ```json
 	"compilerOptions": {
 		"baseUrl": ".",
+		"module": "nodeNext",
 		"target": "es2022",
-		"module": "Node18",
 		"strict": true,
-		"importHelpers": true,
-		"skipLibCheck": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"useDefineForClassFields": true,
-		"inlineSourceMap": true,
 		"allowJs": true,
-		"removeComments": false,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
 		"lib": ["es2022", "esnext.decorators"],
 		"typeRoots": ["../../node_modules/@types"]
-	},
+	}
 ```
 
-These settings are similar to the default transpiler settings, which will not cause an issue. The only change will be the module from Node18 to nodeNext. Any other settings that are not included in the transpiler default will also be applied when the transpiler is executed.
+These settings are similar to the default transpiler settings, which will not cause an issue.
 
 ### esbuild Transpilers
 
-Cucumber-tsflow provides two esbuild transpilers: one with esbuild and support for Vue using the vue-sfc transpiler, and another that only uses the esbuild transpiler. Both cucumber-tsflow transpilers use the same esbuild transpiler, which is configured to generate CommonJS, as shown below:
+<div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
+<strong><span style="color: #000">Note:</span></strong> The esbuild transpilers do not use compilerOptions from tsconfig. Instead, all of the options are configured within the esbuild module that's included with cucumber-tsflow.
+</div>
+
+Cucumber-tsflow provides two esbuild transpilers: one with esbuild and support for Vue using the vue-sfc transpiler, and another that only uses the esbuild transpiler. Both cucumber-tsflow transpilers use the same esbuild transpiler, which uses the following Common set of options:
 
 ```typescript
 const commonOptions: CommonOptions = {
 	format: 'cjs',
 	logLevel: 'info',
-	target: [`es2020`],
+	target: [`es2022`],
 	minify: false,
 	sourcemap: 'external'
 };
 ```
 
 As you can see, this also uses the same target as the typescript configuration. In addition, minify is set to false, which makes it easy to debug and step into code when running tests.
+
+In order to support both official and experimental decorators the esbuild transpiler will use different configurations based on the experimentalDecorators flag in the cucumber configuration.
+
+#### Official Decorators
+
+When using official decorators the following settings are added using the esbuild tsconfigRaw setting.
+
+```typescript
+	commonOptions.tsconfigRaw = {
+		compilerOptions: {
+			importsNotUsedAsValues: 'remove',
+			strict: true
+		}
+	};
+```
+
+#### Experimental Decorators
+
+When using experimental decorators the experimentalDecorators setting is added to the tsconfigRaw settings. As mentioned, esbuild does not use tsconfig settings from ts-node or from a tsconfig file. As a result, this is the only option available to turn on experimental decorators when using esbuild.
+
+```typescript
+	commonOptions.tsconfigRaw = {
+		compilerOptions: {
+			experimentalDecorators: true,
+			importsNotUsedAsValues: 'remove',
+			strict: true
+		}
+	};
+```
 
 As mentioned at the beginning of this section, there are several transpilers provided, which can be used with your test project. The [transpilers](#transpiler-and-vue3-supported) section below provides information on how to configure your project to use one of these transpilers.
 
@@ -229,22 +296,23 @@ As mentioned previously, with recent updates cucumber-tsflow must be used to exe
 The following example demonstrates executing cucumber-tsflow from the command line to execute tests:
 
 ```bash
-C:\GitHub\cucumber-js-tsflow (dev -> origin)
-λ npx cucumber-tsflow
-Loading configuration and step definitions...
+C:\GitHub\cucumber-js-tsflow\cucumber-tsflow-specs\node (dev-0525 -> origin)
+λ npx cucumber-tsflow -p esnode
+Loading configuration from "cucumber.json".
+Running Cucumber-TsFlow in Serial mode.
 
 beforeAll was called
-......@basic after hook is called.
+......................@basic after hook is called.
 .......@basic after hook is called.
 .......@basic after hook is called.
-...........@tags1 after hook is called.
+.......................................@tags1 after hook is called.
 ......@tagging afterTag method is called
-.........<Suspense> is an experimental feature and its API will likely change.
-..afterAll was called
+.afterAll was called
 
-8 scenarios (8 passed)
-24 steps (24 passed)
-0m00.076s (executing steps: 0m00.040s)
+
+15 scenarios (15 passed)
+44 steps (44 passed)
+0m00.072s (executing steps: 0m00.013s)
 ```
 
 To recap, cucumber-tsflow extends cucumber-js, which means that all options and features provided by cucumber-js are supported with cucumber-tsflow. In other words, when executing tests using cucumber-tsflow the underlying cucumber API is actually used to run the tests.
@@ -255,7 +323,7 @@ You can also add a script to package.json to execute the tests as shown below:
 
 ```json
 "scripts": {
-	"test": "cucumber-tsflow -p default"
+	"test": "cucumber-tsflow -p esnode"
 }
 ```
 
@@ -313,32 +381,33 @@ echo $?
 
 ## New Configuration options
 
-As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/configuration.md>
+As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v11.3.0/docs/configuration.md>
 
 In addition to cucumber configuration options the following two options have been added:
 
-| Name             | Type      | Repeatable | CLI Option           | Description                                                   | Default |
-| ---------------- | --------- | ---------- | -------------------- | ------------------------------------------------------------- | ------- |
-| `transpiler`     | `string`  | No         | `--transpiler`       | Name of the transpiler to use: esnode, esvue, tsnode or tsvue | esnode  |
-| `debugFile`      | `string`  | No         | `--debug-file`       | Path to a file with steps for debugging                       |         |
-| `enableVueStyle` | `boolean` | No         | `--enable-vue-style` | Enable Vue `<style>` block when compiling Vue SFC.            | false   |
+| Name                     | Type      | Repeatable | CLI Option                  | Description                                                  | Default |
+| ------------------------ | --------- | ---------- | --------------------------- | ------------------------------------------------------------ | ------- |
+| `transpiler`             | `string`  | No         | `--transpiler`              | Name of the transpiler to use: esnode, esvue, tsnode or tsvue | esnode  |
+| `debugFile`              | `string`  | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
+| `enableVueStyle`         | `boolean` | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
+| `experimentalDecorators` | `boolean` | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
 
 ### Transpiler and Vue3 supported
 
-Using TypeScript with cucumber-js requires setting tsconfig.json parameters as described here: [cucumber-js Transpiling](https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with cucumber-js.
+Using TypeScript with cucumber-js requires setting tsconfig.json parameters as described here: [cucumber-js Transpiling](https://github.com/cucumber/cucumber-js/blob/v11.3.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with cucumber-js.
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
 
 **NOTE**: By default, the `<style>` block in Vue SFC components will not be loaded when .vue files are transformed. However, that behavior can be overridden when testing compiled Vue components from a library using the `enableVueStyle` configuration setting.
 
-The following transpilers are provided:
+Cucumber-TsFlow provides the following transpilers:
 
-- **esnode**: Uses esbuild to transpile TypeScript code for node test execution.
-- **esvue**: Uses esbuild to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into commonJS.
-  - **jsdom** is also loaded globally to support loading and testing Vue SFC components.
-- **tsnode**: Uses typescript to transpile TypeScript code for node test execution.
-- **tsvue**: Uses typescript to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into commonJS.
-  - **jsdom** is also loaded globally to support loading and testing Vue SFC components.
+| Name       | Bundler | Description                                                  |
+| ---------- | ------- | ------------------------------------------------------------ |
+| **esnode** | esbuild | Uses esbuild to transpile TypeScript code for node test execution. |
+| **esvue**  | esbuild | Uses esbuild to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into common-JS.  **jsdom** is also loaded globally to support loading and testing Vue SFC components. |
+| **tsnode** | ts-node | Uses typescript to transpile TypeScript code for node test execution.<br />**NOTE:** When Experimental Decorators are enabled, cucumber-tsflow loads a different transpiler named tsnode-exp. |
+| **tsvue**  | ts-node | Uses typescript to transpile TypeScript code and adds a hook for .vue files, which transforms Vue SFC components into common-JS. **jsdom** is also loaded globally to support loading and testing Vue SFC components.<br />**NOTE:** When Experimental Decorators are enabled, cucumber-tsflow loads a different transpiler named tsvue-exp. |
 
 <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b; background-color: #fcf8e3; border-color: #faebcc;">
 <strong><span style="color: #000">Note:</span></strong> The transpilers provide with cucumber-tsflow will only support CommonJS modules. In other words, if your package.json file has 'type: module' you will not be able to use these transpilers. However, you can use ts-node for transpiling as documented here: <a ref='https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/transpiling.md#esm'>Transpiling</a>
@@ -513,7 +582,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 }
 ```
 
-**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v11.2.0/docs/support_files/hooks.md>
+**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v11.3.0/docs/support_files/hooks.md>
 
 ## Hooks
 
@@ -589,7 +658,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 
 tsflow currently doesn't have a way to define a global default step timeout,
 
-but it can be easily done through CucumberJS `setDefaultTimeout` function.
+but it can be easily done through Cucumber-JS `setDefaultTimeout` function.
 
 ### Passing WrapperOptions
 
@@ -608,7 +677,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 
 ### Using different report formatters and tsflow-snippet-syntax
 
-Changing the formatter used for generating json along with changing the Snippet Syntax can be done through the CucumberJS configuration file.
+Changing the formatter used for generating json along with changing the Snippet Syntax can be done through the Cucumber-JS configuration file.
 
 If it doesn't already exist, create a file named cucumber.json at the root of your project. This is where we can configure different options for CucumberJS.
 

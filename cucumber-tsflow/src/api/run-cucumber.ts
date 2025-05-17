@@ -18,6 +18,7 @@ import 'polyfill-symbol-metadata';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
+import ansis from 'ansis';
 
 export interface ITsFlowRunOptions extends IRunOptions {
 	runtime: ITsFlowRunOptionsRuntime;
@@ -48,12 +49,14 @@ Running from: ${__dirname}
 `);
 	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
 	if (options.runtime.experimentalDecorators) {
-		consoleLogger.info('Using Experimental Decorators.');
+		consoleLogger.info(ansis.yellowBright('Using Experimental Decorators.'));
 	}
 	if (options.runtime.parallel > 0) {
-		consoleLogger.info(`Running Cucumber-TsFlow in Parallel with ${options.runtime.parallel} workers.\n`);
+		consoleLogger.info(
+			ansis.cyanBright(`Running Cucumber-TsFlow in Parallel with ${options.runtime.parallel} worker(s).\n`)
+		);
 	} else {
-		consoleLogger.info('Running Cucumber-TsFlow in Serial.\n');
+		consoleLogger.info(ansis.cyanBright('Running Cucumber-TsFlow in Serial mode.\n'));
 	}
 
 	const newId = IdGenerator.uuid();

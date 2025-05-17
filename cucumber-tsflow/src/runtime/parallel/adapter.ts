@@ -5,9 +5,9 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
-import { IRunOptionsRuntime, ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
+import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
 import { FinalizeCommand, RunCommand, WorkerToCoordinatorEvent } from '@cucumber/cucumber/lib/runtime/parallel/types';
-import { InitializeTsflowCommand } from './types';
+import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime } from '../types';
 
 const runWorkerPath = path.resolve(__dirname, 'run-worker');
 
@@ -43,7 +43,7 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly environment: IRunEnvironment,
 		private readonly logger: ILogger,
 		private readonly eventBroadcaster: EventEmitter,
-		private readonly options: IRunOptionsRuntime,
+		private readonly options: ITsFlowRunOptionsRuntime,
 		private readonly supportCodeLibrary: SupportCodeLibrary,
 		private readonly coordinates: ISourcesCoordinates
 	) {}
@@ -91,7 +91,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				...this.environment.env,
 				CUCUMBER_PARALLEL: 'true',
 				CUCUMBER_TOTAL_WORKERS: total.toString(),
-				CUCUMBER_WORKER_ID: id
+				CUCUMBER_WORKER_ID: id,
+				EXPERIMENTAL_DECORATORS: this.options.experimentalDecorators.toString()
 			},
 			stdio: ['inherit', 'inherit', 'inherit', 'ipc']
 		});

@@ -1,6 +1,5 @@
 // tslint:disable:no-bitwise
 import { World } from '@cucumber/cucumber';
-import { Callsite } from '../utils/our-callsite';
 
 /**
  * A string representation of a [[RegExp]] that defines a Cucumber step pattern.

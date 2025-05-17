@@ -1,15 +1,18 @@
 const hooks = require('require-extension-hooks');
-import VueTransformer from './transpilers/vue-sfc';
+import VueTransformer from './vue-sfc';
 
 require('ts-node').register({
 	compilerOptions: {
 		module: 'nodeNext',
 		target: 'es2022',
 		strict: true,
-		resolveJsonModule: true,
+		allowJs: true,
+		allowSyntheticDefaultImports: true,
 		esModuleInterop: true,
+		experimentalDecorators: true,
+		resolveJsonModule: true,
 		skipLibCheck: true,
-		lib: ['es2022', 'esnext.decorators']
+		lib: ['es2022']
 	},
 	transpileOnly: true
 });

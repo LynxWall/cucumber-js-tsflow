@@ -7,7 +7,7 @@ import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
 import { EndTestCaseInfo } from './test-case-info';
-import { IMessageData } from './parallel/types';
+import { IMessageData } from './types';
 
 interface ITestCaseAttemptData {
 	attempt: number;

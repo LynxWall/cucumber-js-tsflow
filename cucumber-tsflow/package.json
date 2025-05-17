@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 11.2.0 in TypeScript 5.8+.",
-	"version": "7.1.2",
+	"version": "7.2.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"keywords": [
@@ -39,21 +39,23 @@
 			"require": "./lib/*.js"
 		},
 		"./behave": "./lib/behave.js",
-		"./esnode": "./lib/esnode.js",
-		"./esvue": "./lib/esvue.js",
+		"./esnode": "./lib/transpilers/esnode.js",
+		"./esvue": "./lib/transpilers/esvue.js",
 		"./junitbamboo": "./lib/junitbamboo.js",
 		"./snippet": "./lib/snippet.js",
-		"./tsnode": "./lib/tsnode.js",
-		"./tsvue": "./lib/tsvue.js",
+		"./tsnode-exp": "./lib/transpilers/tsnode-exp.js",
+		"./tsnode": "./lib/transpilers/tsnode.js",
+		"./tsvue-exp": "./lib/transpilers/tsvue-exp.js",
+		"./tsvue": "./lib/transpilers/tsvue.js",
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",
 	"dependencies": {
-		"@cucumber/cucumber": "~11.2.0",
+		"@cucumber/cucumber": "~11.3.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
 		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",
-		"commander": "^13.1.0",
+		"commander": "^10.0.1",
 		"debug": "^4.3.4",
 		"esbuild": "~0.25.1",
 		"glob": "~11.0.1",
@@ -88,10 +90,11 @@
 		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",
 		"build:watch": "tsc --build tsconfig.node.json --watch"
 	},
-	"bin": {
-		"cucumber-tsflow": "bin/cucumber-tsflow.js"
-	},
+	"bin": "bin/cucumber-tsflow.js",
 	"files": [
+		"CHANGELOG.md",
+		"LICENSE",
+		"README.md",
 		"api/",
 		"bin/",
 		"lib/"

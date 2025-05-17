@@ -1,4 +1,4 @@
-import { ILoadConfigurationOptions, IRunConfiguration } from '@cucumber/cucumber/lib/api/types';
+import { ILoadConfigurationOptions } from '@cucumber/cucumber/lib/api/types';
 import { locateFile } from '@cucumber/cucumber/lib/configuration/locate_file';
 import {
 	DEFAULT_CONFIGURATION,
@@ -8,13 +8,14 @@ import {
 	mergeConfigurations
 } from '@cucumber/cucumber/lib/configuration/index';
 import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/validate_configuration';
-import { convertConfiguration } from '@cucumber/cucumber/lib/api/convert_configuration';
+import { convertConfiguration } from './convert-configuration';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { ITsflowConfiguration } from '../cli/argv-parser';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
-import chalk from 'ansis';
-import logger from '../utils/logger';
+import ansis from 'ansis';
+import { ITsFlowRunConfiguration } from '../runtime/types';
+import { Console } from 'console';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -24,7 +25,7 @@ export interface ITsflowResolvedConfiguration {
 	/**
 	 * The format that can be passed into `runCucumber`.
 	 */
-	runConfiguration: IRunConfiguration;
+	runConfiguration: ITsFlowRunConfiguration;
 }
 
 /**
@@ -40,13 +41,19 @@ export const loadConfiguration = async (
 ): Promise<ITsflowResolvedConfiguration> => {
 	const { cwd, env, logger } = makeEnvironment(environment);
 	const configFile = options.file ?? locateFile(cwd);
+	let msg = '';
 	if (configFile) {
-		logger.debug(`Configuration will be loaded from "${configFile}"`);
+		msg = `Loading configuration from "${configFile}".`;
 	} else if (configFile === false) {
-		logger.debug('Skipping configuration file resolution');
+		msg = 'Skipping configuration file resolution';
 	} else {
-		logger.debug('No configuration file found');
+		msg = 'No configuration file found';
 	}
+	// log this to debug and console
+	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+	logger.debug(msg);
+	consoleLogger.log(ansis.cyanBright(msg));
+
 	const profileConfiguration = configFile ? await fromFile(logger, cwd, configFile, options.profiles) : {};
 
 	// if a feature was passed in on command line it's added
@@ -64,19 +71,30 @@ export const loadConfiguration = async (
 		parseConfiguration(logger, 'Provided', options.provided)
 	) as ITsflowConfiguration;
 
+	// Get the experimental decorators setting
+	if (original.experimentalDecorators === undefined) {
+		original.experimentalDecorators = false;
+	}
+	const experimentalDecorators = original.experimentalDecorators;
+	global.experimentalDecorators = experimentalDecorators;
+
 	switch (original.transpiler) {
 		case 'esvue':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/esvue');
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esvue');
 			break;
-		case 'tsvue':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/tsvue');
+		case 'tsvue': {
+			const module = experimentalDecorators ? 'tsvue-exp' : 'tsvue';
+			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 			break;
-		case 'tsnode':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/tsnode');
+		}
+		case 'tsnode': {
+			const module = experimentalDecorators ? 'tsnode-exp' : 'tsnode';
+			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 			break;
+		}
 		default:
-			// defaulting to esbuild
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/esnode');
+			// defaulting to esnode
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esnode');
 			break;
 	}
 	// set the snippet syntax
@@ -126,8 +144,8 @@ export const loadConfiguration = async (
 			features.forEach(x => original.paths.push(x.featureFile));
 		} else {
 			// log a message if the feature path is not found
-			logger.warn(chalk.yellow(`\nUnable to find feature for debugFile: ${original.debugFile}`));
-			logger.warn(chalk.yellow('All tests will be executed\n'));
+			logger.warn(ansis.yellow(`\nUnable to find feature for debugFile: ${original.debugFile}`));
+			logger.warn(ansis.yellow('All tests will be executed\n'));
 		}
 	}
 

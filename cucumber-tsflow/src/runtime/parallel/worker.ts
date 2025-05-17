@@ -5,13 +5,12 @@ import { Envelope, IdGenerator } from '@cucumber/messages';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import tryRequire from '@cucumber/cucumber/lib/try_require';
-import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/index';
 import { Worker } from '../worker';
 import { WorkerToCoordinatorEvent, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import logger from '../../utils/logger';
 import { resolvePaths } from '@cucumber/cucumber/lib/paths/paths';
 import { BindingRegistry } from '../../bindings/binding-registry';
-import { InitializeTsflowCommand, CoordinatorToWorkerCommand } from './types';
+import { InitializeTsflowCommand, CoordinatorToWorkerCommand, TsFlowRuntimeOptions } from '../types';
 import MessageCollector from '../message-collector';
 
 const { uuid } = IdGenerator;
@@ -30,7 +29,7 @@ export class ChildProcessWorker {
 	private readonly eventBroadcaster: EventEmitter;
 	private readonly newId: IdGenerator.NewId;
 	private readonly sendMessage: IMessageSender;
-	private options!: RuntimeOptions;
+	private options!: TsFlowRuntimeOptions;
 	private supportCodeLibrary!: SupportCodeLibrary;
 	private worker!: Worker;
 
@@ -38,12 +37,14 @@ export class ChildProcessWorker {
 		cwd,
 		exit,
 		id,
-		sendMessage
+		sendMessage,
+		experimentalDecorators
 	}: {
 		cwd: string;
 		exit: IExitFunction;
 		id: string;
 		sendMessage: IMessageSender;
+		experimentalDecorators: boolean;
 	}) {
 		this.id = id;
 		this.newId = uuid();
@@ -55,6 +56,9 @@ export class ChildProcessWorker {
 		// initialize a message collector for this process to handle our
 		// integration with event data
 		global.messageCollector = new MessageCollector(this.eventBroadcaster);
+
+		// initialize the global experimentalDecorators setting
+		global.experimentalDecorators = experimentalDecorators;
 
 		// pass any envelope messages up to the parent process to keep our main
 		// message collector in sync with this one.

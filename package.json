@@ -3,12 +3,14 @@
 	"name": "@lynxwall/cucumber-tsflow-workspace",
 	"description": "Workspace for cucumber-tsflow",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
-	"version": "7.1.2",
+	"version": "7.2.0",
 	"license": "MIT",
 	"workspaces": [
 		"cucumber-tsflow",
 		"cucumber-tsflow-specs/node",
-		"cucumber-tsflow-specs/vue"
+		"cucumber-tsflow-specs/node-exp",
+		"cucumber-tsflow-specs/vue",
+		"cucumber-tsflow-specs/vue-exp"
 	],
 	"repository": {
 		"type": "git",
@@ -19,11 +21,15 @@
 		"build:watch": "yarn workspace @lynxwall/cucumber-tsflow build:watch",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
 		"lint": "eslint --fix --ext .js,.ts,.vue cucumber-tsflow/src",
-		"test:all": "yarn test:vue:es && yarn test:vue:ts && yarn test:node:es && yarn test:node:ts",
+		"test:all": "yarn test:vue:es && yarn test:vue:ts && yarn test:node:es && yarn test:node:ts && yarn test:vue-exp:es && yarn test:vue-exp:ts && yarn test:node-exp:es && yarn test:node-exp:ts",
 		"test:vue:es": "yarn workspace cucumber-tsflow-vue test:es",
 		"test:vue:ts": "yarn workspace cucumber-tsflow-vue test:ts",
 		"test:node:es": "yarn workspace cucumber-tsflow-node test:es",
-		"test:node:ts": "yarn workspace cucumber-tsflow-node test:ts"
+		"test:node:ts": "yarn workspace cucumber-tsflow-node test:ts",
+		"test:vue-exp:es": "yarn workspace cucumber-tsflow-vue-exp test:es",
+		"test:vue-exp:ts": "yarn workspace cucumber-tsflow-vue-exp test:ts",
+		"test:node-exp:es": "yarn workspace cucumber-tsflow-node-exp test:es",
+		"test:node-exp:ts": "yarn workspace cucumber-tsflow-node-exp test:ts"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.3.1",

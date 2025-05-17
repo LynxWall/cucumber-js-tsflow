@@ -1,15 +1,19 @@
+import { SourceMap } from 'node:module';
+
 require('ts-node').register({
 	compilerOptions: {
 		module: 'nodeNext',
 		target: 'es2022',
 		strict: true,
-		resolveJsonModule: true,
+		allowJs: true,
+		allowSyntheticDefaultImports: true,
 		esModuleInterop: true,
+		experimentalDecorators: true,
+		resolveJsonModule: true,
 		skipLibCheck: true,
-		lib: ['es2022', 'esnext.decorators']
+		lib: ['es2022']
 	},
-	transpileOnly: true,
-	transpiler: '@lynxwall/cucumber-tsflow/lib/transpilers/esbuild-transpiler'
+	transpileOnly: true
 });
 
 require('tsconfig-paths').register();

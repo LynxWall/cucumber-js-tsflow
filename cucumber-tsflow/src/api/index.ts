@@ -11,6 +11,7 @@ export { IConfiguration } from '@cucumber/cucumber/lib/configuration/index';
 export { IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 export { IPickleOrder } from '@cucumber/cucumber/lib/filter/index';
 export { IPublishConfig } from '@cucumber/cucumber/lib/publish/index';
+export * from './convert-configuration';
 export * from './load-configuration';
 export * from '@cucumber/cucumber/lib/api/load_sources';
 export * from './load-support';

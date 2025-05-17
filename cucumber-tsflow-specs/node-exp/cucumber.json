@@ -1,0 +1,28 @@
+{
+	"esnode": {
+		"transpiler": "esnode",
+		"paths": ["../features/**/*.feature"],
+		"require": ["./src/step_definitions/**/*.ts"],
+		"format": [
+			"behave:../reports/esnode-exp.json",
+			"html:../reports/esnode-exp.html",
+			"junitbamboo:../reports/esnode-exp.xml"
+		],
+		"parallel": 2,
+		"experimentalDecorators": true,
+		"tags": "@node-exp"
+	},
+	"tsnode": {
+		"transpiler": "tsnode",
+		"paths": ["../features/**/*.feature"],
+		"require": ["./src/step_definitions/**/*.ts"],
+		"format": [
+			"behave:../reports/tsnode-exp.json",
+			"html:../reports/tsnode-exp.html",
+			"junitbamboo:../reports/tsnode-exp.xml"
+		],
+		"parallel": 1,
+		"experimentalDecorators": true,
+		"tags": "@node-exp"
+	}
+}

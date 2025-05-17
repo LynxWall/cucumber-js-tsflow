@@ -1,3 +1,4 @@
+@vue @vue-exp
 Feature: Vue tests
 
 

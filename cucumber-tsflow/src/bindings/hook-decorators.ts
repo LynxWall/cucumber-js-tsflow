@@ -1,7 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding } from './binding-context';
+import { addStepBinding, addStepBindingExp } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
@@ -74,26 +74,51 @@ function checkTag(tag: string): string {
 }
 
 function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?: string, timeout?: number) {
-	return function hookDecorator(target: Function, context: ClassMethodDecoratorContext) {
-		const stepBinding: StepBinding = {
-			stepPattern: '',
-			bindingType: flag,
-			classPrototype: undefined,
-			classPropertyKey: context.name,
-			stepFunction: target,
-			stepIsStatic: context.static,
-			stepArgsLength: target.length,
-			tags: tag,
-			timeout: timeout,
-			callsite: callSite,
-			cucumberKey: shortUuid().new()
+	if (global.experimentalDecorators) {
+		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepBinding: StepBinding = {
+				stepPattern: '',
+				bindingType: flag,
+				classPrototype: target,
+				classPropertyKey: propertyKey,
+				stepFunction: target[propertyKey],
+				stepIsStatic: false,
+				stepArgsLength: target[propertyKey].length,
+				tags: tag,
+				timeout: timeout,
+				callsite: callSite,
+				cucumberKey: shortUuid().new()
+			};
+
+			if (tag) {
+				stepBinding.tags = checkTag(tag);
+			}
+			addStepBindingExp(stepBinding);
+
+			return descriptor;
 		};
+	} else {
+		return function hookDecorator(target: Function, context: ClassMethodDecoratorContext) {
+			const stepBinding: StepBinding = {
+				stepPattern: '',
+				bindingType: flag,
+				classPrototype: undefined,
+				classPropertyKey: context.name,
+				stepFunction: target,
+				stepIsStatic: context.static,
+				stepArgsLength: target.length,
+				tags: tag,
+				timeout: timeout,
+				callsite: callSite,
+				cucumberKey: shortUuid().new()
+			};
 
-		if (tag) {
-			stepBinding.tags = checkTag(tag);
-		}
-		addStepBinding(context, stepBinding);
+			if (tag) {
+				stepBinding.tags = checkTag(tag);
+			}
+			addStepBinding(context, stepBinding);
 
-		return;
-	};
+			return;
+		};
+	}
 }

@@ -10,8 +10,7 @@ import {
 	When,
 	World
 } from '@cucumber/cucumber';
-import { getStepBindings } from './binding-context';
-import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
+import { getStepBindings, getStepBindingsExp } from './binding-context';
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern } from './types';
@@ -41,37 +40,45 @@ const stepPatternRegistrations = new Map<StepPattern, StepBindingFlags>();
  * An instance of the decorated class will be created for each scenario.
  */
 export function binding(requiredContextTypes?: ContextType[]): any {
-	return function classDecorator(target: Function, context: ClassDecoratorContext) {
-		const bindingRegistry = BindingRegistry.instance;
-		bindingRegistry.registerContextTypesForClass(target.prototype, requiredContextTypes);
-		const lib = supportCodeLibraryBuilder;
-		defineParameters();
+	if (global.experimentalDecorators) {
+		return <T>(target: { new (...args: any[]): T }) => {
+			const bindingRegistry = BindingRegistry.instance;
+			bindingRegistry.registerContextTypesForClass(target.prototype, requiredContextTypes);
+			defineParameters();
 
-		// the class decorator is called last when decorators on a type are initialized. All other decorators
-		// are added to DecoratorContext.metadata before this is called.
-		// This will get all those bindings and then clear metadata for the next type that's loaded.
-		const allBindings: StepBinding[] = getStepBindings(context);
-		allBindings.forEach(stepBinding => {
-			// Set the class prototype and then register the binding with the prototype
-			stepBinding.classPrototype = target.prototype;
-			bindingRegistry.registerStepBinding(stepBinding);
+			// the class decorator is called last when decorators on a type are initialized. All other decorators
+			// are added to DecoratorContext.metadata before this is called.
+			// This will get all those bindings and then clear metadata for the next type that's loaded.
+			const allBindings: StepBinding[] = getStepBindingsExp();
+			allBindings.forEach(stepBinding => {
+				// register the binding
+				bindingRegistry.registerStepBinding(stepBinding);
 
-			if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
-				let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
-				if (stepBindingFlags === undefined) {
-					stepBindingFlags = StepBindingFlags.none;
-				}
-				if (stepBindingFlags & stepBinding.bindingType) {
-					return;
-				}
-				bindStepDefinition(stepBinding);
-				stepPatternRegistrations.set(stepBinding.stepPattern.toString(), stepBindingFlags | stepBinding.bindingType);
-			} else if (stepBinding.bindingType & StepBindingFlags.Hooks) {
-				bindHook(stepBinding);
-			}
-		});
-		return target;
-	};
+				// add the step binding to the binding registry
+				addStepBinding(stepBinding);
+			});
+		};
+	} else {
+		return function classDecorator(target: Function, context: ClassDecoratorContext) {
+			const bindingRegistry = BindingRegistry.instance;
+			bindingRegistry.registerContextTypesForClass(target.prototype, requiredContextTypes);
+			defineParameters();
+
+			// the class decorator is called last when decorators on a type are initialized. All other decorators
+			// are added to DecoratorContext.metadata before this is called.
+			// This will get all those bindings and then clear metadata for the next type that's loaded.
+			const allBindings: StepBinding[] = getStepBindings(context);
+			allBindings.forEach(stepBinding => {
+				// Set the class prototype and then register the binding with the prototype
+				stepBinding.classPrototype = target.prototype;
+				bindingRegistry.registerStepBinding(stepBinding);
+
+				// add the step binding to the binding registry
+				addStepBinding(stepBinding);
+			});
+			return target;
+		};
+	}
 }
 
 /**
@@ -87,6 +94,27 @@ const defineParameters = _.once(() => {
 		transformer: s => (s === 'true' ? true : false)
 	});
 });
+
+/**
+ * Common helper used to add StepBindings to the binding registry
+ * @param stepBinding
+ * @returns
+ */
+function addStepBinding(stepBinding: StepBinding): void {
+	if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
+		let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
+		if (stepBindingFlags === undefined) {
+			stepBindingFlags = StepBindingFlags.none;
+		}
+		if (stepBindingFlags & stepBinding.bindingType) {
+			return;
+		}
+		bindStepDefinition(stepBinding);
+		stepPatternRegistrations.set(stepBinding.stepPattern.toString(), stepBindingFlags | stepBinding.bindingType);
+	} else if (stepBinding.bindingType & StepBindingFlags.Hooks) {
+		bindHook(stepBinding);
+	}
+}
 
 /**
  * Binds a step definition to Cucumber.

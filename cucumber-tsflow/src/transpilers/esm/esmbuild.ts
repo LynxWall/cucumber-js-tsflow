@@ -10,9 +10,9 @@ const defaultOptions: TranspileOptions = {
 };
 
 const commonOptions: CommonOptions = {
-	format: 'cjs',
+	format: 'esm',
 	logLevel: 'info',
-	target: [`es2022`],
+	target: [`esnext`],
 	minify: false,
 	sourcemap: 'external'
 };

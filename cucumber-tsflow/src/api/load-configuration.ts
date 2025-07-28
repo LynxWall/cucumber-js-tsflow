@@ -77,14 +77,22 @@ export const loadConfiguration = async (
 	}
 	const experimentalDecorators = original.experimentalDecorators;
 	global.experimentalDecorators = experimentalDecorators;
-
+// todo: add the esm transpilers here
 	switch (original.transpiler) {
+		case 'esmvue':
+			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esm/esmvue');
+			break;
 		case 'esvue':
 			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esvue');
 			break;
 		case 'tsvue': {
 			const module = experimentalDecorators ? 'tsvue-exp' : 'tsvue';
 			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
+			break;
+		}
+		case 'tsnodeesm': {
+			original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/tsnode-esm`); // per cucumber docs, we want to add this to the loader for esm
+			// original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/tsnode-esm`);
 			break;
 		}
 		case 'tsnode': {

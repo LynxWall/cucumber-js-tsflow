@@ -1,4 +1,12 @@
 {
+	"tsnodeesm": {
+		"transpiler": "tsnodeesm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"format": ["behave:../reports/tsnodeesm.json", "html:../reports/tsnodeesm.html", "junitbamboo:../reports/tsnodeesm.xml"],
+		"parallel": 1,
+		"tags": "@node"
+	},
 	"tsnode": {
 		"transpiler": "tsnode",
 		"paths": ["../features/**/*.feature"],

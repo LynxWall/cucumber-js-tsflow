@@ -1,4 +1,4 @@
-@injection @node @node-exp @vue @vue-exp
+@injection @node @node-exp @node-esm @vue @vue-exp
 Feature: Test Features with injection support.
 
 	Scenario: change can be seen among the shared workspace

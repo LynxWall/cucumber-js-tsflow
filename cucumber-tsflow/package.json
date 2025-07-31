@@ -45,8 +45,7 @@
 		"./snippet": "./lib/snippet.js",
 		"./tsnode-exp": "./lib/transpilers/tsnode-exp.js",
 		"./tsnode": "./lib/transpilers/tsnode.js",
-		"./tsnode-esm": "./lib/transpilers/esm/tsnode-esm.js",
-		"./tsnodeesm": "./lib/transpilers/esm/tsnode-esm.js",
+		"./lib/transpilers/esm/tsnode-esm": "./lib/transpilers/esm/tsnode-esm.js",
 		"./tsvue-exp": "./lib/transpilers/tsvue-exp.js",
 		"./tsvue": "./lib/transpilers/tsvue.js",
 		"./package.json": "./package.json"

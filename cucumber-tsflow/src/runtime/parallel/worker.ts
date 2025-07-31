@@ -92,7 +92,7 @@ export class ChildProcessWorker {
 		for (const specifier of supportCodeCoordinates.loaders) {
 			register(specifier, pathToFileURL('./'));
 		}
-		for (const path of supportCodeCoordinates.importPaths) {
+		for (const path of importPaths) {
 			await import(pathToFileURL(path).toString());
 		}
 		// Finalize the support code library with IDs passed in and

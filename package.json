@@ -8,6 +8,7 @@
 	"workspaces": [
 		"cucumber-tsflow",
 		"cucumber-tsflow-specs/node",
+		"cucumber-tsflow-specs/node-esm",
 		"cucumber-tsflow-specs/node-exp",
 		"cucumber-tsflow-specs/vue",
 		"cucumber-tsflow-specs/vue-exp"
@@ -21,7 +22,7 @@
 		"build:watch": "yarn workspace @lynxwall/cucumber-tsflow build:watch",
 		"format": "prettier --write \"{cucumber-tsflow/src,cucumber-tsflow-specs/src}/**/*.{js,ts}\"",
 		"lint": "eslint --fix --ext .js,.ts,.vue cucumber-tsflow/src",
-		"test:all": "yarn test:vue:es && yarn test:vue:ts && yarn test:node:es && yarn test:node:ts && yarn test:vue-exp:es && yarn test:vue-exp:ts && yarn test:node-exp:es && yarn test:node-exp:ts",
+		"test:all": "yarn test:vue:es && yarn test:vue:ts && yarn test:node:es && yarn test:node:ts && yarn test:vue-exp:es && yarn test:vue-exp:ts && yarn test:node-exp:es && yarn test:node-exp:ts && yarn test:node-esm",
 		"test:vue:es": "yarn workspace cucumber-tsflow-vue test:es",
 		"test:vue:ts": "yarn workspace cucumber-tsflow-vue test:ts",
 		"test:node:es": "yarn workspace cucumber-tsflow-node test:es",
@@ -29,7 +30,8 @@
 		"test:vue-exp:es": "yarn workspace cucumber-tsflow-vue-exp test:es",
 		"test:vue-exp:ts": "yarn workspace cucumber-tsflow-vue-exp test:ts",
 		"test:node-exp:es": "yarn workspace cucumber-tsflow-node-exp test:es",
-		"test:node-exp:ts": "yarn workspace cucumber-tsflow-node-exp test:ts"
+		"test:node-exp:ts": "yarn workspace cucumber-tsflow-node-exp test:ts",
+		"test:node-esm": "yarn workspace cucumber-tsflow-node-esm test:ts-esm"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.3.1",

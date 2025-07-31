@@ -1,4 +1,4 @@
-@node @node-exp @vue @vue-exp
+@node @node-exp @node-esm @vue @vue-exp
 Feature: Test Background Feature
 	Description: The purpose of this feature is to test the Background keyword
 

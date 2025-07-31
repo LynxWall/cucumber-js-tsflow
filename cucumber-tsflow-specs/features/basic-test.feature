@@ -1,4 +1,4 @@
-@basic @node @node-exp @vue @vue-exp
+@basic @node @node-exp @node-esm @vue @vue-exp
 Feature: Basic Test Feature
 
 	Scenario: Basic test scenario

@@ -18,7 +18,6 @@ class VueTransformer implements VueTransformerContext {
 		this.customElementFilter = typeof customElement === 'boolean' ? () => customElement : createFilter(customElement);
 
 		const rootDir: string = process.cwd();
-		// todo: these options need to be updated maybe for esm
 		this.options = {
 			isProduction: process.env.NODE_ENV === 'production',
 			compiler: resolveCompiler(rootDir),

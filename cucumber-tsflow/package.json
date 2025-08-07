@@ -87,7 +87,8 @@
 		"shx": "0.3.4"
 	},
 	"scripts": {
-		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json  && shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/",
+		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs",
+		"build:copy-mjs": "shx cp src/wrapper.mjs lib/ && shx cp src/api/wrapper.mjs lib/api/ && shx cp src/transpilers/esm/vue-loader.mjs lib/transpilers/esm/ && shx cp src/transpilers/esm/vue-sfc-compiler.mjs lib/transpilers/esm/",
 		"build:watch": "tsc --build tsconfig.node.json --watch"
 	},
 	"bin": "bin/cucumber-tsflow.js",

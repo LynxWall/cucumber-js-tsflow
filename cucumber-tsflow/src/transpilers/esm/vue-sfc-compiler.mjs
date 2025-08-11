@@ -14,14 +14,35 @@ export function compileVueSFC(source, filename) {
 
   const id = hash(filename);
 
+
+  // First, we need to check if template uses any components
+  let templateAst = null;
+  if (descriptor.template) {
+    // Parse template to get AST - this helps compileScript understand component usage
+    const { ast } = compileTemplate({
+      source: descriptor.template.content,
+      filename,
+      id,
+      compilerOptions: {
+        mode: 'module',
+        parseOnly: true // Just parse, don't compile yet
+      }
+    });
+    templateAst = ast;
+  }
+
   // Compile script
   let scriptCode = '';
+	let compiledScript = undefined;
   if (descriptor.script || descriptor.scriptSetup) {
-    const script = compileScript(descriptor, {
+    compiledScript = compileScript(descriptor, {
       id,
       inlineTemplate: false,
       sourceMap: true,
-      genDefaultAs: '_sfc_main'
+      genDefaultAs: '_sfc_main',
+			templateAst, // Pass template AST so it knows which components are used
+      // This tells the compiler to resolve components from setup bindings
+      resolveComponents: true
     });
 
     // Check if the script is TypeScript
@@ -29,7 +50,7 @@ export function compileVueSFC(source, filename) {
 
     if (isTS) {
       // Transpile TypeScript to JavaScript
-      const result = transformSync(script.content, {
+      const result = transformSync(compiledScript.content, {
         loader: 'ts',
         format: 'esm',
         target: 'es2022',
@@ -37,29 +58,28 @@ export function compileVueSFC(source, filename) {
       });
       scriptCode = result.code;
     } else {
-      scriptCode = script.content;
+      scriptCode = compiledScript.content;
     }
   }
 
   // Compile template if exists
   let templateCode = '';
   if (descriptor.template) {
-    // Match the CJS behavior for asset URLs
-    const assetUrlOptions = {
-      includeAbsolute: true
-    };
-
     const template = compileTemplate({
       source: descriptor.template.content,
       filename,
       id,
       scoped: descriptor.styles.some(s => s.scoped),
       compilerOptions: {
-        mode: 'module'
+        mode: 'module',
+				// Pass the bindings from script compilation to template
+        bindingMetadata: compiledScript ? compiledScript.bindings : undefined
       },
 			// Force asset URLs to become imports (matching CJS behavior)
-      transformAssetUrls: assetUrlOptions
-    });
+      transformAssetUrls: {
+        includeAbsolute: true
+      }
+		});
 
     if (template.errors.length) {
       throw new Error(template.errors.map(e => e.message).join('\n'));
@@ -81,9 +101,6 @@ export function compileVueSFC(source, filename) {
   if (!/export\s+default/.test(finalCode)) {
     finalCode += '\nexport default _sfc_main;';
   }
-
-	console.log('>>> vue-sfc-compiler: Final code for', filename);
-  console.log(finalCode);
 
   // For ESM, we need to export everything properly
   return {

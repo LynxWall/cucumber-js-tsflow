@@ -1,8 +1,40 @@
-import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { compileVueSFC } from './vue-sfc-compiler.mjs';
 import path from 'path';
+import { createMatchPath, loadConfig } from 'tsconfig-paths';
 
-console.log('>>> vue-loader: initializing');
+// Initialize jsdom-global for the loader context
+const require = createRequire(import.meta.url);
+require('jsdom-global')();
+
+// Set SVGElement as in CJS version
+(global).SVGElement = (global).window.SVGElement;
+
+// Initialize tsconfig-paths
+let matchPath;
+function initializeTsconfigPaths() {
+  if (matchPath) return;
+
+  try {
+    const configLoaderResult = loadConfig(process.cwd());
+    if (configLoaderResult.resultType === 'success') {
+      matchPath = createMatchPath(
+        configLoaderResult.absoluteBaseUrl,
+        configLoaderResult.paths,
+        configLoaderResult.mainFields,
+        configLoaderResult.addMatchAll
+      );
+      console.log('>>> vue-loader: tsconfig paths loaded from', configLoaderResult.configFileAbsolutePath);
+    } else {
+      console.log('>>> vue-loader: no tsconfig paths found');
+    }
+  } catch (error) {
+    console.error('>>> vue-loader: failed to load tsconfig paths:', error);
+  }
+}
+
+initializeTsconfigPaths();
 
 // Cache for the TypeScript loader
 let tsLoader;
@@ -100,6 +132,20 @@ export async function resolve(specifier, context, nextResolve) {
       }
     } catch (error) {
       // Fall through to default resolver
+    }
+  }
+
+	  // Initialize on first use
+  if (!matchPath) {
+    initializeTsconfigPaths();
+  }
+
+  // Handle tsconfig path mappings
+  if (matchPath && !specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) {
+    const mapped = matchPath(specifier);
+    if (mapped) {
+      console.log(`>>> vue-loader: resolved ${specifier} → ${mapped}`);
+      return nextResolve(pathToFileURL(mapped).href, context);
     }
   }
 

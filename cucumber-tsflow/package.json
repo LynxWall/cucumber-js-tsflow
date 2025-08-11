@@ -47,6 +47,7 @@
 		"./tsnode": "./lib/transpilers/tsnode.js",
 		"./tsvue-exp": "./lib/transpilers/tsvue-exp.js",
 		"./tsvue": "./lib/transpilers/tsvue.js",
+		"./lib/transpilers/esm/vue-loader": "./lib/transpilers/esm/vue-loader.mjs",
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",

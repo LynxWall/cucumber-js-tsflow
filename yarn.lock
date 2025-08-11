@@ -1083,6 +1083,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/jsdom@npm:^21.1.7":
+  version: 21.1.7
+  resolution: "@types/jsdom@npm:21.1.7"
+  dependencies:
+    "@types/node": "*"
+    "@types/tough-cookie": "*"
+    parse5: ^7.0.0
+  checksum: b7465d5a471ed4e68a54e2639c534d364134674598687be69645736731215e7407fe37a4af66dc616ef03be9c5515cb355df2eda5c8080146c05bd569ea8810d
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:^7.0.15":
   version: 7.0.15
   resolution: "@types/json-schema@npm:7.0.15"
@@ -1156,6 +1167,13 @@ __metadata:
   dependencies:
     source-map: ^0.6.0
   checksum: ef287caea52a41b600a128d36cf961f048913e30fe143f7d882d19014635d0ca89e27013a48b0e6353ca277689d633c2ef65a25b2f8cd6d82916a2f908f18c38
+  languageName: node
+  linkType: hard
+
+"@types/tough-cookie@npm:*":
+  version: 4.0.5
+  resolution: "@types/tough-cookie@npm:4.0.5"
+  checksum: f19409d0190b179331586365912920d192733112a195e870c7f18d20ac8adb7ad0b0ff69dad430dba8bc2be09593453a719cfea92dc3bda19748fd158fe1498d
   languageName: node
   linkType: hard
 
@@ -2022,6 +2040,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"cucumber-tsflow-vue-esm@workspace:cucumber-tsflow-specs/vue-esm":
+  version: 0.0.0-use.local
+  resolution: "cucumber-tsflow-vue-esm@workspace:cucumber-tsflow-specs/vue-esm"
+  dependencies:
+    "@lynxwall/cucumber-tsflow": "workspace:*"
+    "@types/chai": ~4.3.20
+    "@types/jsdom": ^21.1.7
+    "@types/node": ~22.13.10
+    "@vue/test-utils": ~2.4.6
+    chai: ~5.2.0
+    ts-node: ~10.9.2
+    tslib: 2.8.1
+    typescript: ~5.8.2
+    vue: ^3.5.13
+  languageName: unknown
+  linkType: soft
+
 "cucumber-tsflow-vue-exp@workspace:cucumber-tsflow-specs/vue-exp":
   version: 0.0.0-use.local
   resolution: "cucumber-tsflow-vue-exp@workspace:cucumber-tsflow-specs/vue-exp"
@@ -2208,6 +2243,13 @@ __metadata:
   version: 4.5.0
   resolution: "entities@npm:4.5.0"
   checksum: 853f8ebd5b425d350bffa97dd6958143179a5938352ccae092c62d1267c4e392a039be1bae7d51b6e4ffad25f51f9617531fedf5237f15df302ccfb452cbf2d7
+  languageName: node
+  linkType: hard
+
+"entities@npm:^6.0.0":
+  version: 6.0.1
+  resolution: "entities@npm:6.0.1"
+  checksum: 937b952e81aca641660a6a07f70001c6821973dea3ae7f6a5013eadce94620f3ed2e9c745832d503c8811ce6e97704d8a0396159580c0e567d815234de7fdecf
   languageName: node
   linkType: hard
 
@@ -4008,6 +4050,15 @@ __metadata:
     index-to-position: ^0.1.2
     type-fest: ^4.7.1
   checksum: efc4256c91e835b1340e2b4f535272247f174fcba85eead15ff938be23b3ca2d521a04c76e564d1dc2f61c0c9ebcb6157d5433d459c7e736c81d014b49577b31
+  languageName: node
+  linkType: hard
+
+"parse5@npm:^7.0.0":
+  version: 7.3.0
+  resolution: "parse5@npm:7.3.0"
+  dependencies:
+    entities: ^6.0.0
+  checksum: ffd040c4695d93f0bc370e3d6d75c1b352178514af41be7afa212475ea5cead1d6e377cd9d4cec6a5e2bcf497ca50daf9e0088eadaa37dbc271f60def08fdfcd
   languageName: node
   linkType: hard
 

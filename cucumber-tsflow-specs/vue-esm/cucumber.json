@@ -1,6 +1,7 @@
 {
 	"vue-esm": {
 		"transpiler": "vueesm",
+		"require": ["src/setup-jsdom.ts"],
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],

@@ -25,9 +25,8 @@ function initializeTsconfigPaths() {
         configLoaderResult.mainFields,
         configLoaderResult.addMatchAll
       );
-      console.log('>>> vue-loader: tsconfig paths loaded from', configLoaderResult.configFileAbsolutePath);
     } else {
-      console.log('>>> vue-loader: no tsconfig paths found');
+      console.warn('>>> vue-loader: no tsconfig paths found');
     }
   } catch (error) {
     console.error('>>> vue-loader: failed to load tsconfig paths:', error);
@@ -45,7 +44,6 @@ async function getTsLoader() {
       // Import ts-node's ESM loader
       const tsNodeEsm = await import('ts-node/esm');
       tsLoader = tsNodeEsm;
-      console.log('>>> vue-loader: ts-node ESM loader loaded');
     } catch (error) {
       console.error('>>> vue-loader: Failed to load ts-node ESM loader:', error);
       throw error;
@@ -60,8 +58,6 @@ export async function load(url, context, nextLoad) {
   const ext = path.extname(url).toLowerCase();
 
   if (assetExtensions.includes(ext)) {
-    console.log(`>>> vue-loader: handling asset import: ${url}`);
-
     // In CJS, the assets plugin would register these and potentially transform them
     // For ESM testing, we'll return the file path as a module
     // This matches what a bundler's asset plugin would do
@@ -100,8 +96,6 @@ export async function load(url, context, nextLoad) {
 
   // For TypeScript files, delegate to ts-node
   if (url.endsWith('.ts') || url.endsWith('.tsx')) {
-    console.log(`>>> vue-loader: delegating TypeScript file to ts-node: ${url}`);
-
     try {
       const tsNode = await getTsLoader();
       return tsNode.load(url, context, nextLoad);
@@ -118,11 +112,6 @@ export async function load(url, context, nextLoad) {
 
 // Optional: export resolve hook if needed
 export async function resolve(specifier, context, nextResolve) {
-  // Check if we need to handle Vue file resolution
-  if (specifier.endsWith('.vue')) {
-    console.log(`>>> vue-loader: resolving Vue file: ${specifier}`);
-  }
-
   // For TypeScript files, we might need to use ts-node's resolver
   if (specifier.endsWith('.ts') || specifier.endsWith('.tsx')) {
     try {
@@ -144,7 +133,6 @@ export async function resolve(specifier, context, nextResolve) {
   if (matchPath && !specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) {
     const mapped = matchPath(specifier);
     if (mapped) {
-      console.log(`>>> vue-loader: resolved ${specifier} → ${mapped}`);
       return nextResolve(pathToFileURL(mapped).href, context);
     }
   }

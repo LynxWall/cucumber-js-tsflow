@@ -1,5 +1,3 @@
-/// <reference path="../vue-shim.d.ts" />
-
 import AsyncWrapper from '../components/AsyncWrapper.vue';
 import Hello from '../components/Hello.vue';
 import { binding, given, then, when } from '@lynxwall/cucumber-tsflow';

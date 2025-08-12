@@ -41,6 +41,9 @@ let tsLoader;
 async function getTsLoader() {
   if (!tsLoader) {
     try {
+			 // Ensure ts-node respects tsconfig.json files
+      process.env.TS_NODE_FILES = process.env.TS_NODE_FILES || 'true';
+
       // Import ts-node's ESM loader
       const tsNodeEsm = await import('ts-node/esm');
       tsLoader = tsNodeEsm;
@@ -74,8 +77,6 @@ export async function load(url, context, nextLoad) {
 
   // Only process .vue files directly
   if (url.endsWith('.vue')) {
-    console.log(`>>> vue-loader: processing Vue SFC ${url}`);
-
     try {
       const { source } = await nextLoad(url, { ...context, format: 'module' });
       const code = source.toString();

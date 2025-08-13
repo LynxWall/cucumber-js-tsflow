@@ -29,7 +29,7 @@
 		"test:vue-esm:ts": "yarn workspace cucumber-tsflow-vue-esm test:tsvue-esm",
 		"test:node:es": "yarn workspace cucumber-tsflow-node test:es",
 		"test:node:ts": "yarn workspace cucumber-tsflow-node test:ts",
-		"test:node-esm:ts": "yarn workspace cucumber-tsflow-node-esm test:ts-esm",
+		"test:node-esm:ts": "yarn workspace cucumber-tsflow-node-esm test:tsnode-esm",
 		"test:vue-exp:es": "yarn workspace cucumber-tsflow-vue-exp test:es",
 		"test:vue-exp:ts": "yarn workspace cucumber-tsflow-vue-exp test:ts",
 		"test:node-exp:es": "yarn workspace cucumber-tsflow-node-exp test:es",

@@ -7,7 +7,7 @@
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"scripts": {
-		"test:ts-esm": "cucumber-tsflow -p tsnodeesm"
+		"test:tsnode-esm": "cucumber-tsflow -p tsnodeesm"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",

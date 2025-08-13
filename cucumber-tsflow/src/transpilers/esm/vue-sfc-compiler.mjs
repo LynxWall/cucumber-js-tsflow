@@ -2,6 +2,30 @@ import { parse, compileScript, compileTemplate, compileStyle } from 'vue/compile
 import hash from 'hash-sum';
 import { transformSync } from 'esbuild';
 
+/**
+ * Vue Single File Component compiler for ESM
+ *
+ * Compiles .vue files into JavaScript modules that can be imported in Node.js.
+ * Uses @vue/compiler-sfc to handle template, script, and style blocks.
+ *
+ * Features:
+ * - TypeScript support in <script> blocks via esbuild
+ * - Template compilation with proper component resolution
+ * - Optional style compilation (controlled by enableStyle option)
+ * - Asset URL transformation (images become imports)
+ * - Scoped CSS support
+ *
+ * Style handling:
+ * - When enableStyle is false (default): styles are ignored
+ * - When enableStyle is true: styles are compiled and injected into document
+ * - Preprocessors (SCSS, Less, etc.) are skipped if not installed
+ *
+ * @param {string} source - Vue SFC source code
+ * @param {string} filename - Path to the Vue file
+ * @param {Object} options - Compilation options
+ * @param {boolean} options.enableStyle - Whether to process <style> blocks
+ * @returns {Object} { code: string } - Compiled JavaScript module
+ */
 export function compileVueSFC(source, filename, options = {}) {
 	const { enableStyle = false } = options;
 

@@ -15,5 +15,10 @@
 		"lib": ["es2022", "esnext.decorators"],
 		"typeRoots": ["../../node_modules/@types"]
 	},
-	"include": ["./src/**/*.ts", "./src/**/*.vue"]
+	"include": ["./src/**/*.ts", "./src/**/*.vue"],
+	"ts-node": {
+		"esm": true,
+		"experimentalSpecifierResolution": "node", // This is the key!
+		"files": true
+	}
 }

@@ -1,3 +1,42 @@
+/**
+ * ESM loader for Vue Single File Components (.vue files)
+ *
+ * This loader enables importing and testing Vue SFC components in Node.js ESM environments.
+ * It provides feature parity with the CJS vue-loader but uses Node.js ESM loader hooks.
+ *
+ * Key features:
+ * - Compiles Vue SFC components (template, script, and optionally styles)
+ * - Handles TypeScript in Vue components via ts-node delegation
+ * - Supports extensionless imports (e.g., import Component from './Component')
+ * - Handles asset imports (images, fonts, etc.)
+ * - Integrates with tsconfig path mappings
+ * - Optional style processing controlled by global.enableVueStyle
+ *
+ * Differences from CJS version:
+ * - Uses ESM loader hooks (resolve/load) instead of require.extensions
+ * - Delegates TypeScript handling to ts-node/esm instead of inline transpilation
+ * - Sets TS_NODE_FILES=true to ensure ts-node respects tsconfig.json includes
+ *   (needed for type definition files like Vue shims)
+ *
+ * Usage:
+ * 1. Or configure in cucumber.json:
+ *    {
+ *      "default": {
+ *        "transpiler": ["tsvueesm"]
+ *      }
+ *    }
+ *
+ * 2. Register this loader when running tests:
+ *    node --loader=@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-loader.mjs
+ *
+ * 3. To enable style processing:
+ *    - Set global.enableVueStyle = true in your test setup
+ *    - Or set environment variable: CUCUMBER_ENABLE_VUE_STYLE=true
+ *
+ * Note: Style preprocessing (SCSS, Less, etc.) requires the corresponding
+ * preprocessor packages to be installed. Missing preprocessors will be skipped
+ * with a warning rather than failing the compilation.
+ */
 import { createRequire } from 'module';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { compileVueSFC } from './vue-sfc-compiler.mjs';
@@ -43,7 +82,11 @@ async function getTsLoader() {
 	if (!tsLoader) {
 		try {
 			// Ensure ts-node respects tsconfig.json files
-			process.env.TS_NODE_FILES = process.env.TS_NODE_FILES || 'true';
+			// This is crucial for picking up:
+			// - Type definition files (d.ts)
+			// - Include/exclude patterns
+			// - Custom type roots (e.g., for Vue shims)
+			// Without this, ts-node might ignore the tsconfig.json includes			process.env.TS_NODE_FILES = process.env.TS_NODE_FILES || 'true';
 
 			// Import ts-node's ESM loader
 			const tsNodeEsm = await import('ts-node/esm');
@@ -121,7 +164,11 @@ export async function load(url, context, nextLoad) {
 
 // Optional: export resolve hook if needed
 export async function resolve(specifier, context, nextResolve) {
-	// Handle extensionless imports
+	// Extension resolution for relative imports
+	// This allows importing without file extensions:
+	//   import Component from './Component'  -> resolves to ./Component.vue
+	//   import helper from './helper'        -> resolves to ./helper.ts
+	// Tries extensions in order: .vue, .ts, .tsx, .js, .jsx, .mjs, .cjs, .json
 	if (specifier.startsWith('.') || specifier.startsWith('/')) {
 		const hasExtension = path.extname(specifier) !== '';
 
@@ -154,7 +201,8 @@ export async function resolve(specifier, context, nextResolve) {
 			}
 		}
 	}
-	// For TypeScript files, we might need to use ts-node's resolver
+	// TypeScript file handling - delegate to ts-node's resolver
+	// This ensures TypeScript's module resolution rules are followed
 	if (specifier.endsWith('.ts') || specifier.endsWith('.tsx')) {
 		try {
 			const tsNode = await getTsLoader();
@@ -171,7 +219,8 @@ export async function resolve(specifier, context, nextResolve) {
 		initializeTsconfigPaths();
 	}
 
-	// Handle tsconfig path mappings
+	// tsconfig path mapping support
+	// Resolves imports like '@/components/Button' based on tsconfig paths
 	if (matchPath && !specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) {
 		const mapped = matchPath(specifier);
 		if (mapped) {

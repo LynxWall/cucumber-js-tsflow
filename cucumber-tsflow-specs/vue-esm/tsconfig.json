@@ -14,7 +14,12 @@
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
 		"lib": ["es2022", "esnext.decorators"],
-		"typeRoots": ["../../node_modules/@types", "src/types"],
+		"typeRoots": ["../../node_modules/@types"]
 	},
-  "include": ["./src/**/*.ts", "./src/**/*.vue"],
+	"include": ["./src/**/*.ts", "./src/**/*.vue"],
+	"ts-node": {
+		"esm": true,
+		"experimentalSpecifierResolution": "node",
+		"files": true // This ensures ts-node reads the includes
+	}
 }

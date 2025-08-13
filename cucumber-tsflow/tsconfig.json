@@ -11,6 +11,7 @@
 		"inlineSources": true,
 		"skipLibCheck": true,
 		"target": "es2022",
-		"typeRoots": ["../node_modules/@types", "./src/types"]
-	}
+		"typeRoots": ["../node_modules/@types", "./src/types"],
+	},
+	"exclude": ["./src/transpilers/esm/*"]
 }

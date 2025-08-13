@@ -1,6 +1,6 @@
 import { after, before, binding } from '@lynxwall/cucumber-tsflow';
 import type { World } from '@lynxwall/cucumber-tsflow';
-import { ScenarioContext } from '../fixtures/scenario-context.ts';
+import { ScenarioContext } from '../fixtures/scenario-context';
 
 @binding([ScenarioContext])
 export default class WorldContext {

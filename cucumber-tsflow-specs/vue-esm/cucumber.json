@@ -1,6 +1,6 @@
 {
 	"vue-esm": {
-		"transpiler": "vueesm",
+		"transpiler": "tsvueesm",
 		"require": ["src/setup-jsdom.ts"],
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],

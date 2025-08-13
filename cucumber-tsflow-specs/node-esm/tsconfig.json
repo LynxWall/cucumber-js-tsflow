@@ -1,7 +1,8 @@
 {
 	"compilerOptions": {
 		"baseUrl": ".",
-		"module": "nodeNext",
+		"module": "esnext",
+		"moduleResolution": "bundler",
 		"target": "es2022",
 		"strict": true,
 		"allowJs": true,

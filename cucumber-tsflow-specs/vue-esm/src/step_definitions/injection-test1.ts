@@ -1,6 +1,6 @@
 import { binding, given, when } from '@lynxwall/cucumber-tsflow';
-import { ScenarioContext } from '../fixtures/scenario-context.ts';
-import { SyncContext } from '../fixtures/sync-context.ts';
+import { ScenarioContext } from '../fixtures/scenario-context';
+import { SyncContext } from '../fixtures/sync-context';
 import { expect } from 'chai';
 
 @binding([ScenarioContext, SyncContext])

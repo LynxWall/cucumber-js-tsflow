@@ -1,5 +1,5 @@
 import { binding, given, when } from '@lynxwall/cucumber-tsflow';
-import { ScenarioContext } from '../fixtures/scenario-context.js';
+import { ScenarioContext } from '../fixtures/scenario-context';
 import { expect } from 'chai';
 
 @binding([ScenarioContext])

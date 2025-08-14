@@ -56,17 +56,25 @@ Your tsconfig.json should include:
 ```json
 {
 	"compilerOptions": {
-		"module": "ESNext",
-		"target": "ES2022",
+		"baseUrl": ".",
+		"module": "esnext",
 		"moduleResolution": "bundler",
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
+		"target": "es2022",
+		"strict": true,
+		"allowJs": true,
+		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"lib": ["es2022", "esnext.decorators"],
+		"typeRoots": ["../../node_modules/@types"]
 	},
+	"include": ["./src/**/*.ts", "./src/**/*.vue"],
 	"ts-node": {
 		"esm": true,
-		"experimentalSpecifierResolution": "node",
+		"experimentalSpecifierResolution": "node", // This is the key!
 		"files": true
 	}
 }
@@ -196,11 +204,6 @@ When enableVueStyle is true:
 
 Ensure your tsconfig.json has the ts-node configuration section
 Check that experimentalSpecifierResolution is set to "node"
-
-### Decorators not working
-
-Verify experimentalDecorators and emitDecoratorMetadata are true
-Make sure you're using the correct import syntax for decorators
 
 ### Vue components not found
 

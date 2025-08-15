@@ -93,6 +93,10 @@ export const loadConfiguration = async (
 				original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 				break;
 			}
+			case 'esnodeesm': {
+				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/esnode-loader`); // per cucumber docs, we want to add this to the loader for esm
+				break;
+			}
 			case 'tsvueesm': {
 				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-loader`); // per cucumber docs, we want to add this to the loader for esm
 				break;

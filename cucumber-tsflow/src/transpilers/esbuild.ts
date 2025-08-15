@@ -78,5 +78,6 @@ export const transpileCode = (
 		loader: loaders[loaderExt],
 		sourcefile: filename
 	});
+
 	return { output: ret.code, sourceMap: ret.map };
 };

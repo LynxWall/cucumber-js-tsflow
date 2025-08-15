@@ -11,8 +11,8 @@
 		"vue": "^3.5.13"
 	},
 	"scripts": {
-		"test:es": "cucumber-tsflow -p esvue",
-		"test:ts": "cucumber-tsflow -p tsvue"
+		"test:es": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue-exp --> test:es\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p esvue",
+		"test:ts": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue-exp --> test:ts\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p tsvue"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",

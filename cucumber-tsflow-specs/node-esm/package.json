@@ -7,7 +7,8 @@
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"scripts": {
-		"test:tsnode-esm": "cucumber-tsflow -p tsnodeesm"
+		"test:tsnode-esm": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node-esm --> test:tsnode-esm\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p tsnodeesm",
+		"test:esnode-esm": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node-esm --> test:esnode-esm\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p esnodeesm"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",

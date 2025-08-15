@@ -1,7 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding, addStepBindingExp } from './binding-context';
+import { addStepBinding, addStepBindingExp, collectStepBinding } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.
@@ -48,7 +48,8 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 				callsite: callsite,
 				cucumberKey: shortUuid().new()
 			};
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};
@@ -101,7 +102,8 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				callsite: callsite,
 				cucumberKey: shortUuid().new()
 			};
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};
@@ -154,7 +156,8 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				callsite: callsite,
 				cucumberKey: shortUuid().new()
 			};
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};

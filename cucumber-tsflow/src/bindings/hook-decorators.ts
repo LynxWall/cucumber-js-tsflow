@@ -1,7 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding, addStepBindingExp } from './binding-context';
+import { collectStepBinding, addStepBindingExp } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
@@ -116,7 +116,8 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 			if (tag) {
 				stepBinding.tags = checkTag(tag);
 			}
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};

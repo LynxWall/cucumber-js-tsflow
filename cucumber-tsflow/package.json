@@ -26,14 +26,14 @@
 	"main": "./lib/index.js",
 	"exports": {
 		".": {
+			"types": "./lib/index.d.ts",
 			"import": "./lib/wrapper.mjs",
-			"require": "./lib/index.js",
-			"types": "./lib/index.d.ts"
+			"require": "./lib/index.js"
 		},
 		"./api": {
+			"types": "./lib/api/index.d.ts",
 			"import": "./lib/api/wrapper.mjs",
-			"require": "./lib/api/index.js",
-			"types": "./lib/api/index.d.ts"
+			"require": "./lib/api/index.js"
 		},
 		"./lib/*": {
 			"require": "./lib/*.js"
@@ -48,6 +48,8 @@
 		"./tsvue-exp": "./lib/transpilers/tsvue-exp.js",
 		"./tsvue": "./lib/transpilers/tsvue.js",
 		"./lib/transpilers/esm/vue-loader": "./lib/transpilers/esm/vue-loader.mjs",
+		"./lib/transpilers/esm/esnode-loader": "./lib/transpilers/esm/esnode-loader.mjs",
+		"./lib/transpilers/esm/esbuild-transpiler'": "./lib/transpilers/esm/esbuild-transpiler.mjs",
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",
@@ -88,7 +90,8 @@
 		"shx": "0.3.4"
 	},
 	"scripts": {
-		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs",
+		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs && yarn build:transpiler",
+		"build:transpiler": "node src/scripts/build-esm-transpiler-cjs.js",
 		"build:copy-mjs": "yarn copy:root-mjs && yarn copy:api-mjs && yarn copy:transpiler-mjs",
 		"copy:root-mjs": "shx cp src/*.mjs lib/",
 		"copy:api-mjs": "shx cp src/api/*.mjs lib/api/",

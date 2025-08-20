@@ -6,7 +6,7 @@
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"scripts": {
-		"test:es": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:es\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p esnode",
+		"test:es": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:es\" && echo \"========================================\" && echo \"\" && cucumber-tsflow -p esnode",
 		"test:ts": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:ts\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p tsnode"
 	},
 	"devDependencies": {

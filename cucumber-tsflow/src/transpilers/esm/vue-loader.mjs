@@ -37,43 +37,17 @@
  * preprocessor packages to be installed. Missing preprocessors will be skipped
  * with a warning rather than failing the compilation.
  */
-import { createRequire } from 'module';
-import { fileURLToPath, pathToFileURL } from 'url';
-import { compileVueSFC } from './vue-sfc-compiler.mjs';
 import path from 'path';
-import { createMatchPath, loadConfig } from 'tsconfig-paths';
-import { existsSync } from 'fs';
+import {
+	initializeJsdom,
+	ASSET_EXTENSIONS,
+	resolveWithExtensions,
+	resolveTsconfigPaths,
+	loadAsset,
+	loadVue
+} from './loader-utils.mjs';
 
-// Initialize jsdom-global for the loader context
-const require = createRequire(import.meta.url);
-require('jsdom-global')();
-
-// Set SVGElement as in CJS version
-global.SVGElement = global.window.SVGElement;
-
-// Initialize tsconfig-paths
-let matchPath;
-function initializeTsconfigPaths() {
-	if (matchPath) return;
-
-	try {
-		const configLoaderResult = loadConfig(process.cwd());
-		if (configLoaderResult.resultType === 'success') {
-			matchPath = createMatchPath(
-				configLoaderResult.absoluteBaseUrl,
-				configLoaderResult.paths,
-				configLoaderResult.mainFields,
-				configLoaderResult.addMatchAll
-			);
-		} else {
-			console.warn('>>> vue-loader: no tsconfig paths found');
-		}
-	} catch (error) {
-		console.error('>>> vue-loader: failed to load tsconfig paths:', error);
-	}
-}
-
-initializeTsconfigPaths();
+initializeJsdom();
 
 // Cache for the TypeScript loader
 let tsLoader;
@@ -101,45 +75,15 @@ async function getTsLoader() {
 
 export async function load(url, context, nextLoad) {
 	// Handle asset files that Vue compiler turns into imports
-	const assetExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
 	const ext = path.extname(url).toLowerCase();
-
-	if (assetExtensions.includes(ext)) {
-		// In CJS, the assets plugin would register these and potentially transform them
-		// For ESM testing, we'll return the file path as a module
-		// This matches what a bundler's asset plugin would do
-		const filePath = fileURLToPath(url);
-
-		// You could also implement asset transformation here if needed
-		// For example, copying to a dist folder, generating hashes, etc.
-		return {
-			format: 'module',
-			source: `export default ${JSON.stringify(filePath)};`,
-			shortCircuit: true
-		};
+	if (ASSET_EXTENSIONS.includes(ext)) {
+		return loadAsset(url);
 	}
 
 	// Only process .vue files directly
 	if (url.endsWith('.vue')) {
 		try {
-			const { source } = await nextLoad(url, { ...context, format: 'module' });
-			const code = source.toString();
-			const filename = fileURLToPath(url);
-
-			// Check if styles should be enabled (from environment or config)
-			// Vue styles are disabled by default. However, user could enable them when importing from compiled libraries
-			const enableVueStyle =
-				global.enableVueStyle === true ||
-				process.env.CUCUMBER_ENABLE_VUE_STYLE === 'true' ||
-				process.env.enableVueStyle === 'true';
-
-			const compiled = compileVueSFC(code, filename, { enableStyle: enableVueStyle });
-
-			return {
-				format: 'module',
-				source: compiled.code,
-				shortCircuit: true
-			};
+			return loadVue(url, context, nextLoad);
 		} catch (error) {
 			console.error(`>>> vue-loader: Failed to compile Vue SFC ${url}:`, error);
 			throw new Error(`Failed to compile Vue SFC ${url}: ${error.message}`);
@@ -173,31 +117,9 @@ export async function resolve(specifier, context, nextResolve) {
 		const hasExtension = path.extname(specifier) !== '';
 
 		if (!hasExtension && context.parentURL) {
-			const parentPath = fileURLToPath(context.parentURL);
-			const parentDir = path.dirname(parentPath);
-			const resolvedPath = path.resolve(parentDir, specifier);
-
-			// Try various extensions
-			const extensions = ['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
-			for (const ext of extensions) {
-				const fullPath = resolvedPath + ext;
-				if (existsSync(fullPath)) {
-					return {
-						url: pathToFileURL(fullPath).href,
-						shortCircuit: true
-					};
-				}
-			}
-
-			// Try index files
-			for (const ext of extensions) {
-				const indexPath = path.join(resolvedPath, 'index' + ext);
-				if (existsSync(indexPath)) {
-					return {
-						url: pathToFileURL(indexPath).href,
-						shortCircuit: true
-					};
-				}
+			const resolved = await resolveWithExtensions(specifier, context.parentURL);
+			if (resolved) {
+				return { url: resolved, shortCircuit: true };
 			}
 		}
 	}
@@ -213,19 +135,10 @@ export async function resolve(specifier, context, nextResolve) {
 			// Fall through to default resolver
 		}
 	}
-
-	// Initialize on first use
-	if (!matchPath) {
-		initializeTsconfigPaths();
-	}
-
-	// tsconfig path mapping support
-	// Resolves imports like '@/components/Button' based on tsconfig paths
-	if (matchPath && !specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) {
-		const mapped = matchPath(specifier);
-		if (mapped) {
-			return nextResolve(pathToFileURL(mapped).href, context);
-		}
+	// TSConfig path mapping resolver
+	const mappedResult = resolveTsconfigPaths(specifier);
+	if (mappedResult) {
+		return mappedResult;
 	}
 
 	return nextResolve(specifier, context);

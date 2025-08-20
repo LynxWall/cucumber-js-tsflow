@@ -154,7 +154,7 @@ const ArgvParser = {
 				ArgvParser.mergeTags
 			)
 			.option(
-				'--transpiler <ESNODE|TSNODE|ESVUE|TSVUE|TSVUEESM|ESNODEESM>',
+				'--transpiler <ESNODE|TSNODE|ESVUE|TSVUE|TSVUEESM|ESNODEESM|ESVUEESM>',
 				`built-in transpiler to use. ESxxx transpilers use esbuild and TSxxx transpilers use typescript.\n
 				Vue versions of the transpilers add a hook for .vue transforms and initialize jsdom globally.\n
 				Default: ESNODE (esbuild without Vue support)`

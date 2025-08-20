@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'url';
-import { compileVueSFC } from './vue-sfc-compiler.mjs';
 import path from 'path';
 import {
 	initializeJsdom,

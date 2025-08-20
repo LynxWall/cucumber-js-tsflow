@@ -1,4 +1,3 @@
-// lib/transpilers/esm/esbuild.mjs
 import { transformSync } from 'esbuild';
 import path from 'path';
 

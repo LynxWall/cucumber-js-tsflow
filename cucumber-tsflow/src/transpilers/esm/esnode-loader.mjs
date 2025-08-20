@@ -6,14 +6,14 @@ const require = createRequire(import.meta.url);
 const tsNode = require('ts-node');
 
 // Use an absolute path to the transpiler
-const transpilerPath = '@lynxwall/cucumber-tsflow/lib/transpilers/esm/esbuild-transpiler-cjs';
+const transpilerPath = '@lynxwall/cucumber-tsflow/lib/transpilers/esm/esbuild-transpiler-cjs'; // transpiled esbuild-transpiler.mjs
 
 const service = tsNode.create({
 	esm: true,
 	experimentalSpecifierResolution: 'node',
 	files: true,
 	transpileOnly: true,
-	transpiler: transpilerPath,
+	transpiler: transpilerPath, // needs to be a transpiler in CJS
 	compilerOptions: {
 		experimentalDecorators: global.experimentalDecorators || false,
 		module: 'ESNext',

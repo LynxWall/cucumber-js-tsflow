@@ -1,3 +1,5 @@
+// This file gets transpiled to CJS via scripts/build-esm-transpiler-cjs as part of the build
+
 import { transpileCode } from './esbuild.mjs';
 
 export function create(_createOptions) {

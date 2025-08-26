@@ -22,7 +22,7 @@ export function createTsNodeService(options = {}) {
 		files: true,
 		transpileOnly: true,
 		compilerOptions: {
-			experimentalDecorators: global.experimentalDecorators || false,
+			experimentalDecorators: process.env.CUCUMBER_EXPERIMENTAL_DECORATORS === 'true',
 			module: 'ESNext',
 			target: 'ES2022'
 		}

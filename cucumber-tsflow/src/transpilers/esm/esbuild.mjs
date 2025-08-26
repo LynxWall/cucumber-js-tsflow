@@ -1,10 +1,64 @@
 import { transformSync } from 'esbuild';
 import path from 'path';
+import { loadConfig } from 'tsconfig-paths';
+import { pathToFileURL } from 'url';
 
 export const defaultOptions = {
 	debug: true
 };
 
+// Cache for tsconfig data
+let tsconfigCache = null;
+
+function loadTsConfigPaths() {
+	if (tsconfigCache) return tsconfigCache;
+
+	try {
+		const configLoaderResult = loadConfig(process.cwd());
+		if (configLoaderResult.resultType === 'success') {
+			tsconfigCache = {
+				absoluteBaseUrl: configLoaderResult.absoluteBaseUrl,
+				paths: configLoaderResult.paths
+			};
+		}
+	} catch (error) {
+		console.error('Failed to load tsconfig for aliases:', error);
+	}
+
+	return tsconfigCache || { paths: {} };
+}
+
+// Add this function to handle path replacements
+function rewritePathMappings(code) {
+	const { absoluteBaseUrl, paths } = loadTsConfigPaths();
+
+	if (!paths || !absoluteBaseUrl) return code;
+
+	let modifiedCode = code;
+
+	// Process each path mapping
+	for (const [pattern, replacements] of Object.entries(paths)) {
+		// Convert @fixtures/* to a regex pattern
+		const searchPattern = pattern.replace('/*', '');
+		const replacementPath = replacements[0].replace('/*', '');
+
+		// Create regex to match imports/exports
+		const regex = new RegExp(`(from\\s+['"])${searchPattern}(/[^'"]+)?(['"])`, 'g');
+
+		modifiedCode = modifiedCode.replace(regex, (match, prefix, subPath, suffix) => {
+			// If subPath is provided, remove leading slash
+			const pathSuffix = subPath ? subPath.substring(1) : '';
+			// Calculate the absolute path
+			const absolutePath = path.resolve(absoluteBaseUrl, replacementPath, pathSuffix);
+			// Convert to file URL for ESM
+			const fileUrl = pathToFileURL(absolutePath).href;
+
+			return `${prefix}${fileUrl}${suffix}`;
+		});
+	}
+
+	return modifiedCode;
+}
 const commonOptions = {
 	format: 'esm',
 	logLevel: 'info',
@@ -14,7 +68,7 @@ const commonOptions = {
 	platform: 'node'
 };
 
-if (global.experimentalDecorators) {
+if (process.env.CUCUMBER_EXPERIMENTAL_DECORATORS === 'true') {
 	commonOptions.tsconfigRaw = {
 		compilerOptions: {
 			experimentalDecorators: true,
@@ -73,7 +127,10 @@ export const transpileCode = (code, filename, ext, _options) => {
 	const loadersMap = getLoaders(options);
 	const loaderExt = ext != undefined ? ext : path.extname(filename);
 
-	const ret = transformSync(code, {
+	// Rewrite path mappings before transpiling
+	let processedCode = rewritePathMappings(code);
+
+	const ret = transformSync(processedCode, {
 		...commonOptions,
 		...(options.esbuild || {}),
 		loader: loadersMap[loaderExt],

@@ -6,8 +6,8 @@
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"scripts": {
-		"test:es": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:es\" && echo \"========================================\" && echo \"\" && cucumber-tsflow -p esnode",
-		"test:ts": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:ts\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p tsnode"
+		"test:esbuild": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:node:cjs-esbuild\" && echo \"========================================\" && echo \"\" && cucumber-tsflow -p esnode",
+		"test:tsnode": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-node --> test:node:cjs-tsnode\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p tsnode"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",

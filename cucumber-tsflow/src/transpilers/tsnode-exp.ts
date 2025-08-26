@@ -1,5 +1,3 @@
-import { SourceMap } from 'node:module';
-
 require('ts-node').register({
 	compilerOptions: {
 		module: 'nodeNext',

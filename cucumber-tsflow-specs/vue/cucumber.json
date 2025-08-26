@@ -1,14 +1,6 @@
 {
-	"esmvue": {
-		"transpiler": "esmvue",
-		"paths": ["../features/**/*.feature"],
-		"require": ["./src/step_definitions/**/*.ts"],
-		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
-		"tags": "@vue",
-		"parallel": 0
-	},
 	"esvue": {
-		"transpiler": "esvue",
+		"transpiler": "es-vue",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
@@ -16,7 +8,7 @@
 		"parallel": 0
 	},
 	"tsvue": {
-		"transpiler": "tsvue",
+		"transpiler": "ts-vue",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/tsvue.json", "html:../reports/tsvue.html", "junitbamboo:../reports/tsvue.xml"],

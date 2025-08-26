@@ -14,14 +14,16 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 	const callsite = Callsite.capture();
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: stepPattern,
 				bindingType: StepBindingFlags.given,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				wrapperOption: wrapperOption,
@@ -68,14 +70,16 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: stepPattern,
 				bindingType: StepBindingFlags.when,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				wrapperOption: wrapperOption,
@@ -122,14 +126,16 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: stepPattern,
 				bindingType: StepBindingFlags.then,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				wrapperOption: wrapperOption,

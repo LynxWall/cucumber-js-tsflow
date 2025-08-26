@@ -75,39 +75,48 @@ export const loadConfiguration = async (
 	if (original.experimentalDecorators === undefined) {
 		original.experimentalDecorators = false;
 	}
+
 	const experimentalDecorators = original.experimentalDecorators;
 	global.experimentalDecorators = experimentalDecorators;
-	// todo: add the esm transpilers here
+	process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(experimentalDecorators); // need to set here so can be accessed in mjs files
+
 	if (original.transpiler) {
 		switch (original.transpiler) {
-			case 'esvue':
+			case 'es-vue':
 				original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esvue');
 				break;
-			case 'tsvue': {
+			case 'ts-vue': {
 				const module = experimentalDecorators ? 'tsvue-exp' : 'tsvue';
 				original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 				break;
 			}
-			case 'tsnode': {
+			case 'es-node': {
+				original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esnode');
+				break;
+			}
+			case 'ts-node': {
 				const module = experimentalDecorators ? 'tsnode-exp' : 'tsnode';
 				original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
 				break;
 			}
-			case 'esnodeesm': {
+			case 'ts-node-esm': {
+				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/tsnode-loader`); // per cucumber docs, we want to add this to the loader for esm
+				break;
+			}
+			case 'es-node-esm': {
 				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/esnode-loader`); // per cucumber docs, we want to add this to the loader for esm
 				break;
 			}
-			case 'tsvueesm': {
+			case 'ts-vue-esm': {
 				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-loader`); // per cucumber docs, we want to add this to the loader for esm
 				break;
 			}
-			case 'esvueesm': {
+			case 'es-vue-esm': {
 				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/esvue-loader`); // per cucumber docs, we want to add this to the loader for esm
 				break;
 			}
 			default:
-				// defaulting to esnode
-				original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esnode');
+				// default sets nothing -- this allows users to not set the transpiler & use their own loaders/transpilers
 				break;
 		}
 	}

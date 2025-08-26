@@ -12,8 +12,8 @@
 		"vue": "^3.5.13"
 	},
 	"scripts": {
-		"test:tsvue-esm": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue-esm --> test:tsvue-esm\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p vue-esm",
-		"test:esvue-esm": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue-esm --> test:esvue-esm\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p esvue-esm",
+		"test:vue-loader": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue-esm --> test:tsvue-esm\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p vue-esm",
+		"test:esvue-loader": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue-esm --> test:esvue-esm\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p esvue-esm",
 		"build": "tsc --noEmit"
 	},
 	"devDependencies": {

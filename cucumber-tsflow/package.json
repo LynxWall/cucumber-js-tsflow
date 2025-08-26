@@ -48,6 +48,7 @@
 		"./tsvue-exp": "./lib/transpilers/tsvue-exp.js",
 		"./tsvue": "./lib/transpilers/tsvue.js",
 		"./lib/transpilers/esm/vue-loader": "./lib/transpilers/esm/vue-loader.mjs",
+		"./lib/transpilers/esm/tsnode-loader": "./lib/transpilers/esm/tsnode-loader.mjs",
 		"./lib/transpilers/esm/esnode-loader": "./lib/transpilers/esm/esnode-loader.mjs",
 		"./lib/transpilers/esm/esvue-loader": "./lib/transpilers/esm/esvue-loader.mjs",
 		"./lib/transpilers/esm/esbuild-transpiler'": "./lib/transpilers/esm/esbuild-transpiler.mjs",

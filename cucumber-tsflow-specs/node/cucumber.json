@@ -1,6 +1,6 @@
 {
 	"tsnode": {
-		"transpiler": "tsnode",
+		"transpiler": "ts-node",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/tsnode.json", "html:../reports/tsnode.html", "junitbamboo:../reports/tsnode.xml"],
@@ -8,7 +8,7 @@
 		"tags": "@node"
 	},
 	"esnode": {
-		"transpiler": "esnode",
+		"transpiler": "es-node",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/esnode.json", "html:../reports/esnode.html", "junitbamboo:../reports/esnode.xml"],

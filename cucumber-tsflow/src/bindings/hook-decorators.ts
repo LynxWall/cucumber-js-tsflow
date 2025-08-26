@@ -76,14 +76,16 @@ function checkTag(tag: string): string {
 function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?: string, timeout?: number) {
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: '',
 				bindingType: flag,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				callsite: callSite,

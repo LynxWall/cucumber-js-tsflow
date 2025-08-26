@@ -1,6 +1,6 @@
 {
 	"vue-esm": {
-		"transpiler": "tsvueesm",
+		"transpiler": "ts-vue-esm",
 		"require": ["src/setup-jsdom.ts"],
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],
@@ -9,7 +9,7 @@
 		"parallel": 0
 	},
 	"esvue-esm": {
-		"transpiler": "esvueesm",
+		"transpiler": "es-vue-esm",
 		"require": ["src/setup-jsdom.ts"],
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],

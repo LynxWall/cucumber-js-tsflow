@@ -38,14 +38,7 @@
  * with a warning rather than failing the compilation.
  */
 import path from 'path';
-import {
-	initializeJsdom,
-	ASSET_EXTENSIONS,
-	resolveWithExtensions,
-	resolveTsconfigPaths,
-	loadAsset,
-	loadVue
-} from './loader-utils.mjs';
+import { initializeJsdom, ASSET_EXTENSIONS, resolveSpecifier, loadAsset, loadVue } from './loader-utils.mjs';
 
 initializeJsdom();
 
@@ -106,39 +99,16 @@ export async function load(url, context, nextLoad) {
 	return nextLoad(url, context);
 }
 
-// Optional: export resolve hook if needed
 export async function resolve(specifier, context, nextResolve) {
-	// Extension resolution for relative imports
-	// This allows importing without file extensions:
-	//   import Component from './Component'  -> resolves to ./Component.vue
-	//   import helper from './helper'        -> resolves to ./helper.ts
-	// Tries extensions in order: .vue, .ts, .tsx, .js, .jsx, .mjs, .cjs, .json
-	if (specifier.startsWith('.') || specifier.startsWith('/')) {
-		const hasExtension = path.extname(specifier) !== '';
+	// Try common resolution logic
+	const resolved = await resolveSpecifier(specifier, context, {
+		checkExtensions: true,
+		handleTsFiles: false, // Vue loader doesn't handle TS files directly
+		nextResolve
+	});
 
-		if (!hasExtension && context.parentURL) {
-			const resolved = await resolveWithExtensions(specifier, context.parentURL);
-			if (resolved) {
-				return { url: resolved, shortCircuit: true };
-			}
-		}
-	}
-	// TypeScript file handling - delegate to ts-node's resolver
-	// This ensures TypeScript's module resolution rules are followed
-	if (specifier.endsWith('.ts') || specifier.endsWith('.tsx')) {
-		try {
-			const tsNode = await getTsLoader();
-			if (tsNode.resolve) {
-				return tsNode.resolve(specifier, context, nextResolve);
-			}
-		} catch (error) {
-			// Fall through to default resolver
-		}
-	}
-	// TSConfig path mapping resolver
-	const mappedResult = resolveTsconfigPaths(specifier);
-	if (mappedResult) {
-		return mappedResult;
+	if (resolved) {
+		return resolved;
 	}
 
 	return nextResolve(specifier, context);

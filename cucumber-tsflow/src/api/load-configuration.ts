@@ -16,6 +16,7 @@ import GherkinManager from '../gherkin/gherkin-manager';
 import ansis from 'ansis';
 import { ITsFlowRunConfiguration } from '../runtime/types';
 import { Console } from 'console';
+import { join } from 'path';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -80,6 +81,25 @@ export const loadConfiguration = async (
 	global.experimentalDecorators = experimentalDecorators;
 	process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(experimentalDecorators); // need to set here so can be accessed in mjs files
 
+	/**
+	 * Ensures JSDOM environment is initialized before any test files are loaded.
+	 * This adds the Vue-specific JSDOM setup to the beginning of Cucumber's require array,
+	 * establishing the DOM environment needed for Vue component testing.
+	 *
+	 * Must run before test execution begins (mise en place for Vue testing).
+	 */
+	const initJsDom = () => {
+		// Use require.resolve to get the absolute path
+		try {
+			const setupPath = require.resolve('@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-jsdom-setup');
+			original.require.unshift(setupPath);
+		} catch (e) {
+			// Fallback to relative path from lib directory
+			const setupPath = join(__dirname, '../../transpilers/esm/vue-jsdom-setup.mjs');
+			original.require.unshift(setupPath);
+		}
+	};
+
 	if (original.transpiler) {
 		switch (original.transpiler) {
 			case 'es-vue':
@@ -109,10 +129,12 @@ export const loadConfiguration = async (
 			}
 			case 'ts-vue-esm': {
 				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-loader`); // per cucumber docs, we want to add this to the loader for esm
+				initJsDom();
 				break;
 			}
 			case 'es-vue-esm': {
 				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/esvue-loader`); // per cucumber docs, we want to add this to the loader for esm
+				initJsDom();
 				break;
 			}
 			default:
@@ -183,6 +205,7 @@ export const loadConfiguration = async (
 
 	validateConfiguration(original, logger);
 	const runnable = await convertConfiguration(logger, original, env);
+
 	return {
 		useConfiguration: original,
 		runConfiguration: runnable

@@ -38,9 +38,7 @@
  * with a warning rather than failing the compilation.
  */
 import path from 'path';
-import { initializeJsdom, ASSET_EXTENSIONS, resolveSpecifier, loadAsset, loadVue } from './loader-utils.mjs';
-
-initializeJsdom();
+import { ASSET_EXTENSIONS, resolveSpecifier, loadAsset, loadVue } from './loader-utils.mjs';
 
 // Cache for the TypeScript loader
 let tsLoader;

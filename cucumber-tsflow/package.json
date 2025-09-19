@@ -52,6 +52,7 @@
 		"./lib/transpilers/esm/esnode-loader": "./lib/transpilers/esm/esnode-loader.mjs",
 		"./lib/transpilers/esm/esvue-loader": "./lib/transpilers/esm/esvue-loader.mjs",
 		"./lib/transpilers/esm/esbuild-transpiler'": "./lib/transpilers/esm/esbuild-transpiler.mjs",
+		"./lib/transpilers/esm/vue-jsdom-setup": "./lib/transpilers/esm/vue-jsdom-setup.mjs",
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",

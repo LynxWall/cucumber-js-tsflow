@@ -1,51 +1,134 @@
-# ESM Transpiler for cucumber-tsflow
+# ESM Transpilers for cucumber-tsflow
 
-This directory contains ECMAScript Module (ESM) loaders that enable cucumber-tsflow to work with modern ESM-based Node.js projects.
+This directory contains transpiler configurations that enable cucumber-tsflow to work with ECMAScript Module (ESM) projects.
 
 ## Overview
 
-This loader provides ESM support for testing Vue 3 Single File Components with cucumber-tsflow, allowing you to:
+<!-- This loader provides ESM support for testing Vue 3 Single File Components with cucumber-tsflow, allowing you to:
 
 - Test Vue 3 Single File Components (`.vue` files)
 - Write tests using ES modules (`import`/`export`)
 - Use TypeScript with proper decorator support
 - Import files without extensions
-- Handle asset imports (images, styles, etc.)
+- Handle asset imports (images, styles, etc.) -->
+
+When your project uses ES modules (`"type": "module"` in package.json), you'll need to use one of the ESM transpilers provided by cucumber-tsflow. These transpilers are configured using the `transpiler` option in your cucumber configuration.
 
 _Note:_ if you just need ts-node/esm as a loader, you don't need a custom transpiler and can [follow the Cucumber ESM transpilation docs](https://github.com/cucumber/cucumber-js/blob/main/docs/transpiling.md#esm).
 
-## Available Loaders
+## Available ESM Transpilers
 
-### vue-loader.mjs
+### ts-vue-esm
 
-Enables importing and testing Vue Single File Components in ESM environments.
+TypeScript + Vue support for ESM projects using ts-node.
+
+**When to use:** Testing Vue 3 Single File Components in an ESM TypeScript project.
 
 **Features:**
 
-- Compiles `.vue` files on-the-fly
-- Handles TypeScript in Vue components
+- Compiles TypeScript and Vue SFCs on-the-fly
+- Automatic JSDOM environment setup
 - Supports scoped styles (when enabled)
-- Transforms asset URLs to imports
-- Integrates with tsconfig path mappings
+- Handles asset imports (images, fonts, etc.)
+- Full TypeScript decorator support
 
-**Usage:**
+**Configuration:**
 
 ```json
-// cucumber.json
 {
 	"vue-esm": {
-		"transpiler": "tsvueesm",
-		"require": ["src/setup-jsdom.ts"],
+		"transpiler": "ts-vue-esm",
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],
-		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
-		"tags": "@vue",
-		"parallel": 0
+		"tags": "@vue"
 	}
 }
 ```
 
-_Note:_ The "transpiler": "tsvueesm" option tells cucumber-tsflow to use the Vue ESM transpiler. This is registered internally by cucumber-tsflow.
+### es-vue-esm
+
+Esbuild + Vue support for ESM projects.
+
+**When to use:** Testing Vue 3 SFCs when you want faster compilation with esbuild.
+
+**Configuration:**
+
+```json
+{
+	"vue-esm": {
+		"transpiler": "es-vue-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"tags": "@vue"
+	}
+}
+```
+
+##ts-node-esm
+TypeScript support for ESM projects using ts-node.
+
+**When to use:** Testing pure Node.js code in an ESM TypeScript project (no DOM needed).
+
+**Features:**
+
+- TypeScript compilation via ts-node/esm
+- Full decorator support
+- Path mapping support
+- No DOM environment (lighter weight for non-UI tests)
+
+**Configuration:**
+
+```json
+{
+	"node-esm": {
+		"transpiler": "ts-node-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"]
+	}
+}
+```
+
+## es-node-esm
+
+Esbuild support for ESM projects.
+
+**When to use:** Testing pure Node.js code when you want faster compilation.
+
+**Features:**
+
+- Same as ts-node-esm but uses esbuild
+- Faster build times
+- No DOM environment
+
+**Configuration:**
+
+```json
+{
+	"node-esm": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"]
+	}
+}
+```
+
+#### Features:
+
+- Same as ts-vue-esm but uses esbuild for compilation
+- Faster build times
+- Automatic JSDOM environment setup
+
+## Transpiler Selection Guide
+
+## No Transpiler Option
+
+If you don't specify a transpiler, cucumber-tsflow won't configure any loaders or transpilers. This allows you to:
+
+- Use your own custom loaders
+- Configure transpilation manually
+- Use cucumber-js native ESM support directly
+
+**Note:** When no transpiler is specified, you're responsible for handling TypeScript compilation and any module resolution.
 
 ## Configuration
 
@@ -74,32 +157,10 @@ Your tsconfig.json should include:
 	"include": ["./src/**/*.ts", "./src/**/*.vue"],
 	"ts-node": {
 		"esm": true,
-		"experimentalSpecifierResolution": "node", // This is the key!
+		"experimentalSpecifierResolution": "node",
 		"files": true
 	}
 }
-```
-
-### DOM Setup
-
-When testing Vue components, you'll need to set up a DOM environment. Create a setup file:
-
-```typescript
-// src/setup-jsdom.ts
-import 'global-jsdom/register';
-
-// Or if using jsdom directly:
-import { JSDOM } from 'jsdom';
-
-const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-	url: 'http://localhost',
-	pretendToBeVisual: true,
-	resources: 'usable'
-});
-
-global.window = dom.window;
-global.document = dom.window.document;
-global.navigator = dom.window.navigator;
 ```
 
 ### Vue Type Definitions
@@ -200,6 +261,13 @@ When enableVueStyle is true:
 
 ## Troubleshooting
 
+| Your Project Type                      | Recommended Transpiler | Why                                              |
+| -------------------------------------- | ---------------------- | ------------------------------------------------ |
+| ESM + TypeScript + Vue                 | `ts-vue-esm`           | Full TypeScript support with Vue SFC compilation |
+| ESM + TypeScript + Vue (fast builds)   | `es-vue-esm`           | Faster compilation with esbuild                  |
+| ESM + TypeScript (no Vue)              | `ts-node-esm`          | Standard TypeScript support without Vue overhead |
+| ESM + TypeScript (no Vue, fast builds) | `es-node-esm`          | Faster compilation for pure Node.js tests        |
+
 ### "Cannot find module" errors
 
 Ensure your tsconfig.json has the ts-node configuration section
@@ -214,6 +282,11 @@ Ensure ts-node.file is set to true in tsconfig.json
 
 Set global.enableVueStyle = true or use the environment variable
 Install required preprocessors (sass, less, etc.) if using them
+
+### TypeScript decorators not working
+
+Verify your tsconfig.json includes "esnext.decorators" in lib array
+Check that you're not using experimentalDecorators: true (unless needed for legacy code)
 
 ## Examples
 
@@ -251,3 +324,10 @@ import { helper } from '@/utils/helper';   // Resolves to src/utils/helper.ts
 3. Update cucumber.json to use the desired transpiler
 4. Add the ts-node configuration to your tsconfig.json
 5. Ensure all relative imports use proper extensions or configure extension resolution
+
+| CommonJS  | ESM Equivalent |
+| --------- | -------------- |
+| `ts-vue`  | `ts-vue-esm`   |
+| `es-vue`  | `es-vue-esm`   |
+| `ts-node` | `ts-node-esm`  |
+| `es-node` | `es-node-esm`  |

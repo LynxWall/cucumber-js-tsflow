@@ -4,14 +4,6 @@ This directory contains transpiler configurations that enable cucumber-tsflow to
 
 ## Overview
 
-<!-- This loader provides ESM support for testing Vue 3 Single File Components with cucumber-tsflow, allowing you to:
-
-- Test Vue 3 Single File Components (`.vue` files)
-- Write tests using ES modules (`import`/`export`)
-- Use TypeScript with proper decorator support
-- Import files without extensions
-- Handle asset imports (images, styles, etc.) -->
-
 When your project uses ES modules (`"type": "module"` in package.json), you'll need to use one of the ESM transpilers provided by cucumber-tsflow. These transpilers are configured using the `transpiler` option in your cucumber configuration.
 
 _Note:_ if you just need ts-node/esm as a loader, you don't need a custom transpiler and can [follow the Cucumber ESM transpilation docs](https://github.com/cucumber/cucumber-js/blob/main/docs/transpiling.md#esm).

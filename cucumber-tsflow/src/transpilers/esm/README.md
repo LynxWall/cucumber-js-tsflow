@@ -64,7 +64,8 @@ Esbuild + Vue support for ESM projects.
 }
 ```
 
-##ts-node-esm
+## ts-node-esm
+
 TypeScript support for ESM projects using ts-node.
 
 **When to use:** Testing pure Node.js code in an ESM TypeScript project (no DOM needed).

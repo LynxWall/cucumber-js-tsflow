@@ -1,17 +1,9 @@
-import { createRequire } from 'module';
 import { compileVueSFC } from './vue-sfc-compiler.mjs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { existsSync } from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
 import { createEsmHooks } from './tsnode-service.mjs';
-
-// Initialize jsdom-global (shared by both loaders)
-export function initializeJsdom() {
-	const require = createRequire(import.meta.url);
-	require('jsdom-global')();
-	global.SVGElement = global.window.SVGElement;
-}
 
 // Shared asset extensions
 export const ASSET_EXTENSIONS = [

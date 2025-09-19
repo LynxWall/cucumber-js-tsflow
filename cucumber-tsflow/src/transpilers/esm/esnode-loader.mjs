@@ -1,6 +1,4 @@
-import { initializeJsdom, createEsbuildLoader } from './loader-utils.mjs';
-
-initializeJsdom();
+import { createEsbuildLoader } from './loader-utils.mjs';
 
 // Create and export the loader with default options
 const loader = createEsbuildLoader({

@@ -1,7 +1,6 @@
 {
 	"tsvue-esm": {
 		"transpiler": "ts-vue-esm",
-		"require": ["src/setup-jsdom.ts"],
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
@@ -11,7 +10,6 @@
 	},
 	"esvue-esm": {
 		"transpiler": "es-vue-esm",
-		"require": ["src/setup-jsdom.ts"],
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],

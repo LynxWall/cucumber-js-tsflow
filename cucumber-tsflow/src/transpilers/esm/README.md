@@ -10,6 +10,24 @@ _Note:_ if you just need ts-node/esm as a loader, you don't need a custom transp
 
 ## Available ESM Transpilers
 
+### es-vue-esm
+
+Esbuild + Vue support for ESM projects.
+
+**When to use:** Testing Vue 3 SFCs when you want faster compilation with esbuild.
+
+**Configuration:**
+
+```json
+{
+	"vue-esm": {
+		"transpiler": "es-vue-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"]
+	}
+}
+```
+
 ### ts-vue-esm
 
 TypeScript + Vue support for ESM projects using ts-node.
@@ -30,51 +48,6 @@ TypeScript + Vue support for ESM projects using ts-node.
 {
 	"vue-esm": {
 		"transpiler": "ts-vue-esm",
-		"paths": ["../features/**/*.feature"],
-		"import": ["./src/step_definitions/**/*.ts"],
-		"tags": "@vue"
-	}
-}
-```
-
-### es-vue-esm
-
-Esbuild + Vue support for ESM projects.
-
-**When to use:** Testing Vue 3 SFCs when you want faster compilation with esbuild.
-
-**Configuration:**
-
-```json
-{
-	"vue-esm": {
-		"transpiler": "es-vue-esm",
-		"paths": ["../features/**/*.feature"],
-		"import": ["./src/step_definitions/**/*.ts"],
-		"tags": "@vue"
-	}
-}
-```
-
-## ts-node-esm
-
-TypeScript support for ESM projects using ts-node.
-
-**When to use:** Testing pure Node.js code in an ESM TypeScript project (no DOM needed).
-
-**Features:**
-
-- TypeScript compilation via ts-node/esm
-- Full decorator support
-- Path mapping support
-- No DOM environment (lighter weight for non-UI tests)
-
-**Configuration:**
-
-```json
-{
-	"node-esm": {
-		"transpiler": "ts-node-esm",
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"]
 	}
@@ -110,6 +83,31 @@ Esbuild support for ESM projects.
 - Same as ts-vue-esm but uses esbuild for compilation
 - Faster build times
 - Automatic JSDOM environment setup
+
+## ts-node-esm
+
+TypeScript support for ESM projects using ts-node.
+
+**When to use:** Testing pure Node.js code in an ESM TypeScript project (no DOM needed).
+
+**Features:**
+
+- TypeScript compilation via ts-node/esm
+- Full decorator support
+- Path mapping support
+- No DOM environment (lighter weight for non-UI tests)
+
+**Configuration:**
+
+```json
+{
+	"node-esm": {
+		"transpiler": "ts-node-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"]
+	}
+}
+```
 
 ## Transpiler Selection Guide
 

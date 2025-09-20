@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"baseUrl": ".",
+		"module": "esnext",
+		"target": "es2022",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"allowJs": true,
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"experimentalDecorators": false,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"lib": ["es2022", "esnext.decorators"],
+		"typeRoots": ["../../node_modules/@types", "src/types"]
+	},
+	"include": ["./src/**/*.ts", "./src/**/*.vue", "./src/types/**/*.d.ts"],
+	"ts-node": {
+		"esm": true,
+		"experimentalSpecifierResolution": "node",
+		"files": true // This ensures ts-node reads the includes
+	}
+}

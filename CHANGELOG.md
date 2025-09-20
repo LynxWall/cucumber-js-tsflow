@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.3.0]
+
+### Added
+
+- Transpilers for ESM projects. Read more about the [cucumber-tsflow ESM implementation](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/cucumber-tsflow/src/transpilers/esm/README.md).
+
+### Changed
+
+- Upgraded to Cucumber-JS 12.2.0
+- Upgraded to Typescript 5.9.2
+
+### Fixed
+
+- Deprecated warnings with Node 22+ and ts-node 10.9.2. Upgraded to [ts-node-maintained](https://github.com/thetutlage/ts-node-maintained) v10.9.6, which resolves the fs.Stats warning and fixes a couple of other bugs.
+
 ## [7.2.0]
 
 ### Fixed
@@ -18,7 +33,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 - Upgraded to Cucumber-JS 11.3.0
 - Implemented support for Experimental Decorators using a new configuration flag named experimentalDecorators. When true Experimental Decorators will be supported. When false TypeScript 5.x Official Decorators will be used.
 - Added class-validator tests. Class-validator is a decorator based validation utility that uses experimental decorators and the main reason for adding support for them.
-- Doubled the number of tests to cover Official and Experimental Decorators with all tests. 
+- Doubled the number of tests to cover Official and Experimental Decorators with all tests.
 
 ## [7.1.2]
 

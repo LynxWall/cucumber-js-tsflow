@@ -1,7 +1,7 @@
 const hooks = require('require-extension-hooks');
 import VueTransformer from './vue-sfc';
 
-require('ts-node').register({
+require('ts-node-maintained').register({
 	compilerOptions: {
 		module: 'nodeNext',
 		target: 'es2022',
@@ -32,7 +32,7 @@ hooks('vue').push(function (params: any) {
 
 		return transformResult.code;
 	} catch (err) {
-		console.log(err);
+		console.error(err);
 	}
 	return params.content;
 });

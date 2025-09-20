@@ -1,0 +1,20 @@
+{
+	"tsvue-esm": {
+		"transpiler": "ts-vue-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
+		"experimentalDecorators": true,
+		"tags": "@vue-exp",
+		"parallel": 0
+	},
+	"esvue-esm": {
+		"transpiler": "es-vue-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
+		"experimentalDecorators": true,
+		"tags": "@vue-exp",
+		"parallel": 0
+	}
+}

@@ -1,4 +1,4 @@
-import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions, TsconfigRaw } from 'esbuild';
+import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions } from 'esbuild';
 import path from 'path';
 
 export type TranspileOptions = {
@@ -78,5 +78,6 @@ export const transpileCode = (
 		loader: loaders[loaderExt],
 		sourcefile: filename
 	});
+
 	return { output: ret.code, sourceMap: ret.map };
 };

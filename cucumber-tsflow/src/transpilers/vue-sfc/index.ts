@@ -30,7 +30,9 @@ class VueTransformer implements VueTransformerContext {
 			sourceMap: true
 		};
 	}
+
 	public error = (err: string | RollupError, pos?: number | { column: number; line: number } | undefined): void => {};
+
 	public resolve = (id: string): VueResolvedId | null => {
 		// serve sub-part requests (*?vue) as virtual modules
 		if (parseVueRequest(id).query.vue) {

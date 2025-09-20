@@ -1,7 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding, addStepBindingExp } from './binding-context';
+import { collectStepBinding, addStepBindingExp } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
@@ -76,14 +76,16 @@ function checkTag(tag: string): string {
 function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?: string, timeout?: number) {
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: '',
 				bindingType: flag,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				callsite: callSite,
@@ -116,7 +118,8 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 			if (tag) {
 				stepBinding.tags = checkTag(tag);
 			}
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};

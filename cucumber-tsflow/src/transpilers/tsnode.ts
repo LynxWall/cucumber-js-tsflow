@@ -1,4 +1,4 @@
-require('ts-node').register({
+require('ts-node-maintained').register({
 	compilerOptions: {
 		module: 'nodeNext',
 		target: 'es2022',

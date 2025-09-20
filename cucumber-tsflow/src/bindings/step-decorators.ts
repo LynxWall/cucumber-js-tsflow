@@ -1,7 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding, addStepBindingExp } from './binding-context';
+import { addStepBinding, addStepBindingExp, collectStepBinding } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.
@@ -14,14 +14,16 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 	const callsite = Callsite.capture();
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: stepPattern,
 				bindingType: StepBindingFlags.given,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				wrapperOption: wrapperOption,
@@ -48,7 +50,8 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 				callsite: callsite,
 				cucumberKey: shortUuid().new()
 			};
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};
@@ -67,14 +70,16 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: stepPattern,
 				bindingType: StepBindingFlags.when,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				wrapperOption: wrapperOption,
@@ -101,7 +106,8 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				callsite: callsite,
 				cucumberKey: shortUuid().new()
 			};
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};
@@ -120,14 +126,16 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 
 	if (global.experimentalDecorators) {
 		return <T>(target: any, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+			const stepFunction = descriptor?.value || target[propertyKey];
+
 			const stepBinding: StepBinding = {
 				stepPattern: stepPattern,
 				bindingType: StepBindingFlags.then,
 				classPrototype: target,
 				classPropertyKey: propertyKey,
-				stepFunction: target[propertyKey],
+				stepFunction,
 				stepIsStatic: false,
-				stepArgsLength: target[propertyKey].length,
+				stepArgsLength: stepFunction ? stepFunction.length : 0, // Safe access
 				tags: tag,
 				timeout: timeout,
 				wrapperOption: wrapperOption,
@@ -154,7 +162,8 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				callsite: callsite,
 				cucumberKey: shortUuid().new()
 			};
-			addStepBinding(context, stepBinding);
+
+			collectStepBinding(stepBinding);
 
 			return;
 		};

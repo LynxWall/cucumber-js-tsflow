@@ -1,6 +1,6 @@
 {
 	"esnode": {
-		"transpiler": "esnode",
+		"transpiler": "es-node",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": [
@@ -13,7 +13,7 @@
 		"tags": "@node-exp"
 	},
 	"tsnode": {
-		"transpiler": "tsnode",
+		"transpiler": "ts-node",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": [
@@ -22,6 +22,32 @@
 			"junitbamboo:../reports/tsnode-exp.xml"
 		],
 		"parallel": 1,
+		"experimentalDecorators": true,
+		"tags": "@node-exp"
+	},
+	"ts-node-esm": {
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"loader": ["ts-node-maintained/esm"],
+		"format": [
+			"behave:../reports/tsnodeesm.json",
+			"html:../reports/tsnodeesm.html",
+			"junitbamboo:../reports/tsnodeesm.xml"
+		],
+		"parallel": 1,
+		"experimentalDecorators": true,
+		"tags": "@node-exp"
+	},
+	"es-node-esm": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"format": [
+			"behave:../reports/tsnode-exp.json",
+			"html:../reports/tsnode-exp.html",
+			"junitbamboo:../reports/tsnode-exp.xml"
+		],
+		"parallel": 0,
 		"experimentalDecorators": true,
 		"tags": "@node-exp"
 	}

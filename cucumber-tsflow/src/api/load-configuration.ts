@@ -16,6 +16,7 @@ import GherkinManager from '../gherkin/gherkin-manager';
 import ansis from 'ansis';
 import { ITsFlowRunConfiguration } from '../runtime/types';
 import { Console } from 'console';
+import { join } from 'path';
 
 export interface ITsflowResolvedConfiguration {
 	/**
@@ -75,27 +76,71 @@ export const loadConfiguration = async (
 	if (original.experimentalDecorators === undefined) {
 		original.experimentalDecorators = false;
 	}
+
 	const experimentalDecorators = original.experimentalDecorators;
 	global.experimentalDecorators = experimentalDecorators;
+	process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(experimentalDecorators); // need to set here so can be accessed in mjs files
 
-	switch (original.transpiler) {
-		case 'esvue':
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esvue');
-			break;
-		case 'tsvue': {
-			const module = experimentalDecorators ? 'tsvue-exp' : 'tsvue';
-			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
-			break;
+	/**
+	 * Ensures JSDOM environment is initialized before any test files are loaded.
+	 * This adds the Vue-specific JSDOM setup to the beginning of Cucumber's require array,
+	 * establishing the DOM environment needed for Vue component testing.
+	 *
+	 * Must run before test execution begins (mise en place for Vue testing).
+	 */
+	const initJsDom = () => {
+		// Use require.resolve to get the absolute path
+		try {
+			const setupPath = require.resolve('@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-jsdom-setup');
+			original.require.unshift(setupPath);
+		} catch (e) {
+			// Fallback to relative path from lib directory
+			const setupPath = join(__dirname, '../../transpilers/esm/vue-jsdom-setup.mjs');
+			original.require.unshift(setupPath);
 		}
-		case 'tsnode': {
-			const module = experimentalDecorators ? 'tsnode-exp' : 'tsnode';
-			original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
-			break;
+	};
+
+	if (original.transpiler) {
+		switch (original.transpiler) {
+			case 'es-vue':
+				original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esvue');
+				break;
+			case 'ts-vue': {
+				const module = experimentalDecorators ? 'tsvue-exp' : 'tsvue';
+				original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
+				break;
+			}
+			case 'es-node': {
+				original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esnode');
+				break;
+			}
+			case 'ts-node': {
+				const module = experimentalDecorators ? 'tsnode-exp' : 'tsnode';
+				original.requireModule.push(`@lynxwall/cucumber-tsflow/lib/transpilers/${module}`);
+				break;
+			}
+			case 'ts-node-esm': {
+				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/tsnode-loader`); // per cucumber docs, we want to add this to the loader for esm
+				break;
+			}
+			case 'es-node-esm': {
+				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/esnode-loader`); // per cucumber docs, we want to add this to the loader for esm
+				break;
+			}
+			case 'ts-vue-esm': {
+				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-loader`); // per cucumber docs, we want to add this to the loader for esm
+				initJsDom();
+				break;
+			}
+			case 'es-vue-esm': {
+				original.loader.push(`@lynxwall/cucumber-tsflow/lib/transpilers/esm/esvue-loader`); // per cucumber docs, we want to add this to the loader for esm
+				initJsDom();
+				break;
+			}
+			default:
+				// default sets nothing -- this allows users to not set the transpiler & use their own loaders/transpilers
+				break;
 		}
-		default:
-			// defaulting to esnode
-			original.requireModule.push('@lynxwall/cucumber-tsflow/lib/transpilers/esnode');
-			break;
 	}
 	// set the snippet syntax
 	if (!original.formatOptions.snippetSyntax) {
@@ -160,6 +205,7 @@ export const loadConfiguration = async (
 
 	validateConfiguration(original, logger);
 	const runnable = await convertConfiguration(logger, original, env);
+
 	return {
 		useConfiguration: original,
 		runConfiguration: runnable

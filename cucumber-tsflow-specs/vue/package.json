@@ -2,7 +2,7 @@
 	"private": true,
 	"name": "cucumber-tsflow-vue",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "7.2.0",
+	"version": "7.3.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",
@@ -11,8 +11,8 @@
 		"vue": "^3.5.13"
 	},
 	"scripts": {
-		"test:es": "cucumber-tsflow -p esvue",
-		"test:ts": "cucumber-tsflow -p tsvue"
+		"test:tsnode": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue --> test:ts\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p tsvue",
+		"test:esbuild": "echo \"\" && echo \"========================================\" && echo \"Running: cucumber-tsflow-vue --> test:es\" && echo \"========================================\" && echo \"\" &&cucumber-tsflow -p esvue"
 	},
 	"devDependencies": {
 		"@lynxwall/cucumber-tsflow": "workspace:*",
@@ -20,8 +20,8 @@
 		"@types/node": "~22.13.10",
 		"@vue/test-utils": "~2.4.6",
 		"chai": "~5.2.0",
-		"ts-node": "~10.9.2",
+		"ts-node-maintained": "~10.9.6",
 		"tslib": "2.8.1",
-		"typescript": "~5.8.2"
+		"typescript": "~5.9.2"
 	}
 }

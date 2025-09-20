@@ -1,6 +1,6 @@
 {
 	"esvue": {
-		"transpiler": "esvue",
+		"transpiler": "es-vue",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": [
@@ -13,7 +13,7 @@
 		"parallel": 0
 	},
 	"tsvue": {
-		"transpiler": "tsvue",
+		"transpiler": "ts-vue",
 		"paths": ["../features/**/*.feature"],
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": [

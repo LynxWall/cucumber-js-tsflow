@@ -121,7 +121,6 @@ export class BindingRegistry {
 
 		if (!tagMap) {
 			tagMap = new Map<TagName, StepBinding[]>();
-
 			this._stepBindings.set(stepPattern, tagMap);
 		}
 
@@ -129,7 +128,6 @@ export class BindingRegistry {
 
 		if (!stepBindings) {
 			stepBindings = [];
-
 			tagMap.set(stepBinding.tags, stepBindings);
 		}
 
@@ -138,7 +136,6 @@ export class BindingRegistry {
 		}
 
 		// Index the step binding for the target
-
 		let targetBinding = this._classBindings.get(stepBinding.classPrototype);
 
 		if (!targetBinding) {
@@ -155,6 +152,19 @@ export class BindingRegistry {
 		}
 
 		function isSameStepBinding(a: StepBinding, b: StepBinding) {
+			// For hooks, we need to check the binding type and method name too
+			if (a.bindingType & StepBindingFlags.Hooks) {
+				return (
+					a.callsite.filename === b.callsite.filename &&
+					a.callsite.lineNumber === b.callsite.lineNumber &&
+					String(a.tags) === String(b.tags) &&
+					String(a.stepPattern) === String(b.stepPattern) &&
+					a.bindingType === b.bindingType &&
+					a.classPropertyKey === b.classPropertyKey
+				);
+			}
+
+			// For step definitions, the existing check is fine
 			return (
 				a.callsite.filename === b.callsite.filename &&
 				a.callsite.lineNumber === b.callsite.lineNumber &&
@@ -208,6 +218,7 @@ export class BindingRegistry {
 
 	public getStepBindingByCucumberKey(cucumberKey: string): StepBinding | undefined {
 		let result: StepBinding | undefined = undefined;
+
 		for (const [_, binding] of this._classBindings) {
 			for (const stepBinding of binding.stepBindings) {
 				if (stepBinding.cucumberKey === cucumberKey) {

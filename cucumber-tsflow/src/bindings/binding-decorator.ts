@@ -10,7 +10,7 @@ import {
 	When,
 	World
 } from '@cucumber/cucumber';
-import { getStepBindings, getStepBindingsExp } from './binding-context';
+import { getStepBindings, getStepBindingsExp, getCollectedBindings } from './binding-context';
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern } from './types';
@@ -51,10 +51,16 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 			// This will get all those bindings and then clear metadata for the next type that's loaded.
 			const allBindings: StepBinding[] = getStepBindingsExp();
 			allBindings.forEach(stepBinding => {
-				// register the binding
+				// For static methods, we need to set the classPrototype to the class itself, not the prototype
+				if (stepBinding.stepIsStatic) {
+					stepBinding.classPrototype = target;
+				} else {
+					stepBinding.classPrototype = target.prototype;
+				}
+
 				bindingRegistry.registerStepBinding(stepBinding);
 
-				// add the step binding to the binding registry
+				// Register with cucumber
 				addStepBinding(stepBinding);
 			});
 		};
@@ -76,6 +82,22 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 				// add the step binding to the binding registry
 				addStepBinding(stepBinding);
 			});
+
+			// Process pending step bindings after class is decorated
+			context.addInitializer(function () {
+				// Get all the collected bindings
+				const allBindings = getCollectedBindings();
+
+				allBindings.forEach(stepBinding => {
+					// Set the class prototype and register
+					stepBinding.classPrototype = target.prototype;
+					bindingRegistry.registerStepBinding(stepBinding);
+
+					// Register with cucumber - call the local addStepBinding function
+					addStepBinding(stepBinding);
+				});
+			});
+
 			return target;
 		};
 	}
@@ -126,6 +148,7 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 		const bindingRegistry = BindingRegistry.instance;
 
 		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
+
 		if (scenarioContext) {
 			const matchingStepBindings = bindingRegistry.getStepBindings(
 				stepBinding.stepPattern.toString(),
@@ -193,16 +216,26 @@ function bindStepDefinition(stepBinding: StepBinding): void {
  * @param stepBinding The [[StepBinding]] that represents a 'before', or 'after', step definition.
  */
 function bindHook(stepBinding: StepBinding): void {
-	// beforeAll and afterAll are called before and after all tests.
-	// these can be class instance or static functions
 	const globalHookFunction = function (this: any): any {
-		// if the function is static we need to add it to the associated class first
-		if (stepBinding.stepIsStatic && !stepBinding.classPrototype[stepBinding.classPropertyKey]) {
-			stepBinding.classPrototype[stepBinding.classPropertyKey] = stepBinding.stepFunction;
+		// Check if it's a static method
+		if (stepBinding.stepIsStatic || !stepBinding.classPrototype[stepBinding.classPropertyKey]) {
+			const constructor = stepBinding.classPrototype.constructor;
+
+			if (constructor && constructor[stepBinding.classPropertyKey]) {
+				return constructor[stepBinding.classPropertyKey].apply(constructor);
+			}
 		}
-		return stepBinding.classPrototype[stepBinding.classPropertyKey].apply() as () => void;
+
+		// For non-static methods
+		if (stepBinding.classPrototype[stepBinding.classPropertyKey]) {
+			return stepBinding.classPrototype[stepBinding.classPropertyKey].apply(stepBinding.classPrototype);
+		}
+
+		throw new Error(
+			`Method ${String(stepBinding.classPropertyKey)} not found on class ${stepBinding.classPrototype?.constructor?.name}`
+		);
 	};
-	// Main binding for all other steps
+	// Main binding for all other hooks (before, after, beforeStep, afterStep)
 	const hookFunction = function (this: any, arg: any): any {
 		const scenarioContext = global.messageCollector.getHookScenarioContext(arg);
 		if (scenarioContext) {

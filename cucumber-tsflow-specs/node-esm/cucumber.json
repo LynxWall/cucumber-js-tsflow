@@ -2,7 +2,7 @@
 	"tsnodeesm": {
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],
-		"loader": ["ts-node/esm"],
+		"loader": ["ts-node-maintained/esm"],
 		"format": [
 			"behave:../reports/tsnodeesm.json",
 			"html:../reports/tsnodeesm.html",

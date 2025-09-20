@@ -17,7 +17,7 @@ if (configLoaderResult.resultType === 'success') {
 }
 
 // Create ts-node service with our configuration
-const tsNode = require('ts-node');
+const tsNode = require('ts-node-maintained');
 
 const service = tsNode.create({
 	esm: true,

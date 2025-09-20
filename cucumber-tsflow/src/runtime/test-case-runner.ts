@@ -1,7 +1,7 @@
 import { getAmbiguousStepException } from '@cucumber/cucumber/lib/runtime/helpers';
 import { INewTestCaseRunnerOptions } from '@cucumber/cucumber/lib/runtime/test_case_runner';
 import AttachmentManager, { ICreateAttachment } from '@cucumber/cucumber/lib/runtime/attachment_manager/index';
-import StepRunner from '@cucumber/cucumber/lib/runtime/step_runner';
+import StepRunner, { RunStepResult } from '@cucumber/cucumber/lib/runtime/step_runner';
 import * as messages from '@cucumber/messages';
 import { getWorstTestStepResult, IdGenerator } from '@cucumber/messages';
 import { EventEmitter } from 'events';
@@ -125,7 +125,7 @@ export default class TestCaseRunner {
 		step: messages.PickleStep,
 		stepDefinition: IDefinition,
 		hookParameter?: ITestCaseHookParameter
-	): Promise<messages.TestStepResult> {
+	): Promise<RunStepResult> {
 		return await StepRunner.run({
 			defaultTimeout: this.supportCodeLibrary.defaultTimeout,
 			filterStackTraces: this.filterStackTraces,
@@ -271,7 +271,8 @@ export default class TestCaseRunner {
 		if (!scenarioContext) throw error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
 
-		return await this.invokeStep(null, hookDefinition, hookParameter);
+		const { result } = await this.invokeStep(null, hookDefinition, hookParameter);
+		return result;
 	}
 
 	async runStepHooks(
@@ -289,7 +290,8 @@ export default class TestCaseRunner {
 			result: stepResult!
 		};
 		for (const stepHookDefinition of stepHooks) {
-			stepHooksResult.push(await this.invokeStep(null, stepHookDefinition, hookParameter));
+			const { result } = await this.invokeStep(null, stepHookDefinition, hookParameter);
+			stepHooksResult.push(result);
 		}
 		return stepHooksResult;
 	}
@@ -331,7 +333,8 @@ export default class TestCaseRunner {
 		let stepResult;
 		let stepResults = await this.runStepHooks(this.getBeforeStepHookDefinitions(), pickleStep);
 		if (getWorstTestStepResult(stepResults).status !== messages.TestStepResultStatus.FAILED) {
-			stepResult = await this.invokeStep(pickleStep, stepDefinitions[0]);
+			const { result } = await this.invokeStep(pickleStep, stepDefinitions[0]);
+			stepResult = result;
 			stepResults.push(stepResult);
 		}
 		// run the after step hooks

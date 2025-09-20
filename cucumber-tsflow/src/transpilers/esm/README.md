@@ -2,17 +2,32 @@
 
 This directory contains transpiler configurations that enable cucumber-tsflow to work with ECMAScript Module (ESM) projects.
 
-## Overview
+## Overview 
 
 When your project uses ES modules (`"type": "module"` in package.json), you'll need to use one of the ESM transpilers provided by cucumber-tsflow. These transpilers are configured using the `transpiler` option in your cucumber configuration.
 
-_Note:_ if you just need ts-node/esm as a loader, you don't need a custom transpiler and can [follow the Cucumber ESM transpilation docs](https://github.com/cucumber/cucumber-js/blob/main/docs/transpiling.md#esm).
+_**Note**:_ if you just need ts-node/esm as a loader, you don't need a custom transpiler and can [follow the Cucumber ESM transpilation docs](https://github.com/cucumber/cucumber-js/blob/main/docs/transpiling.md#esm).
+
+### Node 22+ and ts-node
+
+Starting with Node 22 and up, the latest version of ts-node v10.9.2 is using a deprecated version of fs.Stats that will generate warnings in tests that are using ts-node. 
+
+`(node:27340) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.`
+
+The ts-node package has not been updated in over two years and there hasn't been any indication of future updates. As a result, many projects are switching to other options. However, there is a fork of ts-node that is focused on keeping the repo up-to-date by fixing deal breaker and annoying issues.
+
+[ts-node-maintained: TypeScript execution and REPL for node.js](https://github.com/thetutlage/ts-node-maintained)
+
+As a result, to resolve deprecated warnings, **cucumber-tsflow has been updated to use** **ts-node-maintained** v10.9.6 in the transpilers and loaders that are provided. In addition, all of the ts-node tests have been updated to use ts-node-maintained.
+
+Cucumber-tsflow has a set of tests that cover different node and Vue scenarios. These tests are executed using 16 variations of transpiler configurations, with a mix of serial and parallel tests, to cover all of the configurations that are supported.
+
 
 ## Available ESM Transpilers
 
 ### es-vue-esm
 
-Esbuild + Vue support for ESM projects.
+esbuild + Vue support for ESM projects.
 
 **When to use:** Testing Vue 3 SFCs when you want faster compilation with esbuild.
 
@@ -56,7 +71,7 @@ TypeScript + Vue support for ESM projects using ts-node.
 
 ## es-node-esm
 
-Esbuild support for ESM projects.
+esbuild support for ESM projects.
 
 **When to use:** Testing pure Node.js code when you want faster compilation.
 
@@ -86,13 +101,13 @@ Esbuild support for ESM projects.
 
 ## ts-node-esm
 
-TypeScript support for ESM projects using ts-node.
+TypeScript support for ESM projects using ts-node-maintained.
 
 **When to use:** Testing pure Node.js code in an ESM TypeScript project (no DOM needed).
 
 **Features:**
 
-- TypeScript compilation via ts-node/esm
+- TypeScript compilation via ts-node-maintained/esm
 - Full decorator support
 - Path mapping support
 - No DOM environment (lighter weight for non-UI tests)
@@ -187,7 +202,7 @@ CUCUMBER_ENABLE_VUE_STYLE=true npm test
    - ESM: Uses Node.js loader hooks (resolve, load, etc.)
 3. TypeScript Handling
    - CJS: Inline transpilation with configurable transpiler
-   - ESM: Delegates to ts-node/esm for TypeScript compilation
+   - ESM: Delegates to ts-node-maintained/esm for TypeScript compilation
 4. Configuration
    - CJS: Uses require option in cucumber.json
    - ESM: Uses loader option in cucumber.json
@@ -318,7 +333,7 @@ import { helper } from '@/utils/helper';   // Resolves to src/utils/helper.ts
 
 | CommonJS  | ESM Equivalent |
 | --------- | -------------- |
-| `ts-vue`  | `ts-vue-esm`   |
 | `es-vue`  | `es-vue-esm`   |
-| `ts-node` | `ts-node-esm`  |
+| `ts-vue`  | `ts-vue-esm`   |
 | `es-node` | `es-node-esm`  |
+| `ts-node` | `ts-node-esm`  |

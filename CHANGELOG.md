@@ -9,9 +9,18 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ## [7.3.0]
 
-Adds transpilers for ESM projects.
+### Added
 
-Read more about the [cucumber-tsflow ESM implementation](./cucumber-tsflow/src/transpilers//esm/README.md).
+- Transpilers for ESM projects. Read more about the [cucumber-tsflow ESM implementation](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/cucumber-tsflow/src/transpilers/esm/README.md).
+
+### Changed
+
+- Upgraded to Cucumber-JS 12.2.0
+- Upgraded to Typescript 5.9.2
+
+### Fixed
+
+- Deprecated warnings with Node 22+ and ts-node 10.9.2. Upgraded to [ts-node-maintained](https://github.com/thetutlage/ts-node-maintained) v10.9.6, which resolves the fs.Stats warning and fixes a couple of other bugs.
 
 ## [7.2.0]
 

@@ -1,7 +1,7 @@
 const hooks = require('require-extension-hooks');
 import VueTransformer from './vue-sfc';
 
-require('ts-node').register({
+require('ts-node-maintained').register({
 	transpileOnly: true,
 	transpiler: '@lynxwall/cucumber-tsflow/lib/transpilers/esbuild-transpiler'
 });

@@ -54,7 +54,7 @@ async function getTsLoader() {
 			// Without this, ts-node might ignore the tsconfig.json includes			process.env.TS_NODE_FILES = process.env.TS_NODE_FILES || 'true';
 
 			// Import ts-node's ESM loader
-			const tsNodeEsm = await import('ts-node/esm');
+			const tsNodeEsm = await import('ts-node-maintained/esm');
 			tsLoader = tsNodeEsm;
 		} catch (error) {
 			console.error('>>> vue-loader: Failed to load ts-node ESM loader:', error);

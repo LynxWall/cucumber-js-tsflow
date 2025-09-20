@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const tsNode = require('ts-node');
+const tsNode = require('ts-node-maintained');
 
 // Cache for different ts-node configurations
 const serviceCache = new Map();

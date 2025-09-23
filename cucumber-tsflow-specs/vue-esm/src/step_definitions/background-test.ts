@@ -1,6 +1,6 @@
 import { binding, given, when, then } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
-import { ScenarioContext } from '../fixtures/scenario-context';
+import { ScenarioContext } from '@fixtures/scenario-context';
 
 @binding([ScenarioContext])
 export default class BackgroundTest {

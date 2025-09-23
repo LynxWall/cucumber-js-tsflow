@@ -79,21 +79,57 @@ export async function resolveWithExtensions(specifier, parentURL, extensions = C
 	return null;
 }
 
-// TSConfig path mapping resolver
+const pathResolutionCache = new Map();
+
 export function resolveTsconfigPaths(specifier) {
+	// Fast path: skip what we know won't match
+	if (
+		specifier.startsWith('.') ||
+		specifier.startsWith('/') ||
+		specifier.startsWith('file:') ||
+		specifier.startsWith('node:')
+	) {
+		return null;
+	}
+
+	// Check cache
+	if (pathResolutionCache.has(specifier)) {
+		return pathResolutionCache.get(specifier);
+	}
+
 	const matchPath = initializeTsconfigPaths();
+	if (!matchPath) {
+		pathResolutionCache.set(specifier, null);
+		return null;
+	}
 
-	if (matchPath && !specifier.startsWith('.') && !specifier.startsWith('/') && !specifier.startsWith('file:')) {
-		const mapped = matchPath(specifier);
+	// Try direct match first
+	const mapped = matchPath(specifier);
+	if (mapped) {
+		const result = {
+			url: pathToFileURL(mapped).href,
+			shortCircuit: true
+		};
+		pathResolutionCache.set(specifier, result);
+		return result;
+	}
 
-		if (mapped) {
-			return {
-				url: pathToFileURL(mapped).href,
-				shortCircuit: true
-			};
+	// Try with extensions if no extension present
+	if (!path.extname(specifier)) {
+		for (const ext of ['.ts', '.js', '.mjs', '.vue']) {
+			const mappedWithExt = matchPath(specifier + ext);
+			if (mappedWithExt) {
+				const result = {
+					url: pathToFileURL(mappedWithExt).href,
+					shortCircuit: true
+				};
+				pathResolutionCache.set(specifier, result);
+				return result;
+			}
 		}
 	}
 
+	pathResolutionCache.set(specifier, null);
 	return null;
 }
 
@@ -118,6 +154,45 @@ export function shouldEnableVueStyle() {
 	);
 }
 
+async function transformImports(code, parentURL) {
+	// Match various import patterns
+	const importRegex =
+		/(?:import|export)\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+|type\s+\{[^}]*\}|type\s+\w+)\s+from\s+)?['"]([^'"]+)['"]/g;
+
+	const matches = [...code.matchAll(importRegex)];
+	let transformed = code;
+
+	for (const match of matches) {
+		const specifier = match[1];
+
+		// Skip if it's already a relative path or absolute URL
+		if (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('file:')) {
+			continue;
+		}
+
+		// Try to resolve with tsconfig paths
+		const resolved = resolveTsconfigPaths(specifier);
+		if (resolved) {
+			// Convert the resolved path to a relative import from the parent file
+			const parentDir = path.dirname(fileURLToPath(parentURL));
+			const resolvedPath = fileURLToPath(resolved.url);
+			let relativePath = path.relative(parentDir, resolvedPath).replace(/\\/g, '/');
+
+			// Ensure it starts with ./ or ../
+			if (!relativePath.startsWith('.')) {
+				relativePath = './' + relativePath;
+			}
+
+			// Replace the specifier in the import statement
+			const originalImport = match[0];
+			const newImport = originalImport.replace(specifier, relativePath);
+			transformed = transformed.replace(originalImport, newImport);
+		}
+	}
+
+	return transformed;
+}
+
 export async function loadVue(url, context, nextLoad) {
 	const { source } = await nextLoad(url, { ...context, format: 'module' });
 	const code = source.toString();
@@ -127,9 +202,12 @@ export async function loadVue(url, context, nextLoad) {
 		enableStyle: shouldEnableVueStyle()
 	});
 
+	// Transform imports to resolve path aliases
+	const transformed = await transformImports(compiled.code, url);
+
 	return {
 		format: 'module',
-		source: compiled.code,
+		source: transformed,
 		shortCircuit: true
 	};
 }

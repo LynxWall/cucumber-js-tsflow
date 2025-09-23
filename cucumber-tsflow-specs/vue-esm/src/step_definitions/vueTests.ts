@@ -4,6 +4,9 @@ import { binding, given, then, when } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
 import { RouterLinkStub, flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import { useText } from '@fixtures/use-text';
+
+const { headerText } = useText();
 
 @binding()
 export default class VueTestSteps {
@@ -33,6 +36,7 @@ export default class VueTestSteps {
 		expect(this.helloWrapper.text()).to.contain('4 x 3 = 12');
 		await this.helloWrapper.get('button').trigger('click');
 		expect(this.helloWrapper.text()).to.contain('4 x 4 = 16');
+		expect(this.helloWrapper.text()).to.contain(headerText);
 	}
 
 	@given('There is a valid Async Vue Component')

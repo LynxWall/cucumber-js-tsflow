@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.3.2]
+
+### Fixed
+
+- Fix ESM loaders to properly handle JSON imports with required import attributes
+
 ## [7.3.1]
 
 ### Fixed

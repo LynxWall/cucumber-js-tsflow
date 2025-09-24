@@ -12,5 +12,7 @@ Feature: Vue tests
 		When The Async component is mounted
 		Then The Async component should be testable
 
-
-
+	Scenario: Mount and test Vue component with Json
+		Given There is a valid Menu component
+		When The Menu component is mounted
+		Then The Menu component should be testable

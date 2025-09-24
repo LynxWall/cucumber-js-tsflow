@@ -1,0 +1,20 @@
+{
+	"menus": [
+		{
+			"name": "Home",
+			"items": [
+				{
+					"key": "0",
+					"label": "Home",
+					"icon": "i-fa6-solid-house",
+					"to": "/"
+				},
+				{
+					"key": "1",
+					"label": "Documents",
+					"icon": "i-prime-book"
+				}
+			]
+		}
+	]
+}

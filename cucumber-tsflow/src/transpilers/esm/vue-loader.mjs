@@ -37,8 +37,7 @@
  * preprocessor packages to be installed. Missing preprocessors will be skipped
  * with a warning rather than failing the compilation.
  */
-import path from 'path';
-import { ASSET_EXTENSIONS, resolveSpecifier, loadAsset, loadVue } from './loader-utils.mjs';
+import { resolveSpecifier, loadVue, handleCommonFileTypes } from './loader-utils.mjs';
 
 // Cache for the TypeScript loader
 let tsLoader;
@@ -65,11 +64,9 @@ async function getTsLoader() {
 }
 
 export async function load(url, context, nextLoad) {
-	// Handle asset files that Vue compiler turns into imports
-	const ext = path.extname(url).toLowerCase();
-	if (ASSET_EXTENSIONS.includes(ext)) {
-		return loadAsset(url);
-	}
+	// Check common file types first
+	const commonResult = await handleCommonFileTypes(url, context, nextLoad);
+	if (commonResult) return commonResult;
 
 	// Only process .vue files directly
 	if (url.endsWith('.vue')) {

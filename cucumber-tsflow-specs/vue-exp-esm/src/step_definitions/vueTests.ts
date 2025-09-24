@@ -1,9 +1,11 @@
 import AsyncWrapper from '../components/AsyncWrapper.vue';
 import Hello from '../components/Hello.vue';
+import Menu from '../components/Menu.vue';
 import { binding, given, then, when } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
 import { RouterLinkStub, flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import menu from '../fixtures/menu.json';
 
 @binding()
 export default class VueTestSteps {
@@ -58,5 +60,27 @@ export default class VueTestSteps {
 		await nextTick();
 		const text = this.asyncWrapper.text();
 		expect(text).to.contain('resolved');
+	}
+
+	@given('There is a valid Menu component')
+	g1(): any {
+		expect(Menu).to.exist;
+	}
+
+	@when('The Menu component is mounted')
+	async w2(): Promise<any> {
+		this.helloWrapper = mount(Menu, {
+			props: {
+				menuItems: menu.menus[0].items
+			}
+		});
+	}
+
+	@then('The Menu component should be testable')
+	async t1(): Promise<any> {
+		const label1 = menu.menus[0].items[0].label;
+		const label2 = menu.menus[0].items[1].label;
+		expect(this.helloWrapper.text()).to.contain(label1);
+		expect(this.helloWrapper.text()).to.contain(label2);
 	}
 }

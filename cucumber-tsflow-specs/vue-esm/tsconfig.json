@@ -18,6 +18,7 @@
 		"paths": { "@fixtures/*": ["./src/fixtures/*"] }
 	},
 	"include": ["./src/**/*.ts", "./src/**/*.vue", "./src/types/**/*.d.ts"],
+
 	"ts-node": {
 		"esm": true,
 		"experimentalSpecifierResolution": "node",

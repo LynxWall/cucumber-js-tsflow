@@ -212,6 +212,42 @@ export async function loadVue(url, context, nextLoad) {
 	};
 }
 
+// Common load handlers
+export async function loadJson(url, context, nextLoad) {
+	const result = await nextLoad(url, {
+		...context,
+		format: 'json',
+		importAttributes: { type: 'json' }
+	});
+
+	return {
+		...result,
+		format: 'json',
+		shortCircuit: true
+	};
+}
+
+// loader-utils.mjs - Add a simple common file handler
+export function handleCommonFileTypes(url, context, nextLoad, loaderName) {
+	// Handle assets
+	const ext = path.extname(url).toLowerCase();
+	if (ASSET_EXTENSIONS.includes(ext)) {
+		return loadAsset(url);
+	}
+
+	// Handle JSON
+	if (url.endsWith('.json')) {
+		try {
+			return loadJson(url, context, nextLoad);
+		} catch (error) {
+			console.error(`>>> ${loaderName}: Failed to compile ${url}:`, error);
+			throw new Error(`Failed to compile ${url}: ${error.message}`);
+		}
+	}
+
+	return null; // Not a common file type
+}
+
 /**
  * Resolves module specifiers with support for TypeScript paths, extensions, and more
  * @param {string} specifier - The module specifier to resolve
@@ -321,11 +357,9 @@ export function createEsbuildLoader(options = {}) {
 		},
 
 		load: async (url, context, nextLoad) => {
-			// Handle asset files
-			const ext = path.extname(url).toLowerCase();
-			if (ASSET_EXTENSIONS.includes(ext)) {
-				return loadAsset(url);
-			}
+			// Check common file types first
+			const commonResult = await handleCommonFileTypes(url, context, nextLoad);
+			if (commonResult) return commonResult;
 
 			// Handle Vue files if enabled
 			if (handleVue && url.endsWith('.vue')) {

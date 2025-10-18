@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.3.4]
+
+### Fixed
+
+- Fix calling defineParameterType to use supportCodeLibraryBuilder instance instead of the exported defineParameterType function. The exported function can be bound to a different supportCodeLibraryBuilder instance and causes errors when used.
+
 ## [7.3.3]
 
 ### Fixed

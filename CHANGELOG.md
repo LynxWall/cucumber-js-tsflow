@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.3.3]
+
+### Fixed
+
+- Fix reference to defineParameterType import in binding-decorator.ts. Needs to use supportCodeLibrary instance that's exported from index.ts.
+
 ## [7.3.2]
 
 ### Fixed

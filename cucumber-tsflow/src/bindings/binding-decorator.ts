@@ -44,7 +44,6 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 		return <T>(target: { new (...args: any[]): T }) => {
 			const bindingRegistry = BindingRegistry.instance;
 			bindingRegistry.registerContextTypesForClass(target.prototype, requiredContextTypes);
-			defineParameters();
 
 			// the class decorator is called last when decorators on a type are initialized. All other decorators
 			// are added to DecoratorContext.metadata before this is called.
@@ -68,7 +67,6 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 		return function classDecorator(target: Function, context: ClassDecoratorContext) {
 			const bindingRegistry = BindingRegistry.instance;
 			bindingRegistry.registerContextTypesForClass(target.prototype, requiredContextTypes);
-			defineParameters();
 
 			// the class decorator is called last when decorators on a type are initialized. All other decorators
 			// are added to DecoratorContext.metadata before this is called.
@@ -102,20 +100,6 @@ export function binding(requiredContextTypes?: ContextType[]): any {
 		};
 	}
 }
-
-/**
- * Called only once to register new parameters. This has to be
- * executed here during binding initialization for cucumber to
- * to use it when matching expressions. Attempting to add it
- * before the test run doesn't work
- */
-const defineParameters = _.once(() => {
-	defineParameterType({
-		name: 'boolean',
-		regexp: /true|false/,
-		transformer: s => (s === 'true' ? true : false)
-	});
-});
 
 /**
  * Common helper used to add StepBindings to the binding registry

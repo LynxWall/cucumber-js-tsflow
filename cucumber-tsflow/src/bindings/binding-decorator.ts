@@ -14,7 +14,7 @@ import { getStepBindings, getStepBindingsExp, getCollectedBindings } from './bin
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern } from './types';
-import { supportCodeLibraryBuilder } from '../index';
+import { defineParameterType } from '../index';
 import _ from 'underscore';
 
 interface WritableWorld extends World {
@@ -110,7 +110,7 @@ export function binding(requiredContextTypes?: ContextType[]): any {
  * before the test run doesn't work
  */
 const defineParameters = _.once(() => {
-	supportCodeLibraryBuilder.defineParameterType({
+	defineParameterType({
 		name: 'boolean',
 		regexp: /true|false/,
 		transformer: s => (s === 'true' ? true : false)

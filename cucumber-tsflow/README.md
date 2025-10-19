@@ -12,10 +12,6 @@ This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. 
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
 
-## Release Updates (7.4.0)
-
-This release shifts from importing @cumber/cumber as a dependency to making it a peer dependency. This update was necessary to avoid cucumber runtime instance conflicts when importing cucumber-tsflow into the companion VS Code extension. Importing @cucumber/cucumber as a peer dependency is also recommended in Cucumber.JS documentation.
-
 ## Release Updates (7.3.0)
 
 With this release, we've finally added support for ESM Modules. For details on the new transpilers/loaders please see: [cucumber-tsflow ESM implementation](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/cucumber-tsflow/src/transpilers/esm/README.md).

@@ -86,6 +86,14 @@ export class ChildProcessWorker {
 			importPaths,
 			loaders: supportCodeCoordinates.loaders
 		});
+
+		// Define the boolean type before loading any support code
+		supportCodeLibraryBuilder.defineParameterType({
+			name: 'boolean',
+			regexp: /true|false/,
+			transformer: s => (s === 'true' ? true : false)
+		});
+
 		// Load any require modules for CommonJS or loaders and imports for ESM
 		supportCodeCoordinates.requireModules.map(module => tryRequire(module));
 		requirePaths.map(module => tryRequire(module));

@@ -7,7 +7,7 @@ import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { makeRuntime } from '../runtime/make-runtime';
 import { initializeFormatters } from '@cucumber/cucumber/lib/api/formatters';
-import { getSupportCodeLibrary } from '@cucumber/cucumber/lib/api/support';
+import { getSupportCodeLibrary } from './support';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { getPicklesAndErrors } from '@cucumber/cucumber/lib/api/gherkin';
 import MessageCollector from '../runtime/message-collector';
@@ -19,6 +19,7 @@ import { BindingRegistry } from '../bindings/binding-registry';
 import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
 import ansis from 'ansis';
+import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
 
 export interface ITsFlowRunOptions extends IRunOptions {
 	runtime: ITsFlowRunOptionsRuntime;

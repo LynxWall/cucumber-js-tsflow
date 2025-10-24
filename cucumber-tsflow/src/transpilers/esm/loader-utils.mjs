@@ -108,6 +108,7 @@ export function resolveTsconfigPaths(specifier) {
 	if (mapped) {
 		const result = {
 			url: pathToFileURL(mapped).href,
+			format: 'module',
 			shortCircuit: true
 		};
 		pathResolutionCache.set(specifier, result);
@@ -121,6 +122,7 @@ export function resolveTsconfigPaths(specifier) {
 			if (mappedWithExt) {
 				const result = {
 					url: pathToFileURL(mappedWithExt).href,
+					format: 'module',
 					shortCircuit: true
 				};
 				pathResolutionCache.set(specifier, result);
@@ -272,7 +274,11 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 			// Try to resolve with extensions
 			const resolved = await resolveWithExtensions(mappedUrl, context.parentURL);
 			if (resolved) {
-				return { url: resolved, shortCircuit: true };
+				return {
+					url: resolved,
+					format: 'module',
+					shortCircuit: true
+				};
 			}
 		}
 
@@ -282,7 +288,8 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 	// 2. Handle TypeScript files if requested
 	if (handleTsFiles && tsNodeHooks && (specifier.endsWith('.ts') || specifier.endsWith('.tsx'))) {
 		try {
-			return await tsNodeHooks.resolve(specifier, context, nextResolve);
+			const resolved = await tsNodeHooks.resolve(specifier, context, nextResolve);
+			return { ...resolved, format: 'module' };
 		} catch (error) {
 			// Fall through to extension resolution
 		}
@@ -295,7 +302,11 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 		if (!hasExtension && context.parentURL) {
 			const resolved = await resolveWithExtensions(specifier, context.parentURL);
 			if (resolved) {
-				return { url: resolved, shortCircuit: true };
+				return {
+					url: resolved,
+					format: 'module',
+					shortCircuit: true
+				};
 			}
 		}
 	}

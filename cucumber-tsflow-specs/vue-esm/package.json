@@ -3,7 +3,7 @@
 	"private": true,
 	"name": "cucumber-tsflow-vue-esm",
 	"description": "Specification for 'cucumber-tsflow'.",
-	"version": "7.4.1",
+	"version": "7.5.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"main": "./index.js",

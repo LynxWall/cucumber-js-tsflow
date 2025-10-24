@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.5.0]
+
+### Changed
+
+- Switched @cucumber/cucumber back to a dependency since Cucumber-TsFlow includes most of the same exports as @cucumber/cucumber with many of them overridden.
+
+### Fixed
+
+- Add format: module to all load paths for esm loaders to resolve an issue where the loaders would default back to cjs.
+
 ## [7.4.1]
 
 ### Fixed
@@ -17,7 +27,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Changed
 
-- Switched @cumber/cumber to a peerDependency to avoid runtime instance conflicts when using cucumber-tsflow from the companion VS Code extension.
+- Switched @cucumber/cucumber to a peerDependency to avoid runtime instance conflicts when using cucumber-tsflow from the companion VS Code extension.
 
 ## [7.3.4]
 

@@ -840,8 +840,6 @@ __metadata:
     tslib: 2.8.1
     typescript: ~5.9.2
     underscore: ~1.13.7
-  peerDependencies:
-    "@cucumber/cucumber": ">=12.2.0 <13.0.0"
   bin:
     cucumber-tsflow: bin/cucumber-tsflow.js
   languageName: unknown

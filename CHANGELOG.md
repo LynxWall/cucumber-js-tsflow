@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.5.2]
+
+### Added
+
+- Added publish.yml GitHub workflow action, which was required by deprecation of token keys.
+
 ## [7.5.1]
 
 ### Changed

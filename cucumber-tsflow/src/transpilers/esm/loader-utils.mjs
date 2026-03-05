@@ -4,6 +4,12 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
 import { createEsmHooks } from './tsnode-service.mjs';
+import { createLogger } from '../../utils/tsflow-logger.mjs';
+
+// Create loggers for different concerns
+const loggerUtils = createLogger('loader-utils');
+const loggerResolve = createLogger('resolve');
+const loggerLoad = createLogger('load');
 
 // Shared asset extensions
 export const ASSET_EXTENSIONS = [
@@ -26,8 +32,15 @@ let matchPath;
 export function initializeTsconfigPaths() {
 	if (matchPath) return matchPath;
 
+	loggerUtils.checkpoint('Initializing tsconfig paths');
+
 	try {
 		const configLoaderResult = loadConfig(process.cwd());
+		loggerUtils.checkpoint('tsconfig loadConfig result', {
+			resultType: configLoaderResult.resultType,
+			cwd: process.cwd()
+		});
+
 		if (configLoaderResult.resultType === 'success') {
 			matchPath = createMatchPath(
 				configLoaderResult.absoluteBaseUrl,
@@ -35,11 +48,15 @@ export function initializeTsconfigPaths() {
 				configLoaderResult.mainFields,
 				configLoaderResult.addMatchAll
 			);
+			loggerUtils.checkpoint('tsconfig paths initialized', {
+				baseUrl: configLoaderResult.absoluteBaseUrl,
+				pathCount: Object.keys(configLoaderResult.paths || {}).length
+			});
 		} else {
-			console.warn('>>> loader: no tsconfig paths found');
+			loggerUtils.warn('No tsconfig paths found', { result: configLoaderResult });
 		}
 	} catch (error) {
-		console.error('>>> loader: failed to load tsconfig paths:', error);
+		loggerUtils.error('Failed to load tsconfig paths', error);
 	}
 
 	return matchPath;
@@ -47,23 +64,30 @@ export function initializeTsconfigPaths() {
 
 // Extension resolution helper
 export async function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
+	loggerResolve.checkpoint('resolveWithExtensions', { specifier, parentURL });
+
 	let resolvedPath;
 
-	if (specifier.startsWith('file://')) {
-		// Handle file:// URLs
-		resolvedPath = fileURLToPath(specifier);
-	} else {
-		// Handle relative paths
-		const parentPath = fileURLToPath(parentURL);
-		const parentDir = path.dirname(parentPath);
-		resolvedPath = path.resolve(parentDir, specifier);
+	try {
+		if (specifier.startsWith('file://')) {
+			resolvedPath = fileURLToPath(specifier);
+		} else {
+			const parentPath = fileURLToPath(parentURL);
+			const parentDir = path.dirname(parentPath);
+			resolvedPath = path.resolve(parentDir, specifier);
+		}
+		loggerResolve.checkpoint('Resolved base path', { resolvedPath });
+	} catch (error) {
+		loggerResolve.error('Failed to resolve base path', error, { specifier, parentURL });
+		return null;
 	}
+
 	// Try various extensions
 	for (const ext of extensions) {
 		const fullPath = resolvedPath + ext;
-
 		if (existsSync(fullPath)) {
 			const result = pathToFileURL(fullPath).href;
+			loggerResolve.checkpoint('Resolved with extension', { ext, result });
 			return result;
 		}
 	}
@@ -72,10 +96,13 @@ export async function resolveWithExtensions(specifier, parentURL, extensions = C
 	for (const ext of extensions) {
 		const indexPath = path.join(resolvedPath, 'index' + ext);
 		if (existsSync(indexPath)) {
-			return pathToFileURL(indexPath).href;
+			const result = pathToFileURL(indexPath).href;
+			loggerResolve.checkpoint('Resolved as index file', { ext, result });
+			return result;
 		}
 	}
 
+	loggerResolve.checkpoint('No resolution found', { specifier });
 	return null;
 }
 
@@ -97,6 +124,8 @@ export function resolveTsconfigPaths(specifier) {
 		return pathResolutionCache.get(specifier);
 	}
 
+	loggerResolve.checkpoint('resolveTsconfigPaths', { specifier });
+
 	const matchPath = initializeTsconfigPaths();
 	if (!matchPath) {
 		pathResolutionCache.set(specifier, null);
@@ -104,29 +133,43 @@ export function resolveTsconfigPaths(specifier) {
 	}
 
 	// Try direct match first
-	const mapped = matchPath(specifier);
-	if (mapped) {
-		const result = {
-			url: pathToFileURL(mapped).href,
-			format: 'module',
-			shortCircuit: true
-		};
-		pathResolutionCache.set(specifier, result);
-		return result;
+	try {
+		const mapped = matchPath(specifier);
+		if (mapped) {
+			const result = {
+				url: pathToFileURL(mapped).href,
+				format: 'module',
+				shortCircuit: true
+			};
+			loggerResolve.checkpoint('tsconfig path matched', { specifier, mapped });
+			pathResolutionCache.set(specifier, result);
+			return result;
+		}
+	} catch (error) {
+		loggerResolve.error('matchPath failed', error, { specifier });
 	}
 
 	// Try with extensions if no extension present
 	if (!path.extname(specifier)) {
 		for (const ext of ['.ts', '.js', '.mjs', '.vue']) {
-			const mappedWithExt = matchPath(specifier + ext);
-			if (mappedWithExt) {
-				const result = {
-					url: pathToFileURL(mappedWithExt).href,
-					format: 'module',
-					shortCircuit: true
-				};
-				pathResolutionCache.set(specifier, result);
-				return result;
+			try {
+				const mappedWithExt = matchPath(specifier + ext);
+				if (mappedWithExt) {
+					const result = {
+						url: pathToFileURL(mappedWithExt).href,
+						format: 'module',
+						shortCircuit: true
+					};
+					loggerResolve.checkpoint('tsconfig path matched with extension', {
+						specifier,
+						ext,
+						mapped: mappedWithExt
+					});
+					pathResolutionCache.set(specifier, result);
+					return result;
+				}
+			} catch (error) {
+				loggerResolve.error('matchPath with extension failed', error, { specifier, ext });
 			}
 		}
 	}
@@ -137,6 +180,7 @@ export function resolveTsconfigPaths(specifier) {
 
 // Asset loader helper
 export function loadAsset(url) {
+	loggerLoad.checkpoint('loadAsset', { url });
 	const filePath = fileURLToPath(url);
 	return {
 		format: 'module',
@@ -147,65 +191,98 @@ export function loadAsset(url) {
 
 // Vue style configuration helper
 export function shouldEnableVueStyle() {
-	// Check if styles should be enabled (from environment or config)
-	// Vue styles are disabled by default. However, user could enable them when importing from compiled libraries
-	return (
+	const enabled =
 		global.enableVueStyle === true ||
 		process.env.CUCUMBER_ENABLE_VUE_STYLE === 'true' ||
-		process.env.enableVueStyle === 'true'
-	);
+		process.env.enableVueStyle === 'true';
+	loggerUtils.checkpoint('shouldEnableVueStyle', { enabled });
+	return enabled;
 }
 
 async function transformImports(code, parentURL) {
-	// Match various import patterns
-	const importRegex =
-		/(?:import|export)\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+|type\s+\{[^}]*\}|type\s+\w+)\s+from\s+)?['"]([^'"]+)['"]/g;
+	loggerLoad.checkpoint('transformImports', { parentURL, codeLength: code?.length });
 
-	const matches = [...code.matchAll(importRegex)];
-	let transformed = code;
+	try {
+		const importRegex =
+			/(?:import|export)\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+|type\s+\{[^}]*\}|type\s+\w+)\s+from\s+)?['"]([^'"]+)['"]/g;
 
-	for (const match of matches) {
-		const specifier = match[1];
+		const matches = [...code.matchAll(importRegex)];
+		loggerLoad.checkpoint('Found import matches', { count: matches.length });
 
-		// Skip if it's already a relative path or absolute URL
-		if (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('file:')) {
-			continue;
-		}
+		let transformed = code;
 
-		// Try to resolve with tsconfig paths
-		const resolved = resolveTsconfigPaths(specifier);
-		if (resolved) {
-			// Convert the resolved path to a relative import from the parent file
-			const parentDir = path.dirname(fileURLToPath(parentURL));
-			const resolvedPath = fileURLToPath(resolved.url);
-			let relativePath = path.relative(parentDir, resolvedPath).replace(/\\/g, '/');
+		for (const match of matches) {
+			const specifier = match[1];
 
-			// Ensure it starts with ./ or ../
-			if (!relativePath.startsWith('.')) {
-				relativePath = './' + relativePath;
+			if (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('file:')) {
+				continue;
 			}
 
-			// Replace the specifier in the import statement
-			const originalImport = match[0];
-			const newImport = originalImport.replace(specifier, relativePath);
-			transformed = transformed.replace(originalImport, newImport);
-		}
-	}
+			const resolved = resolveTsconfigPaths(specifier);
+			if (resolved) {
+				try {
+					const parentDir = path.dirname(fileURLToPath(parentURL));
+					const resolvedPath = fileURLToPath(resolved.url);
+					let relativePath = path.relative(parentDir, resolvedPath).replace(/\\/g, '/');
 
-	return transformed;
+					if (!relativePath.startsWith('.')) {
+						relativePath = './' + relativePath;
+					}
+
+					const originalImport = match[0];
+					const newImport = originalImport.replace(specifier, relativePath);
+					transformed = transformed.replace(originalImport, newImport);
+					loggerLoad.checkpoint('Transformed import', { from: specifier, to: relativePath });
+				} catch (error) {
+					loggerLoad.error('Failed to transform import', error, { specifier });
+				}
+			}
+		}
+
+		return transformed;
+	} catch (error) {
+		loggerLoad.error('transformImports failed', error, { parentURL });
+		throw new Error(`Failed to transform imports: ${error.message}`, { cause: error });
+	}
 }
 
 export async function loadVue(url, context, nextLoad) {
-	const { source } = await nextLoad(url, { ...context, format: 'module' });
+	loggerLoad.checkpoint('loadVue', { url });
+
+	let source;
+	try {
+		loggerLoad.checkpoint('Loading Vue source');
+		const result = await nextLoad(url, { ...context, format: 'module' });
+		source = result.source;
+		loggerLoad.checkpoint('Vue source loaded', { sourceLength: source?.toString()?.length });
+	} catch (error) {
+		loggerLoad.error('Failed to load Vue source', error, { url });
+		throw new Error(`Failed to load Vue source from ${url}: ${error.message}`, { cause: error });
+	}
+
 	const code = source.toString();
 	const filename = fileURLToPath(url);
 
-	const compiled = compileVueSFC(code, filename, {
-		enableStyle: shouldEnableVueStyle()
-	});
+	let compiled;
+	try {
+		loggerLoad.checkpoint('Compiling Vue SFC', { filename, enableStyle: shouldEnableVueStyle() });
+		compiled = compileVueSFC(code, filename, {
+			enableStyle: shouldEnableVueStyle()
+		});
+		loggerLoad.checkpoint('Vue SFC compiled', { outputLength: compiled?.code?.length });
+	} catch (error) {
+		loggerLoad.error('Vue SFC compilation failed', error, { filename });
+		throw new Error(`Failed to compile Vue SFC ${filename}: ${error.message}`, { cause: error });
+	}
 
-	// Transform imports to resolve path aliases
-	const transformed = await transformImports(compiled.code, url);
+	let transformed;
+	try {
+		transformed = await transformImports(compiled.code, url);
+		loggerLoad.checkpoint('Vue imports transformed');
+	} catch (error) {
+		loggerLoad.error('Failed to transform Vue imports', error, { url });
+		throw new Error(`Failed to transform imports in ${url}: ${error.message}`, { cause: error });
+	}
 
 	return {
 		format: 'module',
@@ -216,82 +293,84 @@ export async function loadVue(url, context, nextLoad) {
 
 // Common load handlers
 export async function loadJson(url, context, nextLoad) {
-	const result = await nextLoad(url, {
-		...context,
-		format: 'json',
-		importAttributes: { type: 'json' }
-	});
+	loggerLoad.checkpoint('loadJson', { url });
 
-	return {
-		...result,
-		format: 'json',
-		shortCircuit: true
-	};
+	try {
+		const result = await nextLoad(url, {
+			...context,
+			format: 'json',
+			importAttributes: { type: 'json' }
+		});
+
+		return {
+			...result,
+			format: 'json',
+			shortCircuit: true
+		};
+	} catch (error) {
+		loggerLoad.error('loadJson failed', error, { url });
+		throw new Error(`Failed to load JSON ${url}: ${error.message}`, { cause: error });
+	}
 }
 
-// loader-utils.mjs - Add a simple common file handler
-export function handleCommonFileTypes(url, context, nextLoad, loaderName) {
-	// Handle assets
+export function handleCommonFileTypes(url, context, nextLoad, loaderName = 'loader') {
 	const ext = path.extname(url).toLowerCase();
+
 	if (ASSET_EXTENSIONS.includes(ext)) {
+		loggerLoad.checkpoint('Handling asset', { url, ext });
 		return loadAsset(url);
 	}
 
-	// Handle JSON
 	if (url.endsWith('.json')) {
+		loggerLoad.checkpoint('Handling JSON', { url });
 		try {
 			return loadJson(url, context, nextLoad);
 		} catch (error) {
-			console.error(`>>> ${loaderName}: Failed to compile ${url}:`, error);
-			throw new Error(`Failed to compile ${url}: ${error.message}`);
+			loggerLoad.error(`Failed to compile ${url}`, error);
+			throw new Error(`Failed to compile ${url}: ${error.message}`, { cause: error });
 		}
 	}
 
-	return null; // Not a common file type
+	return null;
 }
 
-/**
- * Resolves module specifiers with support for TypeScript paths, extensions, and more
- * @param {string} specifier - The module specifier to resolve
- * @param {object} context - The loader context
- * @param {object} options - Resolution options
- * @param {string} options.logPrefix - Prefix for log messages
- * @param {boolean} options.checkExtensions - Whether to try adding extensions
- * @param {boolean} options.handleTsFiles - Whether to delegate .ts files to ts-node
- * @param {object} options.tsNodeHooks - The ts-node hooks (if handleTsFiles is true)
- * @param {function} options.nextResolve - The next resolver in the chain
- * @returns {Promise<object|null>} The resolution result or null
- */
 export async function resolveSpecifier(specifier, context, options = {}) {
 	const { checkExtensions = true, handleTsFiles = false, tsNodeHooks = null, nextResolve } = options;
 
-	// 1. Handle TypeScript path mappings first
-	const mappedResult = resolveTsconfigPaths(specifier);
-	if (mappedResult) {
-		// Check if the mapped result needs extension resolution
-		const mappedUrl = mappedResult.url;
-		if (checkExtensions && !path.extname(mappedUrl)) {
-			// Try to resolve with extensions
-			const resolved = await resolveWithExtensions(mappedUrl, context.parentURL);
-			if (resolved) {
-				return {
-					url: resolved,
-					format: 'module',
-					shortCircuit: true
-				};
-			}
-		}
+	loggerResolve.checkpoint('resolveSpecifier', { specifier, checkExtensions, handleTsFiles });
 
-		return mappedResult;
+	// 1. Handle TypeScript path mappings first
+	try {
+		const mappedResult = resolveTsconfigPaths(specifier);
+		if (mappedResult) {
+			const mappedUrl = mappedResult.url;
+			if (checkExtensions && !path.extname(mappedUrl)) {
+				const resolved = await resolveWithExtensions(mappedUrl, context.parentURL);
+				if (resolved) {
+					loggerResolve.checkpoint('Resolved via tsconfig paths + extension', { specifier, resolved });
+					return {
+						url: resolved,
+						format: 'module',
+						shortCircuit: true
+					};
+				}
+			}
+
+			loggerResolve.checkpoint('Resolved via tsconfig paths', { specifier, url: mappedResult.url });
+			return mappedResult;
+		}
+	} catch (error) {
+		loggerResolve.error('tsconfig path resolution failed', error, { specifier });
 	}
 
 	// 2. Handle TypeScript files if requested
 	if (handleTsFiles && tsNodeHooks && (specifier.endsWith('.ts') || specifier.endsWith('.tsx'))) {
 		try {
+			loggerResolve.checkpoint('Delegating .ts to ts-node hooks', { specifier });
 			const resolved = await tsNodeHooks.resolve(specifier, context, nextResolve);
 			return { ...resolved, format: 'module' };
 		} catch (error) {
-			// Fall through to extension resolution
+			loggerResolve.checkpoint('ts-node resolution failed, falling through', { specifier, error: error.message });
 		}
 	}
 
@@ -300,18 +379,23 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 		const hasExtension = path.extname(specifier) !== '';
 
 		if (!hasExtension && context.parentURL) {
-			const resolved = await resolveWithExtensions(specifier, context.parentURL);
-			if (resolved) {
-				return {
-					url: resolved,
-					format: 'module',
-					shortCircuit: true
-				};
+			try {
+				const resolved = await resolveWithExtensions(specifier, context.parentURL);
+				if (resolved) {
+					loggerResolve.checkpoint('Resolved with extension', { specifier, resolved });
+					return {
+						url: resolved,
+						format: 'module',
+						shortCircuit: true
+					};
+				}
+			} catch (error) {
+				loggerResolve.error('Extension resolution failed', error, { specifier });
 			}
 		}
 	}
 
-	// 4. No resolution found
+	loggerResolve.checkpoint('No resolution found', { specifier });
 	return null;
 }
 
@@ -319,25 +403,36 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 const esmHooksCache = new Map();
 
 export async function getEsmHooks(transpilerPath, loaderName = 'loader') {
+	loggerUtils.checkpoint('getEsmHooks', { transpilerPath, loaderName });
+
 	if (esmHooksCache.has(transpilerPath)) {
+		loggerUtils.checkpoint('Returning cached ESM hooks', { transpilerPath });
 		return esmHooksCache.get(transpilerPath);
 	}
 
 	try {
+		loggerUtils.checkpoint('Creating ESM hooks', { transpilerPath });
 		const hooks = await createEsmHooks(transpilerPath);
 		esmHooksCache.set(transpilerPath, hooks);
+		loggerUtils.checkpoint('ESM hooks created and cached');
 		return hooks;
 	} catch (error) {
-		console.error(`>>> ${loaderName}: Failed to load ESM hooks with transpiler ${transpilerPath}:`, error);
-		throw error;
+		loggerUtils.error(`Failed to load ESM hooks with transpiler ${transpilerPath}`, error);
+		throw new Error(`Failed to load ESM hooks: ${error.message}`, { cause: error });
 	}
 }
 
 // Helper to create hook exports
 export function createHookExports(getHooksFn) {
 	return {
-		getFormat: async (...args) => (await getHooksFn()).getFormat(...args),
-		transformSource: async (...args) => (await getHooksFn()).transformSource(...args)
+		getFormat: async (...args) => {
+			loggerUtils.checkpoint('getFormat called', { url: args[0] });
+			return (await getHooksFn()).getFormat(...args);
+		},
+		transformSource: async (...args) => {
+			loggerUtils.checkpoint('transformSource called', { url: args[1]?.url });
+			return (await getHooksFn()).transformSource(...args);
+		}
 	};
 }
 
@@ -349,51 +444,82 @@ export function createEsbuildLoader(options = {}) {
 		transpilerPath = '@lynxwall/cucumber-tsflow/lib/transpilers/esm/esbuild-transpiler-cjs'
 	} = options;
 
+	loggerUtils.checkpoint('createEsbuildLoader', { loaderName, handleVue, transpilerPath });
+
+	// Create a loader-specific logger
+	const loaderLogger = createLogger(loaderName);
+
 	const getLocalEsmHooks = () => getEsmHooks(transpilerPath, loaderName);
 
 	return {
 		resolve: async (specifier, context, nextResolve) => {
-			const resolved = await resolveSpecifier(specifier, context, {
-				checkExtensions: true,
-				handleTsFiles: true,
-				tsNodeHooks: await getLocalEsmHooks(),
-				nextResolve
-			});
+			loaderLogger.checkpoint('resolve', { specifier, parentURL: context?.parentURL });
 
-			if (resolved) {
-				return resolved;
+			try {
+				const resolved = await resolveSpecifier(specifier, context, {
+					checkExtensions: true,
+					handleTsFiles: true,
+					tsNodeHooks: await getLocalEsmHooks(),
+					nextResolve
+				});
+
+				if (resolved) {
+					loaderLogger.checkpoint('resolve success', { specifier, url: resolved.url });
+					return resolved;
+				}
+
+				loaderLogger.checkpoint('resolve delegating to nextResolve', { specifier });
+				return nextResolve(specifier, context);
+			} catch (error) {
+				loaderLogger.error('resolve failed', error, { specifier });
+				throw new Error(`Failed to resolve ${specifier}: ${error.message}`, { cause: error });
 			}
-
-			return nextResolve(specifier, context);
 		},
 
 		load: async (url, context, nextLoad) => {
-			// Check common file types first
-			const commonResult = await handleCommonFileTypes(url, context, nextLoad);
-			if (commonResult) return commonResult;
+			loaderLogger.checkpoint('load', { url });
 
-			// Handle Vue files if enabled
-			if (handleVue && url.endsWith('.vue')) {
-				try {
-					return loadVue(url, context, nextLoad);
-				} catch (error) {
-					console.error(`>>> ${loaderName}: Failed to compile Vue SFC ${url}:`, error);
-					throw new Error(`Failed to compile Vue SFC ${url}: ${error.message}`);
+			try {
+				// Check common file types first
+				const commonResult = await handleCommonFileTypes(url, context, nextLoad, loaderName);
+				if (commonResult) {
+					loaderLogger.checkpoint('load handled as common file type', { url });
+					return commonResult;
 				}
-			}
 
-			// Handle TypeScript files
-			if (url.endsWith('.ts') || url.endsWith('.tsx')) {
-				try {
-					const tsNodeHooks = await getLocalEsmHooks();
-					return tsNodeHooks.load(url, context, nextLoad);
-				} catch (error) {
-					console.error(`>>> ${loaderName}: ts-node failed for ${url}:`, error);
-					throw error;
+				// Handle Vue files if enabled
+				if (handleVue && url.endsWith('.vue')) {
+					loaderLogger.checkpoint('load handling Vue file', { url });
+					try {
+						const result = await loadVue(url, context, nextLoad);
+						loaderLogger.checkpoint('Vue file loaded successfully', { url });
+						return result;
+					} catch (error) {
+						loaderLogger.error(`Failed to compile Vue SFC ${url}`, error);
+						throw new Error(`Failed to compile Vue SFC ${url}: ${error.message}`, { cause: error });
+					}
 				}
-			}
 
-			return nextLoad(url, context);
+				// Handle TypeScript files
+				if (url.endsWith('.ts') || url.endsWith('.tsx')) {
+					loaderLogger.checkpoint('load handling TypeScript file', { url });
+					try {
+						const tsNodeHooks = await getLocalEsmHooks();
+						const result = await tsNodeHooks.load(url, context, nextLoad);
+						loaderLogger.checkpoint('TypeScript file loaded successfully', { url });
+						return result;
+					} catch (error) {
+						loaderLogger.error(`ts-node failed for ${url}`, error);
+						throw error;
+					}
+				}
+
+				loaderLogger.checkpoint('load delegating to nextLoad', { url });
+				return nextLoad(url, context);
+			} catch (error) {
+				loaderLogger.error('load failed', error, { url });
+				throw error;
+			}
 		},
 
 		...createHookExports(getLocalEsmHooks)

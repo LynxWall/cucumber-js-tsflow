@@ -1,35 +1,50 @@
-/* This is one rare place where we're fine to use process/console directly,
- * but other code abstracts those to remain composable and testable. */
 import Cli, { ICliRunResult } from './index';
 import { validateNodeEngineVersion } from '@cucumber/cucumber/lib/cli/validate_node_engine_version';
-function logErrorMessageAndExit(message: string): void {
-	console.error(message);
-	process.exit(1);
-}
+import { createLogger } from '../utils/tsflow-logger';
+
+const logger = createLogger('run');
 
 export default async function run(): Promise<void> {
+	logger.checkpoint('Starting cucumber-tsflow', {
+		nodeVersion: process.version,
+		cwd: process.cwd()
+	});
+
 	validateNodeEngineVersion(
 		process.version,
 		(error: any) => {
-			console.error(error);
+			logger.error('Node version validation failed', error);
 			process.exit(1);
 		},
 		console.warn
 	);
 
-	const cli = new Cli({
-		argv: process.argv,
-		cwd: process.cwd(),
-		stdout: process.stdout,
-		stderr: process.stderr,
-		env: process.env
-	});
+	logger.checkpoint('Node version validated');
+
+	let cli: Cli;
+	try {
+		logger.checkpoint('Constructing CLI');
+		cli = new Cli({
+			argv: process.argv,
+			cwd: process.cwd(),
+			stdout: process.stdout,
+			stderr: process.stderr,
+			env: process.env
+		});
+		logger.checkpoint('CLI constructed');
+	} catch (error: any) {
+		logger.error('Failed during CLI initialization', error);
+		process.exit(1);
+	}
 
 	let result!: ICliRunResult;
 	try {
+		logger.checkpoint('Running CLI');
 		result = await cli.run();
+		logger.checkpoint('CLI run completed', { success: result.success });
 	} catch (error: any) {
-		logErrorMessageAndExit(error);
+		logger.error('Failed during CLI execution', error);
+		process.exit(1);
 	}
 
 	// 0 = success, 2 = failed or has pending, undefined or unknown steps
@@ -38,6 +53,8 @@ export default async function run(): Promise<void> {
 		// 3 = implemented tests have failed
 		exitCode = 3;
 	}
+
+	logger.checkpoint('Exiting', { exitCode });
 
 	if (result.shouldExitImmediately) {
 		process.exit(exitCode);

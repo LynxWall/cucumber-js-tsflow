@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0 # avoid shallow clone (required by Nerbank GitVersioning)
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
       - run: yarn
       - run: yarn build

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.5.5]
+
+### Fixed
+
+- Copilot fixed package.json URL to match repo so that publishing checks would pass.
+
 ## [7.5.4]
 
 ### Fixed

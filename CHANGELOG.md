@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.6.0]
+
+### Added
+
+- New `reloadSupport` API function that performs an incremental reload of the `ISupportCodeLibrary`. Evicts only the changed files (and their dependents) from Node's `require.cache`, then re-requires all support files. Unchanged files resolve instantly from cache; only changed files pay the transpilation and evaluation cost. This is intended for use by persistent worker processes (e.g. the `cucumber-tsflow-vscode` VS Code extension) to keep workers warm between test runs.
+
 ## [7.5.5]
 
 ### Fixed

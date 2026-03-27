@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.6.0]
+
+### Added
+
+- New `reloadSupport` API function that performs an incremental reload of the `ISupportCodeLibrary`. Evicts only the changed files (and their dependents) from Node's `require.cache`, then re-requires all support files. Unchanged files resolve instantly from cache; only changed files pay the transpilation and evaluation cost. This is intended for use by persistent worker processes (e.g. the `cucumber-tsflow-vscode` VS Code extension) to keep workers warm between test runs.
+
+### Changed
+
+- Consolidated the Vue SFC compiler into a single shared implementation (`vue-sfc-compiler.ts`). The previous CJS path used a Vite-plugin-derived implementation spread across 9 files (`vue-sfc/` directory); it is now replaced by one shared function that both the CJS transpilers and ESM loaders delegate to. The `format` option (`'cjs' | 'esm'`) controls the esbuild output format, keeping identical runtime behaviour across all transpiler configurations.
+- Disabled `transformAssetUrls` in `compileTemplate` and `compileScript` to prevent binary asset files (e.g. `.jpg`) from being rewritten into `import`/`require` calls. Unit tests do not need asset URL resolution; leaving asset `src` attributes as literal strings is the correct behaviour when mounting components with `@vue/test-utils`.
+
+### Fixed
+
+- **Duplicate "Using Experimental Decorators." console message** — the message was logged once in `load-configuration.ts` and again in `run-cucumber.ts`. The duplicate in `load-configuration.ts` has been removed.
+
+### Removed
+
+- `rollup` runtime dependency — was only used by the now-deleted `vue-sfc/types.ts` for `RollupError`/`RollupLog` types.
+- `@rollup/pluginutils` dev dependency — was only used by the now-deleted `vue-sfc/index.ts` for `createFilter`.
+
 ## [7.5.5]
 
 ### Fixed

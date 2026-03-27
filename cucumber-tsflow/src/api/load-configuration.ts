@@ -143,9 +143,6 @@ export const loadConfiguration = async (
 	process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(experimentalDecorators);
 
 	logger.checkpoint('Experimental decorators configured', { experimentalDecorators });
-	if (experimentalDecorators) {
-		consoleLogger.log(ansis.cyanBright('Using Experimental Decorators.'));
-	}
 
 	/**
 	 * Ensures JSDOM environment is initialized before any test files are loaded.

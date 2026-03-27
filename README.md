@@ -12,6 +12,22 @@ This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. 
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
 
+## Release Updates (7.6.0)
+
+This release adds a new API function for incremental support-code reloading and consolidates the internal Vue SFC compiler.
+
+### `reloadSupport` API
+
+- **`reloadSupport(options, changedPaths, environment?)`** — evicts only the changed files (and their dependents) from Node's `require.cache`, then re-requires all support files. Unchanged files resolve instantly from transpiler cache; only changed files pay the full compilation cost. Pass an empty `changedPaths` array to evict and reload all support modules.
+- Designed for use by persistent worker processes such as the companion [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=lynxwall.cucumber-tsflow-vscode), which can call `reloadSupport` when a step file is saved instead of doing a full `loadSupport` on every run.
+
+### Vue SFC compiler consolidation
+
+- The CJS Vue SFC compiler (previously a 9-file Vite-plugin-derived implementation in `vue-sfc/`) has been replaced by a single shared `vue-sfc-compiler.ts` that both the CJS transpilers and the ESM loaders delegate to.
+- Removed the `rollup` and `@rollup/pluginutils` dependencies, which were only used by the old CJS implementation.
+- Fixed a bug where image assets referenced in Vue templates (e.g. `<img src="...">`) caused a `SyntaxError: Invalid or unexpected token` in CJS mode. Asset URL transforms are now disabled — `src` attributes remain as literal strings, which is the correct behaviour for unit testing Vue components with `@vue/test-utils`.
+- Fixed duplicate **"Using Experimental Decorators."** console message that appeared twice when `experimentalDecorators: true` was set.
+
 ## Release Updates (7.3.0)
 
 With this release, we've finally added support for ESM Modules. For details on the new transpilers/loaders please see: [cucumber-tsflow ESM implementation](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/cucumber-tsflow/src/transpilers/esm/README.md).
@@ -437,7 +453,7 @@ In the table above:
 
 **NOTE:** When using Vue transpilers **jsdom** is also loaded globally to support loading and testing Vue SFC components.
 
-##### Using the transpiler configuration option
+#### Using the transpiler configuration option
 
 When configuring cucumber to execute tests you can specify which transpiler to use with the `transpiler` configuration option as shown below:
 
@@ -449,7 +465,7 @@ When configuring cucumber to execute tests you can specify which transpiler to u
 }
 ```
 
-##### Alternate without using the transpiler option
+#### Alternate without using the transpiler option
 
 You can also use the `requireModule` parameter to configure a transpiler. The following example shows how to configure cucumber to use the `esvue` transpiler with the `requireModule` option.
 
@@ -467,7 +483,7 @@ The new `debugFile` configuration option allows you to specify a .ts file with s
 
 If using VSCode to edit your project the following launch configurations can be used:
 
-##### Debug All
+#### Debug All
 
 ```json
 {
@@ -488,7 +504,7 @@ If using VSCode to edit your project the following launch configurations can be 
 }
 ```
 
-##### Debug Feature
+#### Debug Feature
 
 ```json
 {
@@ -756,7 +772,7 @@ Each scenario in a feature will get a new instance of the _Context_ object when 
   - Context classes now support an `initialize()` function that can be defined synchronous or asynchronous. The `initialize()` function is called after the `BeforeAll` hook and before any other hooks or steps. This provides the ability to initialize a scenario context before any tests are executed with support for async operations.
   - Context classes have always supported a `dispose()` function for cleanup. However, with latest updates the `dispose()` function can be defined synchronously or asynchronously.
 - versions >= 6.4.0
-  - The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumber.js-world-object).
+  - The current Cucumber World object is now available as a constructor parameter on all classes defined for Context Injection. For more information on the World object see: [Access to Cucumber.js World object](#access-to-cucumberjs-world-object).
 
 ### Using Context Injection
 

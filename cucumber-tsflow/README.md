@@ -14,10 +14,19 @@ This fork has been drastically modified from the original and will eventually be
 
 ## Release Updates (7.6.0)
 
-This release adds a new `reloadSupport` API function for incremental support-code reloading:
+This release adds a new API function for incremental support-code reloading and consolidates the internal Vue SFC compiler.
+
+### `reloadSupport` API
 
 - **`reloadSupport(options, changedPaths, environment?)`** — evicts only the changed files (and their dependents) from Node's `require.cache`, then re-requires all support files. Unchanged files resolve instantly from transpiler cache; only changed files pay the full compilation cost. Pass an empty `changedPaths` array to evict and reload all support modules.
 - Designed for use by persistent worker processes such as the companion [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=lynxwall.cucumber-tsflow-vscode), which can call `reloadSupport` when a step file is saved instead of doing a full `loadSupport` on every run.
+
+### Vue SFC compiler consolidation
+
+- The CJS Vue SFC compiler (previously a 9-file Vite-plugin-derived implementation in `vue-sfc/`) has been replaced by a single shared `vue-sfc-compiler.ts` that both the CJS transpilers and the ESM loaders delegate to.
+- Removed the `rollup` and `@rollup/pluginutils` dependencies, which were only used by the old CJS implementation.
+- Fixed a bug where image assets referenced in Vue templates (e.g. `<img src="...">`) caused a `SyntaxError: Invalid or unexpected token` in CJS mode. Asset URL transforms are now disabled — `src` attributes remain as literal strings, which is the correct behaviour for unit testing Vue components with `@vue/test-utils`.
+- Fixed duplicate **"Using Experimental Decorators."** console message that appeared twice when `experimentalDecorators: true` was set.
 
 ## Release Updates (7.3.0)
 
@@ -444,7 +453,7 @@ In the table above:
 
 **NOTE:** When using Vue transpilers **jsdom** is also loaded globally to support loading and testing Vue SFC components.
 
-##### Using the transpiler configuration option
+#### Using the transpiler configuration option
 
 When configuring cucumber to execute tests you can specify which transpiler to use with the `transpiler` configuration option as shown below:
 
@@ -456,7 +465,7 @@ When configuring cucumber to execute tests you can specify which transpiler to u
 }
 ```
 
-##### Alternate without using the transpiler option
+#### Alternate without using the transpiler option
 
 You can also use the `requireModule` parameter to configure a transpiler. The following example shows how to configure cucumber to use the `esvue` transpiler with the `requireModule` option.
 
@@ -474,7 +483,7 @@ The new `debugFile` configuration option allows you to specify a .ts file with s
 
 If using VSCode to edit your project the following launch configurations can be used:
 
-##### Debug All
+#### Debug All
 
 ```json
 {
@@ -495,7 +504,7 @@ If using VSCode to edit your project the following launch configurations can be 
 }
 ```
 
-##### Debug Feature
+#### Debug Feature
 
 ```json
 {

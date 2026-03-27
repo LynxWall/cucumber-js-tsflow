@@ -2,6 +2,7 @@
 	"typescript.tsdk": "node_modules\\typescript\\lib",
 	"npm.packageManager": "yarn",
 	"eslint.packageManager": "yarn",
+	"debug.javascript.autoAttachFilter": "disabled",
 	"editor.formatOnPaste": true,
 	"editor.formatOnSave": true,
 	"editor.formatOnType": false,

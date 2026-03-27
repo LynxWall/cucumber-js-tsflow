@@ -1,5 +1,5 @@
 const hooks = require('require-extension-hooks');
-import VueTransformer from './vue-sfc';
+import { compileVueSFC } from './vue-sfc-compiler';
 
 require('ts-node-maintained').register({
 	compilerOptions: {
@@ -25,14 +25,13 @@ require('jsdom-global')();
 
 hooks('vue').push(function (params: any) {
 	try {
-		const transformer = new VueTransformer({
-			exclude: ['(?:^|/)node_modules/', '(?:^|/)cucumber-tsflow/lib/']
+		const result = compileVueSFC(params.content, params.filename, {
+			enableStyle: !!(global as any).enableVueStyle,
+			format: 'cjs'
 		});
-		const transformResult = transformer.transformCode(params.content, params.filename);
-
-		return transformResult.code;
+		return result.code;
 	} catch (err) {
-		console.log(err);
+		console.error(err);
 	}
 	return params.content;
 });

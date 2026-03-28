@@ -7,6 +7,7 @@ import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/ind
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
 import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
 import { FinalizeCommand, RunCommand, WorkerToCoordinatorEvent } from '@cucumber/cucumber/lib/runtime/parallel/types';
+import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
 import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime } from '../types';
 
 const runWorkerPath = path.resolve(__dirname, 'run-worker');
@@ -40,10 +41,12 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 	private readonly workers: Record<string, ManagedWorker> = {};
 
 	constructor(
+		private readonly testRunStartedId: string,
 		private readonly environment: IRunEnvironment,
 		private readonly logger: ILogger,
 		private readonly eventBroadcaster: EventEmitter,
 		private readonly options: ITsFlowRunOptionsRuntime,
+		private readonly snippetOptions: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>,
 		private readonly supportCodeLibrary: SupportCodeLibrary,
 		private readonly coordinates: ISourcesCoordinates
 	) {}
@@ -111,11 +114,15 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 
 		worker.process.send({
 			type: 'INITIALIZE',
+			testRunStartedId: this.testRunStartedId,
+			snippetOptions: this.snippetOptions,
 			supportCodeCoordinates: this.supportCodeLibrary.originalCoordinates,
 			supportCodeIds: {
 				stepDefinitionIds: this.supportCodeLibrary.stepDefinitions.map(s => s.id),
 				beforeTestCaseHookDefinitionIds: this.supportCodeLibrary.beforeTestCaseHookDefinitions.map(h => h.id),
-				afterTestCaseHookDefinitionIds: this.supportCodeLibrary.afterTestCaseHookDefinitions.map(h => h.id)
+				afterTestCaseHookDefinitionIds: this.supportCodeLibrary.afterTestCaseHookDefinitions.map(h => h.id),
+				beforeTestRunHookDefinitionIds: this.supportCodeLibrary.beforeTestRunHookDefinitions.map(h => h.id),
+				afterTestRunHookDefinitionIds: this.supportCodeLibrary.afterTestRunHookDefinitions.map(h => h.id)
 			},
 			options: this.options,
 			messageData: messageData

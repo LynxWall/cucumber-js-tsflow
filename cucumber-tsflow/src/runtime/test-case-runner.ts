@@ -1,6 +1,9 @@
 import { getAmbiguousStepException } from '@cucumber/cucumber/lib/runtime/helpers';
-import { INewTestCaseRunnerOptions } from '@cucumber/cucumber/lib/runtime/test_case_runner';
+import type { INewTestCaseRunnerOptions as ICucumberTestCaseRunnerOptions } from '@cucumber/cucumber/lib/runtime/test_case_runner';
 import AttachmentManager, { ICreateAttachment } from '@cucumber/cucumber/lib/runtime/attachment_manager/index';
+
+/** Local options interface — omits snippetBuilder which our runner doesn't use */
+type INewTestCaseRunnerOptions = Omit<ICucumberTestCaseRunnerOptions, 'snippetBuilder'>;
 import StepRunner, { RunStepResult } from '@cucumber/cucumber/lib/runtime/step_runner';
 import * as messages from '@cucumber/messages';
 import { getWorstTestStepResult, IdGenerator } from '@cucumber/messages';

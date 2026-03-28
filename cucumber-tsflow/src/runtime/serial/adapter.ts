@@ -11,6 +11,7 @@ export class InProcessAdapter implements RuntimeAdapter {
 	private failing: boolean = false;
 
 	constructor(
+		_testRunStartedId: string,
 		eventBroadcaster: EventEmitter,
 		newId: IdGenerator.NewId,
 		options: RuntimeOptions,

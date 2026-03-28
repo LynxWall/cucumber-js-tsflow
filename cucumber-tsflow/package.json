@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
-	"description": "Provides 'specflow' like bindings for CucumberJS 12.2.0 in TypeScript 5.9+.",
-	"version": "7.6.0",
+	"description": "Provides 'specflow' like bindings for CucumberJS 12.7.0 in TypeScript 5.9+.",
+	"version": "7.7.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"keywords": [
@@ -56,8 +56,11 @@
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",
+	"engines": {
+		"node": ">=22.0.0"
+	},
 	"dependencies": {
-		"@cucumber/cucumber": "~12.2.0",
+		"@cucumber/cucumber": "~12.7.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
 		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",

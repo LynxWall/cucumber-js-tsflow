@@ -6,7 +6,8 @@
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
 		"experimentalDecorators": true,
 		"tags": "@vue-exp",
-		"parallel": 0
+		"parallel": 0,
+		"parallelLoad": true
 	},
 	"esvue-esm": {
 		"transpiler": "es-vue-esm",
@@ -15,6 +16,7 @@
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
 		"experimentalDecorators": true,
 		"tags": "@vue-exp",
-		"parallel": 0
+		"parallel": 0,
+		"parallelLoad": true
 	}
 }

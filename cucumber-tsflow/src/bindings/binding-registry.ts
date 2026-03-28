@@ -1,6 +1,6 @@
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import _ from 'underscore';
-import { StepBinding, StepBindingFlags } from './step-binding';
+import { StepBinding, StepBindingFlags, SerializableBindingDescriptor, serializeBinding } from './step-binding';
 import { ContextType, StepPattern, TagName } from './types';
 import logger from '../utils/logger';
 
@@ -298,6 +298,85 @@ export class BindingRegistry {
 		});
 		return library;
 	};
+
+	/**
+	 * Export all registered step bindings as structured-clone-safe descriptors.
+	 * Used by loader-workers to send binding metadata back to the main thread.
+	 *
+	 * @returns An array of [[SerializableBindingDescriptor]].
+	 */
+	public toDescriptors(): SerializableBindingDescriptor[] {
+		const descriptors: SerializableBindingDescriptor[] = [];
+		for (const [, binding] of this._classBindings) {
+			for (const stepBinding of binding.stepBindings) {
+				descriptors.push(serializeBinding(stepBinding));
+			}
+		}
+		return descriptors;
+	}
+
+	/**
+	 * Remove all step bindings that originated from a given source file.
+	 * This supports delta-aware reload — bindings from changed files are purged
+	 * before re-loading so stale entries don't accumulate.
+	 *
+	 * @param filename Absolute path to the source file whose bindings should be removed.
+	 */
+	public removeBindingsForFile(filename: string): void {
+		// Remove from _stepBindings index
+		for (const [pattern, tagMap] of this._stepBindings) {
+			for (const [tag, bindings] of tagMap) {
+				const filtered = bindings.filter(b => b.callsite.filename !== filename);
+				if (filtered.length === 0) {
+					tagMap.delete(tag);
+				} else {
+					tagMap.set(tag, filtered);
+				}
+			}
+			if (tagMap.size === 0) {
+				this._stepBindings.delete(pattern);
+			}
+		}
+
+		// Remove from _classBindings index
+		for (const [proto, classBinding] of this._classBindings) {
+			classBinding.stepBindings = classBinding.stepBindings.filter(b => b.callsite.filename !== filename);
+			if (classBinding.stepBindings.length === 0 && classBinding.contextTypes.length === 0) {
+				this._classBindings.delete(proto);
+			}
+		}
+	}
+
+	/**
+	 * Check whether a binding with the given cucumberKey is already registered.
+	 *
+	 * @param cucumberKey The unique key to check.
+	 * @returns true if a binding with that key exists.
+	 */
+	public hasBindingForKey(cucumberKey: string): boolean {
+		for (const [, binding] of this._classBindings) {
+			if (binding.stepBindings.some(b => b.cucumberKey === cucumberKey)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Collect the unique set of source filenames from all registered bindings.
+	 * Useful for comparing what was loaded in a worker versus what exists on the main thread.
+	 *
+	 * @returns A Set of absolute file paths.
+	 */
+	public getDescriptorSourceFiles(): Set<string> {
+		const files = new Set<string>();
+		for (const [, binding] of this._classBindings) {
+			for (const stepBinding of binding.stepBindings) {
+				files.add(stepBinding.callsite.filename);
+			}
+		}
+		return files;
+	}
 
 	/**
 	 * Maps an array of tag names to an array of associated step bindings.

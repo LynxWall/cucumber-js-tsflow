@@ -1,7 +1,7 @@
 import { Envelope, IdGenerator, ParseError } from '@cucumber/messages';
 import { EventEmitter } from 'events';
 import { EventDataCollector } from '@cucumber/cucumber/lib/formatter/helpers/index';
-import { emitMetaMessage, emitSupportCodeMessages } from '@cucumber/cucumber/lib/cli/helpers';
+import { emitMetaMessage, emitSupportCodeMessages } from '@cucumber/cucumber/lib/api/emit_support_code_messages';
 import { IRunOptions, IRunResult } from '@cucumber/cucumber/lib/api/types';
 import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -20,6 +20,10 @@ import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
 import ansis from 'ansis';
 import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
+import { parallelPreload } from './parallel-loader';
+import { createLogger } from '../utils/tsflow-logger';
+
+const runLogger = createLogger('run-cucumber');
 
 export interface ITsFlowRunOptions extends IRunOptions {
 	runtime: ITsFlowRunOptionsRuntime;
@@ -95,15 +99,46 @@ Running from: ${__dirname}
 	let supportCodeLibrary =
 		'originalCoordinates' in options.support
 			? (options.support as SupportCodeLibrary)
-			: await getSupportCodeLibrary({
-					logger,
-					cwd,
-					newId,
-					requirePaths,
-					requireModules: supportCoordinates.requireModules,
-					importPaths,
-					loaders: supportCoordinates.loaders
-				});
+			: await (async () => {
+					// Parallel preload phase: warm transpiler caches in worker threads
+					if (options.runtime.parallelLoad) {
+						runLogger.checkpoint('Running parallel preload phase');
+						consoleLogger.info(ansis.cyanBright('Pre-warming transpiler caches in parallel...\n'));
+						try {
+							const result = await parallelPreload({
+								requirePaths,
+								importPaths,
+								requireModules: supportCoordinates.requireModules,
+								loaders: supportCoordinates.loaders,
+								experimentalDecorators: options.runtime.experimentalDecorators,
+								threadCount: options.runtime.parallelLoad
+							});
+							runLogger.checkpoint('Parallel preload completed', {
+								descriptors: result.descriptors.length,
+								files: result.loadedFiles.length,
+								durationMs: result.durationMs
+							});
+							consoleLogger.info(
+								ansis.cyanBright(
+									`Parallel preload completed in ${result.durationMs}ms ` +
+										`(${result.loadedFiles.length} files, ${result.descriptors.length} bindings)\n`
+								)
+							);
+						} catch (err: any) {
+							runLogger.error('Parallel preload failed, falling back to serial load', err);
+						}
+					}
+
+					return getSupportCodeLibrary({
+						logger,
+						cwd,
+						newId,
+						requirePaths,
+						requireModules: supportCoordinates.requireModules,
+						importPaths,
+						loaders: supportCoordinates.loaders
+					});
+				})();
 
 	// Set support to the updated step and hook definitions
 	// in the supportCodeLibrary. We also need to initialize originalCoordinates

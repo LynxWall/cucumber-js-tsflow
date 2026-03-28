@@ -107,6 +107,12 @@ export function binding(requiredContextTypes?: ContextType[]): any {
  * @returns
  */
 function addStepBinding(stepBinding: StepBinding): void {
+	// In loader-worker threads, skip Cucumber registration — we only need
+	// the BindingRegistry populated for descriptor extraction.
+	if (global.__LOADER_WORKER) {
+		return;
+	}
+
 	if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
 		let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
 		if (stepBindingFlags === undefined) {

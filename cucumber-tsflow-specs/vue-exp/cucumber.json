@@ -10,7 +10,8 @@
 		],
 		"experimentalDecorators": true,
 		"tags": "@vue-exp",
-		"parallel": 0
+		"parallel": 0,
+		"parallelLoad": true
 	},
 	"tsvue": {
 		"transpiler": "ts-vue",
@@ -23,6 +24,7 @@
 		],
 		"experimentalDecorators": true,
 		"tags": "@vue-exp",
-		"parallel": 0
+		"parallel": 0,
+		"parallelLoad": true
 	}
 }

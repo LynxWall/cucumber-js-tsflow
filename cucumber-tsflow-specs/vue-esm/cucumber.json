@@ -5,7 +5,8 @@
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
 		"tags": "@vue",
-		"parallel": 0
+		"parallel": 0,
+		"parallelLoad": true
 	},
 	"esvue-esm": {
 		"transpiler": "es-vue-esm",
@@ -13,6 +14,7 @@
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": [["behave", "../reports/esvue.json"], "html:../reports/esvue.html", "junitbamboo:../reports/esvue.xml"],
 		"tags": "@vue",
-		"parallel": 0
+		"parallel": 0,
+		"parallelLoad": true
 	}
 }

@@ -70,4 +70,56 @@ export interface StepBinding {
 	wrapperOption?: any;
 }
 
+/**
+ * A structured-clone-safe summary of a StepBinding.
+ * Omits classPrototype (a live object reference) and stepFunction
+ * (not needed at runtime — the binding decorator creates a replacement closure).
+ * Used to transfer binding metadata from loader-worker threads to the main thread.
+ */
+export interface SerializableBindingDescriptor {
+	/** Source file and line where the binding was declared */
+	callsite: { filename: string; lineNumber: number };
+	/** Property key on the class (always converted to string for serialization) */
+	classPropertyKey: string;
+	/** Unique key used to correlate with Cucumber definitions */
+	cucumberKey: string;
+	/** The step binding type flags */
+	bindingType: StepBindingFlags;
+	/** Step pattern serialized as a string (RegExp.toString() or literal) */
+	stepPattern: string;
+	/** Whether the target method is static */
+	stepIsStatic: boolean;
+	/** Number of arguments the step function expects */
+	stepArgsLength: number;
+	/** Optional tag expression */
+	tags?: string;
+	/** Optional timeout in ms */
+	timeout?: number;
+	/** Optional wrapper options (must be JSON-serializable) */
+	wrapperOption?: any;
+}
+
+/**
+ * Convert a live StepBinding to a structured-clone-safe descriptor.
+ * This strips classPrototype and stepFunction, serializes RegExp patterns,
+ * and converts symbol keys to strings.
+ */
+export function serializeBinding(binding: StepBinding): SerializableBindingDescriptor {
+	return {
+		callsite: {
+			filename: binding.callsite.filename,
+			lineNumber: binding.callsite.lineNumber
+		},
+		classPropertyKey: String(binding.classPropertyKey),
+		cucumberKey: binding.cucumberKey,
+		bindingType: binding.bindingType,
+		stepPattern: binding.stepPattern ? binding.stepPattern.toString() : '',
+		stepIsStatic: binding.stepIsStatic,
+		stepArgsLength: binding.stepArgsLength,
+		tags: binding.tags,
+		timeout: binding.timeout,
+		wrapperOption: binding.wrapperOption
+	};
+}
+
 export { StepBindingFlags } from './types';

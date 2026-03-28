@@ -8,6 +8,7 @@ import { Runtime } from '@cucumber/cucumber/lib/runtime/index';
 
 export class Coordinator implements Runtime {
 	constructor(
+		private testRunStartedId: string,
 		private eventBroadcaster: EventEmitter,
 		private newId: IdGenerator.NewId,
 		private sourcedPickles: ReadonlyArray<SourcedPickle>,
@@ -16,7 +17,7 @@ export class Coordinator implements Runtime {
 	) {}
 
 	async run(): Promise<boolean> {
-		const testRunStartedId = this.newId();
+		const testRunStartedId = this.testRunStartedId;
 
 		this.eventBroadcaster.emit('envelope', {
 			testRunStarted: {

@@ -9,6 +9,12 @@
  * The __LOADER_WORKER global flag causes the binding decorator to skip
  * Cucumber step/hook registration — only BindingRegistry population occurs.
  */
+
+// Shim 'window' for libraries that expect a browser environment in worker threads
+if (typeof globalThis.window === 'undefined') {
+	(globalThis as Record<string, unknown>).window = globalThis;
+}
+
 import { parentPort, workerData } from 'node:worker_threads';
 import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';

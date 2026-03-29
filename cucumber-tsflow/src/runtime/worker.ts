@@ -6,7 +6,6 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import TestCaseRunner from './test-case-runner';
 import { retriesForPickle, shouldCauseFailure } from '@cucumber/cucumber/lib/runtime/helpers';
 import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/index';
-import { timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch';
 
 /** Result of running a single test-run hook */
 export interface RunHookResult {

@@ -19,7 +19,6 @@ import { BindingRegistry } from '../bindings/binding-registry';
 import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
 import ansis from 'ansis';
-import { supportCodeLibraryBuilder } from '@cucumber/cucumber';
 import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
 

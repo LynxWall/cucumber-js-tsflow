@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.7.1]
+
+### Fixed
+
+- **`window` shim in parallel loader worker** — worker threads now shim `globalThis.window` before loading any support-code files, preventing `window is not defined` errors thrown by libraries that assume a browser environment at import time.
+
+### Removed
+
+- Unused imports: `defineParameterType` from `binding-decorator.ts`, `supportCodeLibraryBuilder` from `run-cucumber.ts`, `addStepBinding` from `step-decorators.ts`, `timestamp` from `worker.ts`.
+
 ## [7.7.0]
 
 ### Added

@@ -1,7 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import shortUuid from 'short-uuid';
-import { addStepBinding, addStepBindingExp, collectStepBinding } from './binding-context';
+import { addStepBindingExp, collectStepBinding } from './binding-context';
 
 /**
  * A method decorator that marks the associated function as a 'Given' step.

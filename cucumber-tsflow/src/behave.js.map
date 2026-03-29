@@ -1,1 +1,0 @@
-{"version":3,"file":"behave.js","sourceRoot":"","sources":["behave.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA,0EAA4D;AAE5D,MAAM,CAAC,OAAO,GAAG,MAAM,CAAC","sourcesContent":["import * as behave from './formatter/behave-json-formatter';\r\n\r\nmodule.exports = behave;\r\n"]}

@@ -1,1 +1,0 @@
-{"version":3,"file":"snippet.js","sourceRoot":"","sources":["snippet.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA,0GAA4F;AAE5F,MAAM,CAAC,OAAO,GAAG,OAAO,CAAC","sourcesContent":["import * as snippet from './formatter/step-definition-snippit-syntax/tsflow-snippet-syntax';\r\n\r\nmodule.exports = snippet;\r\n"]}

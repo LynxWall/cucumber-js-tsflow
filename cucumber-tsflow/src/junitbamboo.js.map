@@ -1,1 +1,0 @@
-{"version":3,"file":"junitbamboo.js","sourceRoot":"","sources":["junitbamboo.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA,gFAAkE;AAElE,MAAM,CAAC,OAAO,GAAG,WAAW,CAAC","sourcesContent":["import * as junitbamboo from './formatter/junit-bamboo-formatter';\r\n\r\nmodule.exports = junitbamboo;\r\n"]}

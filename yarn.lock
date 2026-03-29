@@ -792,7 +792,6 @@ __metadata:
     "@types/lodash.merge": ~4.6.9
     "@types/node": ~22.13.10
     "@types/source-map-support": ~0.5.10
-    "@types/underscore": ~1.13.0
     ansis: ~3.17.0
     commander: ^10.0.1
     debug: ^4.4.3
@@ -813,7 +812,6 @@ __metadata:
     tsconfig-paths: ~4.2.0
     tslib: 2.8.1
     typescript: ~5.9.2
-    underscore: ~1.13.7
   bin:
     cucumber-tsflow: bin/cucumber-tsflow.js
   languageName: unknown
@@ -1009,13 +1007,6 @@ __metadata:
   version: 4.0.5
   resolution: "@types/tough-cookie@npm:4.0.5"
   checksum: f19409d0190b179331586365912920d192733112a195e870c7f18d20ac8adb7ad0b0ff69dad430dba8bc2be09593453a719cfea92dc3bda19748fd158fe1498d
-  languageName: node
-  linkType: hard
-
-"@types/underscore@npm:~1.13.0":
-  version: 1.13.0
-  resolution: "@types/underscore@npm:1.13.0"
-  checksum: 1411cbeb1b743629d504fcb2037b393d11eb207459b9d560f71304183115e30ba145f83b819ffcc8a0d5d4eccfb76bebb0ef7aab8f96a04d88d99ff9dfe503c6
   languageName: node
   linkType: hard
 
@@ -4588,13 +4579,6 @@ __metadata:
   version: 4.0.0
   resolution: "typical@npm:4.0.0"
   checksum: a242081956825328f535e6195a924240b34daf6e7fdb573a1809a42b9f37fb8114fa99c7ab89a695e0cdb419d4149d067f6723e4b95855ffd39c6c4ca378efb3
-  languageName: node
-  linkType: hard
-
-"underscore@npm:~1.13.7":
-  version: 1.13.7
-  resolution: "underscore@npm:1.13.7"
-  checksum: 174b011af29e4fbe2c70eb2baa8bfab0d0336cf2f5654f364484967bc6264a86224d0134b9176e4235c8cceae00d11839f0fd4824268de04b11c78aca1241684
   languageName: node
   linkType: hard
 

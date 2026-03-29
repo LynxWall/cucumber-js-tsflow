@@ -2,7 +2,7 @@
 
 # cucumber-tsflow
 
-Provides 'specflow' like bindings for Cucumber-JS 12.2.0 in TypeScript 5.9+.
+Provides 'specflow' like bindings for Cucumber-JS 12.7.0 in TypeScript 5.9+.
 
 Supports Vue3 files in cucumber tests.
 
@@ -11,6 +11,40 @@ Supports Vue3 files in cucumber tests.
 This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. It has had the <https://github.com/wudong/cucumber-js-tsflow/tree/before_after_all_hooks> branch merged into it, which adds support for beforeAll and afterAll hooks.
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
+
+## Release Updates (7.7.0)
+
+This release focuses on correctness, performance, and code quality improvements across the codebase.
+
+### Bug Fixes
+
+- **`throw error()` in `test-case-runner.ts`** — four instances used `console.error()` (which returns `void`) instead of `new Error()`, meaning thrown errors were always `undefined`.
+- **Broken `escapeRegExp` in `runtime/utils.ts`** — the function was a no-op and double-processed intentionally constructed regex syntax. Removed entirely.
+- **Missing hook failure checks in serial adapter** — `runBeforeAllHooks()` and `runAfterAllHooks()` return values were ignored. Added failure propagation so hook errors are reported correctly.
+- **Package exports typo** — trailing apostrophe on the `esbuild-transpiler` export key.
+- **Misspelled folder name** — renamed `step-definition-snippit-syntax` to `step-definition-snippet-syntax` and updated all import references.
+
+### New Features
+
+- **Parallel preload** (`parallelLoad` configuration option) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
+
+### Performance and Efficiency
+
+- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in favour of native `Array.prototype` equivalents.
+- **O(1) binding lookup** — added a `Map` index to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
+- **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` with a lookup map.
+- **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext` with a single spread call, removing the previous limit of nine context objects.
+- **Extracted `replaceFormatAlias` helper** — deduplicated two identical format-replacement loops in `load-configuration.ts`.
+
+### Removed
+
+- `underscore` runtime dependency and `@types/underscore` dev dependency.
+- Empty `src/support_code_library_builder/` directory.
+- Legacy `tslint:disable` comments.
+
+### Documentation
+
+- Added `Architecture.md` describing the project's architectural design, execution flow, and component relationships.
 
 ## Release Updates (7.6.0)
 
@@ -34,7 +68,7 @@ With this release, we've finally added support for ESM Modules. For details on t
 
 Along with ESM support, additional updates include:
 
-- Cucumber-JS updated to version 12.2.0
+- Cucumber-JS updated to version 12.2.0 (later updated to 12.7.0 in 7.7.0)
 - Typescript updated to version 5.9.2
 - ts-node replaced with ts-node-maintained. For more information, please see the section titled **Node 22+ and ts-node** in the [cucumber-tsflow ESM implementation](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/cucumber-tsflow/src/transpilers/esm/README.md).
 - Other package updates.
@@ -91,6 +125,8 @@ This fork of cucumber-tsflow provides the following features that extend the ori
 
 - Support for Parallel execution of tests.
 
+- Parallel preload of transpiler caches via the `parallelLoad` configuration option, reducing startup time for large projects.
+
 - A behave-json-formatter that fixes json so it can be used with Behave Pro.
 
 - A junit-bamboo formatter that generates xml compatible with the Bamboo JUnit plugin.
@@ -142,9 +178,9 @@ Feature: Example Feature
    This is an example feature
 
    Scenario: Adding two numbers
-	  Given I enter 2 and 8
-	  When checking the results
-	  Then I receive the result 10
+   Given I enter 2 and 8
+   When checking the results
+   Then I receive the result 10
 ```
 
 ### Create the Support Files to support the Feature
@@ -160,27 +196,27 @@ Create a new 'ArithmeticSteps.ts' file:
 ```javascript
 // features/ArithmeticSteps.ts
 
-import { binding, given, then } from "@lynxwall/cucumber-tsflow";
+import { binding, given, when, then } from "@lynxwall/cucumber-tsflow";
 
 @binding()
 export default class ArithmeticSteps {
     private computedResult = 0;
 
-	@given('I enter {int} and {int}')
-	iEnterintAndint(int: number, int2: number): any {
-		this.computedResult = int + int2;
+ @given('I enter {int} and {int}')
+ iEnterintAndint(int: number, int2: number): any {
+  this.computedResult = int + int2;
     }
 
-	@when('checking the results')
-	checkingTheResults(): any {
-		expect(this.computedResult).to.be.greaterThan(0);
-	}
+ @when('checking the results')
+ checkingTheResults(): any {
+  expect(this.computedResult).to.be.greaterThan(0);
+ }
 
-	@then('I receive the result {int}')
-	iReceiveTheResultint(int: number): any {
-		if (int !== this.computedResult) {
-			throw new Error('Arithmetic Error');
-		}
+ @then('I receive the result {int}')
+ iReceiveTheResultint(int: number): any {
+  if (int !== this.computedResult) {
+   throw new Error('Arithmetic Error');
+  }
     }
 }
 ```
@@ -191,7 +227,7 @@ export default class ArithmeticSteps {
 
 All support code, which includes your step definition files along with any test fixtures, utilities and references to source code are transpiled on the fly using transpilers that are included with cucumber-tsflow. This eliminates the requirement to prebuild any test code along with associated management of those builds.
 
-If not using one of the [transpilers](#transpiler-and-vue3-supported) listed below you'll need to implement your own transpiler using guidance found in Cucumber-JS documentation: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v12.2.0/docs/transpiling.md)
+If not using one of the [transpilers](#transpiler-and-vue3-supported) listed below you'll need to implement your own transpiler using guidance found in Cucumber-JS documentation: [Transpiling](https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/transpiling.md)
 
 ## Transpilers and TypeScript
 
@@ -214,35 +250,35 @@ There are two different bundlers, or transpilers, used in cucumber-tsflow: **ts-
 The following typescript configuration is used in the ts-node transpilers configured for official decorators:
 
 ```typescript
-	compilerOptions: {
-		module: 'nodeNext',
-		target: 'es2022',
-		strict: true,
-		allowJs: true,
-		allowSyntheticDefaultImports: true,
-		esModuleInterop: true,
-		experimentalDecorators: false,
-		resolveJsonModule: true,
-		skipLibCheck: true,
-		lib: ['es2022', 'esnext.decorators']
-	}
+ compilerOptions: {
+  module: 'nodeNext',
+  target: 'es2022',
+  strict: true,
+  allowJs: true,
+  allowSyntheticDefaultImports: true,
+  esModuleInterop: true,
+  experimentalDecorators: false,
+  resolveJsonModule: true,
+  skipLibCheck: true,
+  lib: ['es2022', 'esnext.decorators']
+ }
 ```
 
-This next typescript configuration is used in the ts-node transpilers configured for official decorators:
+This next typescript configuration is used in the ts-node transpilers configured for experimental decorators:
 
 ```typescript
-	compilerOptions: {
-		module: 'nodeNext',
-		target: 'es2022',
-		strict: true,
-		allowJs: true,
-		allowSyntheticDefaultImports: true,
-		esModuleInterop: true,
-		experimentalDecorators: true,
-		resolveJsonModule: true,
-		skipLibCheck: true,
-		lib: ['es2022']
-	}
+ compilerOptions: {
+  module: 'nodeNext',
+  target: 'es2022',
+  strict: true,
+  allowJs: true,
+  allowSyntheticDefaultImports: true,
+  esModuleInterop: true,
+  experimentalDecorators: true,
+  resolveJsonModule: true,
+  skipLibCheck: true,
+  lib: ['es2022']
+ }
 ```
 
 As you can see the only difference is the setting for experimentalDecorators and the lib imports.
@@ -252,19 +288,19 @@ When test runs are started, the settings from your local tsconfig.json are loade
 For example, the settings from the cucumber-tsflow vue test project is shown below:
 
 ```json
-	"compilerOptions": {
-		"baseUrl": ".",
-		"module": "nodeNext",
-		"target": "es2022",
-		"strict": true,
-		"allowJs": true,
-		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-		"lib": ["es2022", "esnext.decorators"],
-		"typeRoots": ["../../node_modules/@types"]
-	}
+ "compilerOptions": {
+  "baseUrl": ".",
+  "module": "nodeNext",
+  "target": "es2022",
+  "strict": true,
+  "allowJs": true,
+  "allowSyntheticDefaultImports": true,
+  "esModuleInterop": true,
+  "resolveJsonModule": true,
+  "skipLibCheck": true,
+  "lib": ["es2022", "esnext.decorators"],
+  "typeRoots": ["../../node_modules/@types"]
+ }
 ```
 
 These settings are similar to the default transpiler settings, which will not cause an issue.
@@ -279,11 +315,11 @@ Cucumber-tsflow provides two esbuild transpilers: one with esbuild and support f
 
 ```typescript
 const commonOptions: CommonOptions = {
-	format: 'cjs',
-	logLevel: 'info',
-	target: [`es2022`],
-	minify: false,
-	sourcemap: 'external'
+ format: 'cjs',
+ logLevel: 'info',
+ target: [`es2022`],
+ minify: false,
+ sourcemap: 'external'
 };
 ```
 
@@ -297,10 +333,10 @@ When using official decorators the following settings are added using the esbuil
 
 ```typescript
 commonOptions.tsconfigRaw = {
-	compilerOptions: {
-		importsNotUsedAsValues: 'remove',
-		strict: true
-	}
+ compilerOptions: {
+  importsNotUsedAsValues: 'remove',
+  strict: true
+ }
 };
 ```
 
@@ -310,11 +346,11 @@ When using experimental decorators the experimentalDecorators setting is added t
 
 ```typescript
 commonOptions.tsconfigRaw = {
-	compilerOptions: {
-		experimentalDecorators: true,
-		importsNotUsedAsValues: 'remove',
-		strict: true
-	}
+ compilerOptions: {
+  experimentalDecorators: true,
+  importsNotUsedAsValues: 'remove',
+  strict: true
+ }
 };
 ```
 
@@ -354,7 +390,7 @@ You can also add a script to package.json to execute the tests as shown below:
 
 ```json
 "scripts": {
-	"test": "cucumber-tsflow -p esnode"
+ "test": "cucumber-tsflow -p esnode"
 }
 ```
 
@@ -412,20 +448,21 @@ echo $?
 
 ## New Configuration options
 
-As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v12.2.0/docs/configuration.md>
+As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/configuration.md>
 
 In addition to cucumber configuration options the following two options have been added:
 
 | Name                     | Type      | Repeatable | CLI Option                  | Description                                                  | Default |
 | ------------------------ | --------- | ---------- | --------------------------- | ------------------------------------------------------------ | ------- |
-| `transpiler`             | `string`  | No         | `--transpiler`              | Name of the transpiler to use: es-vue, ts-vue, es-node, ts-node, es-vue-esm, es-node-esm, ts-vue-esm, ts-node-esm | none    |
-| `debugFile`              | `string`  | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
-| `enableVueStyle`         | `boolean` | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
-| `experimentalDecorators` | `boolean` | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
+| `transpiler`             | `string`           | No         | `--transpiler`              | Name of the transpiler to use: es-vue, ts-vue, es-node, ts-node, es-vue-esm, es-node-esm, ts-vue-esm, ts-node-esm | none    |
+| `debugFile`              | `string`           | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
+| `enableVueStyle`         | `boolean`          | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
+| `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
+| `parallelLoad`           | `boolean \| number` | No         |                             | Pre-warm transpiler caches in parallel worker threads before loading support code. `true` = auto thread count, number = explicit count. | false   |
 
 ### Transpiler and Vue3 supported
 
-Using TypeScript with cucumber-js requires setting tsconfig.json parameters as described here: [cucumber-js Transpiling](https://github.com/cucumber/cucumber-js/blob/v12.2.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with cucumber-js.
+Using TypeScript with cucumber-js requires setting tsconfig.json parameters as described here: [cucumber-js Transpiling](https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/transpiling.md). In addition, there is no support for transpiling Vue files with cucumber-js.
 
 As a result, cucumber-tsflow adds several configurations for transpiling TypeScript code using the recommended configuration. In addition, support has been added to transform .vue files during test execution allowing you to test Vue SFC components using cucumber.
 
@@ -459,9 +496,9 @@ When configuring cucumber to execute tests you can specify which transpiler to u
 
 ```json
 {
-	"default": {
-		"transpiler": "es-vue"
-	}
+ "default": {
+  "transpiler": "es-vue"
+ }
 }
 ```
 
@@ -471,9 +508,9 @@ You can also use the `requireModule` parameter to configure a transpiler. The fo
 
 ```json
 {
-	"default": {
-		"requireModule": ["@lynxwall/cucumber-tsflow/esvue"]
-	}
+ "default": {
+  "requireModule": ["@lynxwall/cucumber-tsflow/esvue"]
+ }
 }
 ```
 
@@ -487,20 +524,20 @@ If using VSCode to edit your project the following launch configurations can be 
 
 ```json
 {
-	"name": "Debug All",
-	"type": "node",
-	"request": "launch",
-	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow/vue",
-	"stopOnEntry": true,
-	"args": ["-p", "esvue"],
-	"cwd": "${workspaceRoot}",
-	"runtimeExecutable": null,
-	"runtimeArgs": ["--nolazy"],
-	"env": {
-		"NODE_ENV": "development"
-	},
-	"console": "integratedTerminal",
-	"sourceMaps": true
+ "name": "Debug All",
+ "type": "node",
+ "request": "launch",
+ "program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow/vue",
+ "stopOnEntry": true,
+ "args": ["-p", "esvue"],
+ "cwd": "${workspaceRoot}",
+ "runtimeExecutable": null,
+ "runtimeArgs": ["--nolazy"],
+ "env": {
+  "NODE_ENV": "development"
+ },
+ "console": "integratedTerminal",
+ "sourceMaps": true
 }
 ```
 
@@ -508,20 +545,20 @@ If using VSCode to edit your project the following launch configurations can be 
 
 ```json
 {
-	"name": "Debug Feature",
-	"type": "node",
-	"request": "launch",
-	"program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow/vue",
-	"stopOnEntry": true,
-	"args": ["--debug-file", "${file}", "-p", "esvue"],
-	"cwd": "${workspaceRoot}",
-	"runtimeExecutable": null,
-	"runtimeArgs": ["--nolazy"],
-	"env": {
-		"NODE_ENV": "development"
-	},
-	"console": "integratedTerminal",
-	"sourceMaps": true
+ "name": "Debug Feature",
+ "type": "node",
+ "request": "launch",
+ "program": "${workspaceRoot}/node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow/vue",
+ "stopOnEntry": true,
+ "args": ["--debug-file", "${file}", "-p", "esvue"],
+ "cwd": "${workspaceRoot}",
+ "runtimeExecutable": null,
+ "runtimeArgs": ["--nolazy"],
+ "env": {
+  "NODE_ENV": "development"
+ },
+ "console": "integratedTerminal",
+ "sourceMaps": true
 }
 ```
 
@@ -574,9 +611,9 @@ The following Scenario uses boolean values in the Given and Then statements:
 
 ```gherkin
 Scenario: Boolean type supported
-	Given I pass true into a step
-	When checking the boolean value
-	Then we can see that true was passed in
+ Given I pass true into a step
+ When checking the boolean value
+ Then we can see that true was passed in
 ```
 
 The associated step definition replaces `true` in this scenario with a `{boolean}` expression as shown below:
@@ -584,17 +621,17 @@ The associated step definition replaces `true` in this scenario with a `{boolean
 ```typescript
 @given('I pass {boolean} into a step')
 iPassbooleanIntoAStep(boolean: boolean): any {
-	this.boolValue = boolean;
+ this.boolValue = boolean;
 }
 
 @when('checking the boolean value')
 checkingTheBooleanValue(): any {
-	expect(this.boolValue).not.to.be.undefined;
+ expect(this.boolValue).not.to.be.undefined;
 }
 
 @then('we can see that {boolean} was passed in')
 weCanThatbooleanWasPassedIn(boolean: boolean): any {
-	expect(this.boolValue).to.equal(boolean);
+ expect(this.boolValue).to.equal(boolean);
 }
 ```
 
@@ -622,7 +659,7 @@ public givenAValueBasedSearch(searchValue: string): void {
 }
 ```
 
-**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v12.2.0/docs/support_files/hooks.md>
+**Note**: Tags added to steps work the same as "Tagged Hooks" documented here: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/support_files/hooks.md>
 
 ## Hooks
 
@@ -654,12 +691,12 @@ class MySteps {
 
     @beforeStep('@addNumbers')
     public beforeStep() {
-	    ...
+     ...
     }
 
     @afterStep('@addNumbers')
     public afterStep() {
-	    ...
+     ...
     }
 
     @after()
@@ -723,15 +760,15 @@ If it doesn't already exist, create a file named cucumber.json at the root of yo
 
 #### Using the behave json formatter
 
-The following example shows how to configure the behave formatter in cucumber.json. The tsflow-snippet-syntax module is configured as the default snippet syntax and does not require configuration. However, you can override the snippet syntax as documented here: <https://github.com/cucumber/cucumber-js/blob/v12.2.0/docs/custom_snippet_syntaxes.md>
+The following example shows how to configure the behave formatter in cucumber.json. The tsflow-snippet-syntax module is configured as the default snippet syntax and does not require configuration. However, you can override the snippet syntax as documented here: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/custom_snippet_syntaxes.md>
 
 ```typescript
 {
-	"default": {
-		"format": [
-			"behave:cucumber_report.json"
-		]
-	}
+ "default": {
+  "format": [
+   "behave:cucumber_report.json"
+  ]
+ }
 }
 ```
 
@@ -741,11 +778,11 @@ The following example shows how to configure the bamboo junit formatter in cucum
 
 ```typescript
 {
-	"default": {
-		"format": [
-			"junitbamboo:cucumber_report.xml"
-		]
-	}
+ "default": {
+  "format": [
+   "junitbamboo:cucumber_report.xml"
+  ]
+ }
 }
 ```
 
@@ -789,30 +826,30 @@ import { World } from '@cucumber/cucumber';
 import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
-	public world: World;
-	public someValue = '';
-	private id: string = '';
+ public world: World;
+ public someValue = '';
+ private id: string = '';
 
-	constructor(worldObj: World) {
-		this.world = worldObj;
-	}
-	public initialize({ pickle, gherkinDocument }: StartTestCaseInfo): void {
-		this.id = this.makeid(5);
-		console.log(`Sync init: ${this.id}`);
-		console.log(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
-	}
-	public dispose({ pickle, gherkinDocument }: EndTestCaseInfo): void {
-		console.log(`Sync dispose: ${this.id}`);
-		console.log(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
-	}
-	private getFeatureAndScenario(path: string, scenario: string): string | undefined {
-		...
+ constructor(worldObj: World) {
+  this.world = worldObj;
+ }
+ public initialize({ pickle, gherkinDocument }: StartTestCaseInfo): void {
+  this.id = this.makeid(5);
+  console.log(`Sync init: ${this.id}`);
+  console.log(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
+ }
+ public dispose({ pickle, gherkinDocument }: EndTestCaseInfo): void {
+  console.log(`Sync dispose: ${this.id}`);
+  console.log(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
+ }
+ private getFeatureAndScenario(path: string, scenario: string): string | undefined {
+  ...
         return `${fileName}: ${scenario.split(' ').join('-')}`;
-	}
-	private makeid(length: number) {
-		...
-		return result;
-	}
+ }
+ private makeid(length: number) {
+  ...
+  return result;
+ }
 }
 ```
 
@@ -823,39 +860,39 @@ import { World } from '@cucumber/cucumber';
 import { EndTestCaseInfo, StartTestCaseInfo } from '@lynxwall/cucumber-tsflow';
 
 export class ScenarioContext {
-	public world: World;
-	public someValue = '';
-	private id: string = '';
+ public world: World;
+ public someValue = '';
+ private id: string = '';
 
-	constructor(worldObj: World) {
-		this.world = worldObj;
-	}
-	public async initialize({ pickle, gherkinDocument }: StartTestCaseInfo): Promise<void> {
-		this.id = this.makeid(5);
-		await this.logTest(`Async init: ${this.id}`);
-		await this.logTest(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
-	}
-	public async dispose({ pickle, gherkinDocument }: EndTestCaseInfo): Promise<void> {
-		await this.logTest(`Async dispose: ${this.id}`);
-		await this.logTest(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
-	}
-	async logTest(text: string): Promise<void> {
-		await Promise.resolve(console.log(text));
-	}
-	private getFeatureAndScenario(path: string, scenario: string): string | undefined {
-		...
+ constructor(worldObj: World) {
+  this.world = worldObj;
+ }
+ public async initialize({ pickle, gherkinDocument }: StartTestCaseInfo): Promise<void> {
+  this.id = this.makeid(5);
+  await this.logTest(`Async init: ${this.id}`);
+  await this.logTest(`Start Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
+ }
+ public async dispose({ pickle, gherkinDocument }: EndTestCaseInfo): Promise<void> {
+  await this.logTest(`Async dispose: ${this.id}`);
+  await this.logTest(`End Test Case: ${this.getFeatureAndScenario(gherkinDocument.uri!, pickle.name)}`);
+ }
+ async logTest(text: string): Promise<void> {
+  await Promise.resolve(console.log(text));
+ }
+ private getFeatureAndScenario(path: string, scenario: string): string | undefined {
+  ...
         return `${fileName}: ${scenario.split(' ').join('-')}`;
-	}
+ }
     private makeid(length: number) {
-		...
-		return result;
-	}
+  ...
+  return result;
+ }
 }
 ```
 
 **Initialize Binding in Step class:**
 
-- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class. You can include up to nine separate _Context_ objects.
+- Update the `@binding()` decorator to indicate the types of context objects that are required by the 'binding' class. There is no limit on the number of _Context_ objects.
 - Define a constructor on the `@binding` class with steps that need access to the shared data that accepts one or more context objects as parameters based on initialization of the `@binding` decorator.
 
 **Single Context class example:**
@@ -867,18 +904,18 @@ import { expect } from 'chai';
 
 @binding([ScenarioContext])
 export default class InjectionTestSteps1 {
-	constructor(private context: ScenarioContext) {}
+ constructor(private context: ScenarioContext) {}
 
-	@given('The Workspace is available and valid')
-	theWorkspaceIsAvailableAndValid() {
-		expect(this.context).not.to.be.undefined;
-		expect(this.context.world).not.to.be.undefined;
-	}
+ @given('The Workspace is available and valid')
+ theWorkspaceIsAvailableAndValid() {
+  expect(this.context).not.to.be.undefined;
+  expect(this.context.world).not.to.be.undefined;
+ }
 
-	@when('I change the workspace in one step definition class')
-	whenIChangeTheWorkspaceInOneStep() {
-		this.context.someValue = 'value changed';
-	}
+ @when('I change the workspace in one step definition class')
+ whenIChangeTheWorkspaceInOneStep() {
+  this.context.someValue = 'value changed';
+ }
 }
 ```
 
@@ -892,24 +929,24 @@ import { expect } from 'chai';
 
 @binding([ScenarioContext, SyncContext])
 export default class InjectionTestSteps1 {
-	constructor(
-		private context: ScenarioContext,
-		private syncContext: SyncContext
-	) {}
+ constructor(
+  private context: ScenarioContext,
+  private syncContext: SyncContext
+ ) {}
 
-	@given('The Workspace is available and valid')
-	theWorkspaceIsAvailableAndValid() {
-		expect(this.context).not.to.be.undefined;
-		expect(this.context.world).not.to.be.undefined;
+ @given('The Workspace is available and valid')
+ theWorkspaceIsAvailableAndValid() {
+  expect(this.context).not.to.be.undefined;
+  expect(this.context.world).not.to.be.undefined;
 
-		expect(this.syncContext).not.to.be.undefined;
-		expect(this.syncContext.world).not.to.be.undefined;
-	}
+  expect(this.syncContext).not.to.be.undefined;
+  expect(this.syncContext.world).not.to.be.undefined;
+ }
 
-	@when('I change the workspace in one step definition class')
-	whenIChangeTheWorkspaceInOneStep() {
-		this.context.someValue = 'value changed';
-	}
+ @when('I change the workspace in one step definition class')
+ whenIChangeTheWorkspaceInOneStep() {
+  this.context.someValue = 'value changed';
+ }
 }
 ```
 
@@ -927,16 +964,16 @@ Starting with version **6.4.0** the Cucumber World object is now passed into a _
 import { World } from '@cucumber/cucumber';
 
 export class ScenarioContext {
-	public world: World;
-	public someValue = '';
+ public world: World;
+ public someValue = '';
 
-	constructor(worldObj: World) {
-		this.world = worldObj;
-	}
+ constructor(worldObj: World) {
+  this.world = worldObj;
+ }
 
-	public dispose(): void {
-		this.someValue = '';
-	}
+ public dispose(): void {
+  this.someValue = '';
+ }
 }
 ```
 
@@ -958,8 +995,8 @@ With this approach, you would define a world property on simple _Context_ class 
 import { World } from '@cucumber/cucumber';
 
 export class ScenarioContext {
-	public world!: World;
-	public someValue = '';
+ public world!: World;
+ public someValue = '';
 }
 ```
 
@@ -974,14 +1011,14 @@ import { World } from '@cucumber/cucumber';
 
 @binding([ScenarioContext])
 export default class WorldContext {
-	_worldObj?: World;
+ _worldObj?: World;
 
-	constructor(private context: ScenarioContext) {}
+ constructor(private context: ScenarioContext) {}
 
-	@before()
-	beforeScenario() {
-		this.context.world = this._worldObj as World;
-	}
+ @before()
+ beforeScenario() {
+  this.context.world = this._worldObj as World;
+ }
 }
 ```
 

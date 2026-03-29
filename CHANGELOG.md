@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.7.0]
+
+### Added
+
+- **Parallel preload** (`parallelLoad` configuration option) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files (round-robin distribution), triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
+- `Architecture.md` document describing the project's architectural design, execution flow, and component relationships.
+
+### Fixed
+
+- **`throw error()` bug in `test-case-runner.ts`** — four instances used `console.error()` (which returns `void`) instead of `new Error()`, meaning thrown errors were always `undefined`.
+- **Broken `escapeRegExp` in `runtime/utils.ts`** — the function was a no-op (`'$&'` preserves the original character) and double-processed intentionally constructed regex syntax from `getRegTextForStep`. Removed entirely.
+- **Missing hook failure checks in serial adapter** — `runBeforeAllHooks()` and `runAfterAllHooks()` return values were ignored. Added `hasHookFailure()` helper and failure propagation.
+- **Package exports typo** — trailing apostrophe on the `esbuild-transpiler` export key.
+- **Misspelled folder name** — renamed `step-definition-snippit-syntax` to `step-definition-snippet-syntax` (source and compiled output) and updated all import references.
+
+### Changed
+
+- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in `binding-registry.ts`, `binding-decorator.ts`, and `managed-scenario-context.ts` in favour of native `Array.prototype` equivalents (`map`, `flatMap`, `filter`).
+- **O(1) binding lookup** — added `_cucumberKeyIndex` Map to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
+- **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` statement with a lookup map that maps `StepBindingFlags` values to their corresponding `SupportCodeLibrary` array names.
+- **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext.invokeBindingConstructor()` with a single spread call (`new ctor(...args)`).
+- **Extracted `replaceFormatAlias` helper** — deduplicated two identical format-replacement loops in `load-configuration.ts` into one shared function.
+
+### Removed
+
+- `underscore` runtime dependency and `@types/underscore` dev dependency.
+- Empty `src/support_code_library_builder/` directory (dead scaffolding; all imports reference the `@cucumber/cucumber` vendor package).
+- Legacy `tslint:disable` comments in `binding-registry.ts` and `types.ts`.
+
 ## [7.6.0]
 
 ### Added

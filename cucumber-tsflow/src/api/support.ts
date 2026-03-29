@@ -5,6 +5,7 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import tryRequire from '@cucumber/cucumber/lib/try_require';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
+import { resetStepPatternRegistrations } from '../bindings/binding-decorator';
 
 export async function getSupportCodeLibrary({
 	logger,
@@ -23,6 +24,9 @@ export async function getSupportCodeLibrary({
 	importPaths: string[];
 	loaders: string[];
 }): Promise<SupportCodeLibrary> {
+	// Clear the step pattern cache so decorators re-register with the fresh builder
+	resetStepPatternRegistrations();
+
 	supportCodeLibraryBuilder.reset(cwd, newId, {
 		requireModules,
 		requirePaths,

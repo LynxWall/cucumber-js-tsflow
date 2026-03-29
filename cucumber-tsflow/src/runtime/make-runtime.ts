@@ -6,6 +6,7 @@ import { SourcedPickle } from '@cucumber/cucumber/lib/assemble/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { Runtime, RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
+import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
 import { ChildProcessAdapter } from './parallel/adapter';
 import { InProcessAdapter } from './serial/adapter';
 import { Coordinator } from './coordinator';
@@ -23,7 +24,8 @@ export async function makeRuntime({
 	newId,
 	supportCodeLibrary,
 	options,
-	coordinates
+	coordinates,
+	snippetOptions = {}
 }: {
 	environment: IRunEnvironment;
 	logger: ILogger;
@@ -33,10 +35,21 @@ export async function makeRuntime({
 	supportCodeLibrary: SupportCodeLibrary;
 	options: ITsFlowRunOptionsRuntime;
 	coordinates: ISourcesCoordinates;
+	snippetOptions?: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>;
 }): Promise<Runtime> {
+	const testRunStartedId = newId();
 	const adapter: RuntimeAdapter =
 		options.parallel > 0
-			? new ChildProcessAdapter(environment, logger, eventBroadcaster, options, supportCodeLibrary, coordinates)
-			: new InProcessAdapter(eventBroadcaster, newId, options, supportCodeLibrary);
-	return new Coordinator(eventBroadcaster, newId, sourcedPickles, supportCodeLibrary, adapter);
+			? new ChildProcessAdapter(
+					testRunStartedId,
+					environment,
+					logger,
+					eventBroadcaster,
+					options,
+					snippetOptions,
+					supportCodeLibrary,
+					coordinates
+				)
+			: new InProcessAdapter(testRunStartedId, eventBroadcaster, newId, options, supportCodeLibrary);
+	return new Coordinator(testRunStartedId, eventBroadcaster, newId, sourcedPickles, supportCodeLibrary, adapter);
 }

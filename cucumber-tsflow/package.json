@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
-	"description": "Provides 'specflow' like bindings for CucumberJS 12.2.0 in TypeScript 5.9+.",
-	"version": "7.6.0",
+	"description": "Provides 'specflow' like bindings for CucumberJS 12.7.0 in TypeScript 5.9+.",
+	"version": "7.7.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"keywords": [
@@ -51,13 +51,16 @@
 		"./lib/transpilers/esm/tsnode-loader": "./lib/transpilers/esm/tsnode-loader.mjs",
 		"./lib/transpilers/esm/esnode-loader": "./lib/transpilers/esm/esnode-loader.mjs",
 		"./lib/transpilers/esm/esvue-loader": "./lib/transpilers/esm/esvue-loader.mjs",
-		"./lib/transpilers/esm/esbuild-transpiler'": "./lib/transpilers/esm/esbuild-transpiler.mjs",
+		"./lib/transpilers/esm/esbuild-transpiler": "./lib/transpilers/esm/esbuild-transpiler.mjs",
 		"./lib/transpilers/esm/vue-jsdom-setup": "./lib/transpilers/esm/vue-jsdom-setup.mjs",
 		"./package.json": "./package.json"
 	},
 	"types": "./lib/index.d.ts",
+	"engines": {
+		"node": ">=22.0.0"
+	},
 	"dependencies": {
-		"@cucumber/cucumber": "~12.2.0",
+		"@cucumber/cucumber": "~12.7.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
 		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",
@@ -77,15 +80,13 @@
 		"ts-node-maintained": "~10.9.6",
 		"tsconfig-paths": "~4.2.0",
 		"tslib": "2.8.1",
-		"typescript": "~5.9.2",
-		"underscore": "~1.13.7"
+		"typescript": "~5.9.2"
 	},
 	"devDependencies": {
 		"@types/debug": "~4.1.12",
 		"@types/hash-sum": "~1.0.2",
 		"@types/lodash.merge": "~4.6.9",
 		"@types/source-map-support": "~0.5.10",
-		"@types/underscore": "~1.13.0",
 		"genversion": "~3.2.0",
 		"shx": "0.4.0"
 	},

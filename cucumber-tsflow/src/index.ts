@@ -23,7 +23,7 @@ export { default as DataTable } from '@cucumber/cucumber/lib/models/data_table';
 export { default as TestCaseHookDefinition } from '@cucumber/cucumber/lib/models/test_case_hook_definition';
 
 // TsFlow Snippet Syntax and Formatters
-export { default as TsflowSnippet } from './formatter/step-definition-snippit-syntax/tsflow-snippet-syntax';
+export { default as TsflowSnippet } from './formatter/step-definition-snippet-syntax/tsflow-snippet-syntax';
 export { default as BehaveFormatter } from './formatter/behave-json-formatter';
 export { default as JunitBambooFormatter } from './formatter/junit-bamboo-formatter';
 

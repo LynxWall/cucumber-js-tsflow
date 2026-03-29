@@ -15,7 +15,6 @@ import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern } from './types';
 import { defineParameterType } from '../index';
-import _ from 'underscore';
 
 interface WritableWorld extends World {
 	[key: string]: any;
@@ -30,6 +29,15 @@ interface WritableWorld extends World {
  * the point of invocation.
  */
 const stepPatternRegistrations = new Map<StepPattern, StepBindingFlags>();
+
+/**
+ * Clear the step pattern registration cache. Must be called whenever
+ * `supportCodeLibraryBuilder.reset()` is used so that decorators
+ * re-register definitions with the fresh builder instance.
+ */
+export function resetStepPatternRegistrations(): void {
+	stepPatternRegistrations.clear();
+}
 
 /**
  * A class decorator that marks the associated class as a CucumberJS binding.
@@ -107,6 +115,12 @@ export function binding(requiredContextTypes?: ContextType[]): any {
  * @returns
  */
 function addStepBinding(stepBinding: StepBinding): void {
+	// In loader-worker threads, skip Cucumber registration — we only need
+	// the BindingRegistry populated for descriptor extraction.
+	if (global.__LOADER_WORKER) {
+		return;
+	}
+
 	if (stepBinding.bindingType & StepBindingFlags.StepDefinitions) {
 		let stepBindingFlags = stepPatternRegistrations.get(stepBinding.stepPattern.toString());
 		if (stepBindingFlags === undefined) {

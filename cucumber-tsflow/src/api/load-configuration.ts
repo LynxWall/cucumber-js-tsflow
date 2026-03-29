@@ -144,6 +144,12 @@ export const loadConfiguration = async (
 
 	logger.checkpoint('Experimental decorators configured', { experimentalDecorators });
 
+	// Configure parallel loading
+	if (original.parallelLoad === undefined) {
+		original.parallelLoad = false;
+	}
+	logger.checkpoint('Parallel load configured', { parallelLoad: original.parallelLoad });
+
 	/**
 	 * Ensures JSDOM environment is initialized before any test files are loaded.
 	 */
@@ -232,39 +238,27 @@ export const loadConfiguration = async (
 	// Process format options
 	logger.checkpoint('Processing format options', { formatCount: original.format?.length });
 	try {
-		for (let idx = 0; idx < original.format.length; idx++) {
-			if (typeof original.format[idx] === 'string') {
-				const formatItem = original.format[idx] as string;
-				if (formatItem.startsWith('behave:')) {
-					original.format[idx] = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/behave');
-					logger.checkpoint('Replaced behave format', { index: idx });
-				}
-			} else if (original.format[idx].length > 0) {
-				const formatItem = original.format[idx][0] as string;
-				if (formatItem.startsWith('behave')) {
-					const newVal = formatItem.replace('behave', '@lynxwall/cucumber-tsflow/behave');
-					original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
-					logger.checkpoint('Replaced behave format (array)', { index: idx });
+		const replaceFormatAlias = (alias: string, replacement: string) => {
+			for (let idx = 0; idx < original.format.length; idx++) {
+				if (typeof original.format[idx] === 'string') {
+					const formatItem = original.format[idx] as string;
+					if (formatItem.startsWith(`${alias}:`)) {
+						original.format[idx] = formatItem.replace(alias, replacement);
+						logger.checkpoint(`Replaced ${alias} format`, { index: idx });
+					}
+				} else if (original.format[idx].length > 0) {
+					const formatItem = original.format[idx][0] as string;
+					if (formatItem.startsWith(alias)) {
+						const newVal = formatItem.replace(alias, replacement);
+						original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
+						logger.checkpoint(`Replaced ${alias} format (array)`, { index: idx });
+					}
 				}
 			}
-		}
+		};
 
-		for (let idx = 0; idx < original.format.length; idx++) {
-			if (typeof original.format[idx] === 'string') {
-				const formatItem = original.format[idx] as string;
-				if (formatItem.startsWith('junitbamboo:')) {
-					original.format[idx] = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
-					logger.checkpoint('Replaced junitbamboo format', { index: idx });
-				}
-			} else if (original.format[idx].length > 0) {
-				const formatItem = original.format[idx][0] as string;
-				if (formatItem.startsWith('junitbamboo')) {
-					const newVal = formatItem.replace('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
-					original.format[idx] = original.format[idx].length > 1 ? [newVal, original.format[idx][1]] : [newVal];
-					logger.checkpoint('Replaced junitbamboo format (array)', { index: idx });
-				}
-			}
-		}
+		replaceFormatAlias('behave', '@lynxwall/cucumber-tsflow/behave');
+		replaceFormatAlias('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
 		logger.checkpoint('Format options processed');
 	} catch (error: any) {
 		logger.error('Failed to process format options', error);

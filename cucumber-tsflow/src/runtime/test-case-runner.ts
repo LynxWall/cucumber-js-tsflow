@@ -1,6 +1,9 @@
 import { getAmbiguousStepException } from '@cucumber/cucumber/lib/runtime/helpers';
-import { INewTestCaseRunnerOptions } from '@cucumber/cucumber/lib/runtime/test_case_runner';
+import type { INewTestCaseRunnerOptions as ICucumberTestCaseRunnerOptions } from '@cucumber/cucumber/lib/runtime/test_case_runner';
 import AttachmentManager, { ICreateAttachment } from '@cucumber/cucumber/lib/runtime/attachment_manager/index';
+
+/** Local options interface — omits snippetBuilder which our runner doesn't use */
+type INewTestCaseRunnerOptions = Omit<ICucumberTestCaseRunnerOptions, 'snippetBuilder'>;
 import StepRunner, { RunStepResult } from '@cucumber/cucumber/lib/runtime/step_runner';
 import * as messages from '@cucumber/messages';
 import { getWorstTestStepResult, IdGenerator } from '@cucumber/messages';
@@ -18,7 +21,6 @@ import StepDefinition from '@cucumber/cucumber/lib/models/step_definition';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { StepBinding } from '../bindings/step-binding';
 import { ManagedScenarioContext } from './managed-scenario-context';
-import { error } from 'console';
 import { EndTestCaseInfo, StartTestCaseInfo } from './test-case-info';
 import { IWorldOptions } from '@cucumber/cucumber/lib/support_code_library_builder/world';
 import { timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch';
@@ -266,9 +268,9 @@ export default class TestCaseRunner {
 		// Get the step binding and scenario context so that we can
 		// initialize any context objects before hooks are executed
 		const stepBinding = this.bindingRegistry.getStepBindingByCucumberKey((hookDefinition.options as any).cucumberKey);
-		if (!stepBinding) throw error('===268 test-case-runner.ts Unable to find StepBinding!');
+		if (!stepBinding) throw new Error('===268 test-case-runner.ts Unable to find StepBinding!');
 		const scenarioContext = global.messageCollector.getHookScenarioContext(hookParameter);
-		if (!scenarioContext) throw error('Unable to find the ManagedScenarioContext!');
+		if (!scenarioContext) throw new Error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
 
 		const { result } = await this.invokeStep(null, hookDefinition, hookParameter);
@@ -323,9 +325,9 @@ export default class TestCaseRunner {
 		const stepBinding = this.bindingRegistry.getStepBindingByCucumberKey(
 			(stepDefinitions[0].options as any).cucumberKey
 		);
-		if (!stepBinding) throw error('===323 test-case-runner.ts: Unable to find StepBinding!');
+		if (!stepBinding) throw new Error('===323 test-case-runner.ts: Unable to find StepBinding!');
 		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
-		if (!scenarioContext) throw error('Unable to find the ManagedScenarioContext!');
+		if (!scenarioContext) throw new Error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
 
 		// next execute any before step hooks followed by the step if there are no

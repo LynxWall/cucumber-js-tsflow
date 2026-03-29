@@ -7,6 +7,8 @@ declare global {
 	var enableVueStyle: boolean;
 	// eslint-disable-next-line no-var
 	var experimentalDecorators: boolean;
+	// eslint-disable-next-line no-var
+	var __LOADER_WORKER: boolean;
 }
 
 export {};

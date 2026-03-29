@@ -5,6 +5,7 @@
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/tsnode.json", "html:../reports/tsnode.html", "junitbamboo:../reports/tsnode.xml"],
 		"parallel": 1,
+		"parallelLoad": true,
 		"tags": "@node"
 	},
 	"esnode": {
@@ -13,6 +14,7 @@
 		"require": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/esnode.json", "html:../reports/esnode.html", "junitbamboo:../reports/esnode.xml"],
 		"parallel": 0,
+		"parallelLoad": true,
 		"tags": "@node"
 	}
 }

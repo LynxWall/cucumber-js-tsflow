@@ -6,6 +6,20 @@ import type { ISupportCodeCoordinates } from '@cucumber/cucumber/lib/support_cod
 import { getSupportCodeLibrary } from './support';
 import { initializeForLoadSupport } from '@cucumber/cucumber/lib/api/plugins';
 import { BindingRegistry } from '../bindings/binding-registry';
+import { parallelPreload } from './parallel-loader';
+import { createLogger } from '../utils/tsflow-logger';
+
+const logger = createLogger('load-support');
+
+/**
+ * Options extending the standard load-support options with parallelLoad control.
+ */
+export interface ITsFlowLoadSupportOptions extends ILoadSupportOptions {
+	/** Pre-warm transpiler caches in parallel worker threads. true = auto threads, number = explicit count. */
+	parallelLoad?: boolean | number;
+	/** Whether experimental decorators are enabled */
+	experimentalDecorators?: boolean;
+}
 
 /**
  * Load support code for use in test runs
@@ -15,11 +29,11 @@ import { BindingRegistry } from '../bindings/binding-registry';
  * @param environment - Project environment
  */
 export async function loadSupport(
-	options: ILoadSupportOptions,
+	options: ITsFlowLoadSupportOptions,
 	environment: IRunEnvironment = {}
 ): Promise<ISupportCodeLibrary> {
 	const mergedEnvironment = makeEnvironment(environment);
-	const { cwd, logger } = mergedEnvironment;
+	const { cwd, logger: cucumberLogger } = mergedEnvironment;
 	const newId = IdGenerator.uuid();
 	const supportCoordinates = Object.assign(
 		{
@@ -31,11 +45,34 @@ export async function loadSupport(
 		options.support
 	);
 	const pluginManager = await initializeForLoadSupport(mergedEnvironment);
-	const resolvedPaths = await resolvePaths(logger, cwd, options.sources, supportCoordinates);
+	const resolvedPaths = await resolvePaths(cucumberLogger, cwd, options.sources, supportCoordinates);
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { requirePaths, importPaths } = resolvedPaths;
+
+	// Parallel preload phase: warm transpiler caches in worker threads
+	if (options.parallelLoad) {
+		logger.checkpoint('Running parallel preload phase');
+		try {
+			const result = await parallelPreload({
+				requirePaths,
+				importPaths,
+				requireModules: supportCoordinates.requireModules,
+				loaders: supportCoordinates.loaders,
+				experimentalDecorators: options.experimentalDecorators ?? false,
+				threadCount: options.parallelLoad
+			});
+			logger.checkpoint('Parallel preload completed', {
+				descriptors: result.descriptors.length,
+				files: result.loadedFiles.length,
+				durationMs: result.durationMs
+			});
+		} catch (err: any) {
+			logger.error('Parallel preload failed, falling back to serial load', err);
+		}
+	}
+
 	let supportCodeLibrary = await getSupportCodeLibrary({
-		logger,
+		logger: cucumberLogger,
 		cwd,
 		newId,
 		requireModules: supportCoordinates.requireModules,
@@ -68,12 +105,12 @@ export async function loadSupport(
  * @param environment - Project environment
  */
 export async function reloadSupport(
-	options: ILoadSupportOptions,
+	options: ITsFlowLoadSupportOptions,
 	changedPaths: string[],
 	environment: IRunEnvironment = {}
 ): Promise<ISupportCodeLibrary> {
 	const mergedEnvironment = makeEnvironment(environment);
-	const { cwd, logger } = mergedEnvironment;
+	const { cwd, logger: cucumberLogger } = mergedEnvironment;
 	const newId = IdGenerator.uuid();
 	const supportCoordinates: ISupportCodeCoordinates = Object.assign(
 		{
@@ -85,7 +122,7 @@ export async function reloadSupport(
 		options.support
 	);
 	const pluginManager = await initializeForLoadSupport(mergedEnvironment);
-	const resolvedPaths = await resolvePaths(logger, cwd, options.sources, supportCoordinates);
+	const resolvedPaths = await resolvePaths(cucumberLogger, cwd, options.sources, supportCoordinates);
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { requirePaths, importPaths } = resolvedPaths;
 
@@ -98,7 +135,7 @@ export async function reloadSupport(
 	}
 
 	let supportCodeLibrary = await getSupportCodeLibrary({
-		logger,
+		logger: cucumberLogger,
 		cwd,
 		newId,
 		requireModules: supportCoordinates.requireModules,

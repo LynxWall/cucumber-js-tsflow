@@ -1,5 +1,3 @@
-import _ from 'underscore';
-
 import { ContextType } from '../bindings/types';
 import { ScenarioContext, ScenarioInfo } from './scenario-context';
 import { EndTestCaseInfo, StartTestCaseInfo } from './test-case-info';
@@ -69,64 +67,7 @@ export class ManagedScenarioContext implements ScenarioContext {
 	}
 
 	private activateBindingClass(classPrototype: any, contextTypes: ContextType[], worldObj: World): any {
-		const invokeBindingConstructor = (args: any[]): any => {
-			switch (contextTypes.length) {
-				case 0:
-					return new (classPrototype.constructor as any)();
-				case 1:
-					return new (classPrototype.constructor as any)(args[0]);
-				case 2:
-					return new (classPrototype.constructor as any)(args[0], args[1]);
-				case 3:
-					return new (classPrototype.constructor as any)(args[0], args[1], args[2]);
-				case 4:
-					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3]);
-				case 5:
-					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4]);
-				case 6:
-					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4], args[5]);
-				case 7:
-					return new (classPrototype.constructor as any)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
-				case 8:
-					return new (classPrototype.constructor as any)(
-						args[0],
-						args[1],
-						args[2],
-						args[3],
-						args[4],
-						args[5],
-						args[6],
-						args[7]
-					);
-				case 9:
-					return new (classPrototype.constructor as any)(
-						args[0],
-						args[1],
-						args[2],
-						args[3],
-						args[4],
-						args[5],
-						args[6],
-						args[7],
-						args[8]
-					);
-				case 10:
-					return new (classPrototype.constructor as any)(
-						args[0],
-						args[1],
-						args[2],
-						args[3],
-						args[4],
-						args[5],
-						args[6],
-						args[7],
-						args[8],
-						args[9]
-					);
-			}
-		};
-
-		const contextObjects = _.map(contextTypes, contextType =>
+		const contextObjects = contextTypes.map(contextType =>
 			this.getOrActivateContext(
 				contextType.prototype,
 				(worldObj?: any) => {
@@ -136,7 +77,7 @@ export class ManagedScenarioContext implements ScenarioContext {
 			)
 		);
 
-		return invokeBindingConstructor(contextObjects);
+		return new (classPrototype.constructor as any)(...contextObjects);
 	}
 
 	/**

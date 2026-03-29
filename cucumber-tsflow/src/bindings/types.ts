@@ -1,4 +1,3 @@
-// tslint:disable:no-bitwise
 import { World } from '@cucumber/cucumber';
 
 /**

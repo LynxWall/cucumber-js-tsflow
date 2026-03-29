@@ -1,5 +1,4 @@
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import _ from 'underscore';
 import { StepBinding, StepBindingFlags, SerializableBindingDescriptor, serializeBinding } from './step-binding';
 import { ContextType, StepPattern, TagName } from './types';
 import logger from '../utils/logger';
@@ -35,6 +34,7 @@ export const DEFAULT_TAG = '*';
 export class BindingRegistry {
 	private _stepBindings = new Map<StepPattern, Map<TagName, StepBinding[]>>();
 	private _classBindings = new Map<any, ClassBinding>();
+	private _cucumberKeyIndex = new Map<string, StepBinding>();
 
 	/**
 	 * Gets the binding registry singleton.
@@ -109,7 +109,6 @@ export class BindingRegistry {
 		}
 
 		if (stepBinding.tags !== DEFAULT_TAG && !stepBinding.tags.startsWith('@')) {
-			// tslint:disable-next-line:no-console
 			logger.debug('tag should start with @; tsflow has stopped to automatically prepend @ for you.');
 		}
 
@@ -150,6 +149,9 @@ export class BindingRegistry {
 		if (!targetBinding.stepBindings.some(b => isSameStepBinding(stepBinding, b))) {
 			targetBinding.stepBindings.push(stepBinding);
 		}
+
+		// Index by cucumberKey for O(1) lookup
+		this._cucumberKeyIndex.set(stepBinding.cucumberKey, stepBinding);
 
 		function isSameStepBinding(a: StepBinding, b: StepBinding) {
 			// For hooks, we need to check the binding type and method name too
@@ -217,20 +219,7 @@ export class BindingRegistry {
 	}
 
 	public getStepBindingByCucumberKey(cucumberKey: string): StepBinding | undefined {
-		let result: StepBinding | undefined = undefined;
-
-		for (const [_, binding] of this._classBindings) {
-			for (const stepBinding of binding.stepBindings) {
-				if (stepBinding.cucumberKey === cucumberKey) {
-					result = stepBinding;
-					break;
-				}
-			}
-			if (result) {
-				break;
-			}
-		}
-		return result;
+		return this._cucumberKeyIndex.get(cucumberKey);
 	}
 
 	/**
@@ -240,56 +229,25 @@ export class BindingRegistry {
 	 * @returns
 	 */
 	public updateSupportCodeLibrary = (library: SupportCodeLibrary): SupportCodeLibrary => {
+		const findByKey = (definitions: any[]) => (cucumberKey: string) =>
+			definitions.find(s => (s.options as any).cucumberKey === cucumberKey);
+
+		const lookupMap: Record<number, (key: string) => any> = {
+			[StepBindingFlags.beforeAll]: findByKey(library.beforeTestRunHookDefinitions),
+			[StepBindingFlags.before]: findByKey(library.beforeTestCaseHookDefinitions),
+			[StepBindingFlags.beforeStep]: findByKey(library.beforeTestStepHookDefinitions),
+			[StepBindingFlags.given]: findByKey(library.stepDefinitions),
+			[StepBindingFlags.when]: findByKey(library.stepDefinitions),
+			[StepBindingFlags.then]: findByKey(library.stepDefinitions),
+			[StepBindingFlags.afterStep]: findByKey(library.afterTestStepHookDefinitions),
+			[StepBindingFlags.after]: findByKey(library.afterTestCaseHookDefinitions),
+			[StepBindingFlags.afterAll]: findByKey(library.afterTestRunHookDefinitions)
+		};
+
 		this._classBindings.forEach(binding => {
 			binding.stepBindings.forEach(stepBinding => {
-				let cucumberDefinition: any | undefined = undefined;
-				switch (stepBinding.bindingType) {
-					case StepBindingFlags.beforeAll:
-						cucumberDefinition = library.beforeTestRunHookDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.before:
-						cucumberDefinition = library.beforeTestCaseHookDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.beforeStep:
-						cucumberDefinition = library.beforeTestStepHookDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.given:
-						cucumberDefinition = library.stepDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.when:
-						cucumberDefinition = library.stepDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.then:
-						cucumberDefinition = library.stepDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.afterStep:
-						cucumberDefinition = library.afterTestStepHookDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.after:
-						cucumberDefinition = library.afterTestCaseHookDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-					case StepBindingFlags.afterAll:
-						cucumberDefinition = library.afterTestRunHookDefinitions.find(
-							s => (s.options as any).cucumberKey === stepBinding.cucumberKey
-						);
-						break;
-				}
+				const lookup = lookupMap[stepBinding.bindingType];
+				const cucumberDefinition = lookup?.(stepBinding.cucumberKey);
 				if (cucumberDefinition) {
 					cucumberDefinition.line = stepBinding.callsite.lineNumber;
 					cucumberDefinition.uri = stepBinding.callsite.filename;
@@ -338,6 +296,13 @@ export class BindingRegistry {
 			}
 		}
 
+		// Remove from _cucumberKeyIndex
+		for (const [key, binding] of this._cucumberKeyIndex) {
+			if (binding.callsite.filename === filename) {
+				this._cucumberKeyIndex.delete(key);
+			}
+		}
+
 		// Remove from _classBindings index
 		for (const [proto, classBinding] of this._classBindings) {
 			classBinding.stepBindings = classBinding.stepBindings.filter(b => b.callsite.filename !== filename);
@@ -354,12 +319,7 @@ export class BindingRegistry {
 	 * @returns true if a binding with that key exists.
 	 */
 	public hasBindingForKey(cucumberKey: string): boolean {
-		for (const [, binding] of this._classBindings) {
-			if (binding.stepBindings.some(b => b.cucumberKey === cucumberKey)) {
-				return true;
-			}
-		}
-		return false;
+		return this._cucumberKeyIndex.has(cucumberKey);
 	}
 
 	/**
@@ -387,8 +347,6 @@ export class BindingRegistry {
 	 * @returns An array of [[StepBinding]].
 	 */
 	private mapTagNamesToStepBindings(tags: TagName[], tagMap: Map<TagName, StepBinding[]>): StepBinding[] {
-		const matchingStepBindings: (StepBinding | undefined)[] = _.flatten(_.map(tags, tag => tagMap.get(tag)));
-
-		return _.reject(matchingStepBindings, stepBinding => stepBinding === undefined) as StepBinding[];
+		return tags.flatMap(tag => tagMap.get(tag) ?? []);
 	}
 }

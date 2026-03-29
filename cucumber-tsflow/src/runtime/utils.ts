@@ -66,13 +66,5 @@ const getRegTextForStep = (step: string): string => {
 	//https://docs.cucumber.io/cucumber-expressions/#custom-parameters
 	step = step.replace(/([^\\]|^){(?![\d,])(.*?)}/g, '$1.*');
 
-	//Escape all the regex symbols to avoid errors
-	step = escapeRegExp(step);
-
 	return step;
-};
-
-const escapeRegExp = (str: string): string => {
-	// eslint-disable-next-line no-useless-escape
-	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '$&');
 };

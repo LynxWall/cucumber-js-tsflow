@@ -15,7 +15,6 @@ import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern } from './types';
 import { defineParameterType } from '../index';
-import _ from 'underscore';
 
 interface WritableWorld extends World {
 	[key: string]: any;

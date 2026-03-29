@@ -10,7 +10,7 @@
 		],
 		"parallel": 1,
 		"parallelLoad": true,
-		"tags": "@node-esm"
+		"tags": "@node-esm and not @reload"
 	},
 	"esnodeesm": {
 		"transpiler": "es-node-esm",
@@ -19,6 +19,6 @@
 		"format": ["behave:../reports/esnode.json", "html:../reports/esnode.html", "junitbamboo:../reports/esnode.xml"],
 		"parallel": 0,
 		"parallelLoad": true,
-		"tags": "@node-esm"
+		"tags": "@node-esm and not @reload"
 	}
 }

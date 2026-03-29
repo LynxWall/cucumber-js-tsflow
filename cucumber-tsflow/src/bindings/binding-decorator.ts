@@ -32,6 +32,15 @@ interface WritableWorld extends World {
 const stepPatternRegistrations = new Map<StepPattern, StepBindingFlags>();
 
 /**
+ * Clear the step pattern registration cache. Must be called whenever
+ * `supportCodeLibraryBuilder.reset()` is used so that decorators
+ * re-register definitions with the fresh builder instance.
+ */
+export function resetStepPatternRegistrations(): void {
+	stepPatternRegistrations.clear();
+}
+
+/**
  * A class decorator that marks the associated class as a CucumberJS binding.
  *
  * @param requiredContextTypes An optional array of Types that will be created and passed into the created

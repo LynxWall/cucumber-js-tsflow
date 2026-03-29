@@ -11,7 +11,7 @@
 		"parallel": 1,
 		"parallelLoad": true,
 		"experimentalDecorators": true,
-		"tags": "@node-exp"
+		"tags": "@node-exp and not @reload"
 	},
 	"es-node-esm": {
 		"transpiler": "es-node-esm",
@@ -25,6 +25,6 @@
 		"parallel": 0,
 		"parallelLoad": true,
 		"experimentalDecorators": true,
-		"tags": "@node-exp"
+		"tags": "@node-exp and not @reload"
 	}
 }

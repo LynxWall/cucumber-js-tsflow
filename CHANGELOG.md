@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [7.7.2]
+
+### Fixed
+
+- **Comprehensive browser shims in parallel loader worker** — replaced the minimal `window = globalThis` shim with full stubs for `location`, `document`, `navigator`, `localStorage`, `matchMedia`, `XMLSerializer`, `HTMLElement`, `Element`, and other browser globals. Aligned with the environment setup used by `@uis/testing-bdd` (uis-jest). Prevents `Cannot read properties of undefined (reading 'prototype')`, `Cannot read properties of undefined (reading 'href')`, and similar errors when libraries probe for browser APIs during module evaluation in worker threads.
+- **Getter-only global properties** — `globalThis.navigator` (and other properties) are getter-only in modern Node.js (v21+). Replaced direct assignment with `Object.defineProperty` via a `safeDefine` helper to avoid `Cannot set property navigator of #<Object> which has only a getter` errors.
+- **Per-file error isolation in loader worker** — each support-code file is now loaded inside its own `try/catch`. A single file failing no longer kills the entire worker; other files still warm the transpiler cache successfully. Failed files are reported as non-fatal `fileErrors` and loaded by the main thread as a fallback.
+- **ESM loader registration order** — moved `register()` calls for ESM loaders before the ESM file import phase (was previously after CJS loads), ensuring loaders are active when `import()` is called.
+
+### Changed
+
+- **`LoaderWorkerResponse` type** — added optional `fileErrors` field to report per-file load failures without treating the entire worker as failed.
+- **Parallel loader result reporting** — workers that complete with some file errors now report `LOADED` (not `ERROR`). Per-file errors are logged as informational checkpoints, not `ERROR` level. Added summary message for skipped files.
+
 ## [7.7.1]
 
 ### Fixed

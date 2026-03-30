@@ -95,6 +95,7 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 	const allDescriptors: SerializableBindingDescriptor[] = [];
 	const allFiles = new Set<string>();
 	let errors = 0;
+	let fileWarnings = 0;
 
 	for (const result of results) {
 		if (result.status === 'fulfilled') {
@@ -106,9 +107,21 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 				if (response.loadedFiles) {
 					response.loadedFiles.forEach(f => allFiles.add(f));
 				}
+				// Per-file errors are non-fatal — the file just didn't contribute to the cache
+				if (response.fileErrors && response.fileErrors.length > 0) {
+					fileWarnings += response.fileErrors.length;
+					for (const fe of response.fileErrors) {
+						logger.checkpoint('File skipped during preload', { detail: fe });
+					}
+				}
 			} else {
 				errors++;
 				logger.error('Worker reported error', new Error(response.error || 'Unknown worker error'));
+				if (response.fileErrors) {
+					for (const fe of response.fileErrors) {
+						logger.checkpoint('File skipped during preload', { detail: fe });
+					}
+				}
 			}
 		} else {
 			errors++;
@@ -121,11 +134,15 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 		durationMs,
 		descriptorCount: allDescriptors.length,
 		fileCount: allFiles.size,
-		errors
+		errors,
+		fileWarnings
 	});
 
 	if (errors > 0) {
 		logger.checkpoint('Some workers failed — main thread will do full load as fallback');
+	}
+	if (fileWarnings > 0) {
+		logger.checkpoint(`${fileWarnings} file(s) skipped during preload — these will be loaded by the main thread`);
 	}
 
 	return {

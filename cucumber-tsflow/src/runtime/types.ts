@@ -12,7 +12,6 @@ export interface IMessageData {
 
 export interface ITsFlowRunOptionsRuntime extends IRunOptionsRuntime {
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
 	prebuild: boolean;
 	watch: boolean;
 }
@@ -22,7 +21,6 @@ export interface ITsFlowRunConfiguration extends IRunConfiguration {
 
 export interface TsFlowRuntimeOptions extends RuntimeOptions {
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
 }
 
 export interface InitializeTsflowCommand extends InitializeCommand {

@@ -8,7 +8,6 @@ const logger = createLogger('convert');
 
 export interface IConfigurationExt extends IConfiguration {
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
 	prebuild: boolean;
 	watch: boolean;
 }
@@ -46,7 +45,6 @@ export async function convertConfiguration(
 
 		logger.checkpoint('Building runtime config', {
 			parallel: flatConfiguration.parallel,
-			parallelLoad: flatConfiguration.parallelLoad,
 			prebuild: flatConfiguration.prebuild,
 			watch: flatConfiguration.watch,
 			experimentalDecorators: flatConfiguration.experimentalDecorators
@@ -57,7 +55,6 @@ export async function convertConfiguration(
 			failFast: flatConfiguration.failFast,
 			filterStacktraces: !flatConfiguration.backtrace,
 			parallel: flatConfiguration.parallel,
-			parallelLoad: flatConfiguration.parallelLoad,
 			prebuild: flatConfiguration.prebuild ?? false,
 			watch: flatConfiguration.watch ?? false,
 			retry: flatConfiguration.retry,

@@ -9,7 +9,6 @@
 			"junitbamboo:../reports/tsnodeesm.xml"
 		],
 		"parallel": 1,
-		"parallelLoad": true,
 		"tags": "@node-esm and not @reload"
 	},
 	"esnodeesm": {
@@ -18,7 +17,6 @@
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/esnode.json", "html:../reports/esnode.html", "junitbamboo:../reports/esnode.xml"],
 		"parallel": 0,
-		"parallelLoad": true,
 		"tags": "@node-esm and not @reload"
 	}
 }

@@ -18,7 +18,6 @@ export interface ITsflowConfiguration extends IConfiguration {
 	transpiler: string;
 	enableVueStyle: boolean;
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
 	prebuild: boolean;
 	watch: boolean;
 }
@@ -156,15 +155,6 @@ const ArgvParser = {
 				'-t, --tags <EXPRESSION>',
 				'only execute the features or scenarios with tags matching the expression (repeatable)',
 				ArgvParser.mergeTags
-			)
-			.option(
-				'--parallel-load [THREADS]',
-				'Pre-warm transpiler caches in parallel worker threads before loading support code. ' +
-					'Pass a number to control thread count, or omit for auto-detect.',
-				val => {
-					if (val === undefined || val === '') return true;
-					return ArgvParser.validateCountOption(val, '--parallel-load');
-				}
 			)
 			.option(
 				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|TS-VUE-ESM|ES-NODE-ESM|ES-VUE-ESM>',

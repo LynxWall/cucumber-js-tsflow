@@ -1,5 +1,5 @@
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import { StepBinding, StepBindingFlags, SerializableBindingDescriptor, serializeBinding } from './step-binding';
+import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern, TagName } from './types';
 import logger from '../utils/logger';
 
@@ -258,22 +258,6 @@ export class BindingRegistry {
 	};
 
 	/**
-	 * Export all registered step bindings as structured-clone-safe descriptors.
-	 * Used by loader-workers to send binding metadata back to the main thread.
-	 *
-	 * @returns An array of [[SerializableBindingDescriptor]].
-	 */
-	public toDescriptors(): SerializableBindingDescriptor[] {
-		const descriptors: SerializableBindingDescriptor[] = [];
-		for (const [, binding] of this._classBindings) {
-			for (const stepBinding of binding.stepBindings) {
-				descriptors.push(serializeBinding(stepBinding));
-			}
-		}
-		return descriptors;
-	}
-
-	/**
 	 * Remove all step bindings that originated from a given source file.
 	 * This supports delta-aware reload — bindings from changed files are purged
 	 * before re-loading so stale entries don't accumulate.
@@ -320,22 +304,6 @@ export class BindingRegistry {
 	 */
 	public hasBindingForKey(cucumberKey: string): boolean {
 		return this._cucumberKeyIndex.has(cucumberKey);
-	}
-
-	/**
-	 * Collect the unique set of source filenames from all registered bindings.
-	 * Useful for comparing what was loaded in a worker versus what exists on the main thread.
-	 *
-	 * @returns A Set of absolute file paths.
-	 */
-	public getDescriptorSourceFiles(): Set<string> {
-		const files = new Set<string>();
-		for (const [, binding] of this._classBindings) {
-			for (const stepBinding of binding.stepBindings) {
-				files.add(stepBinding.callsite.filename);
-			}
-		}
-		return files;
 	}
 
 	/**

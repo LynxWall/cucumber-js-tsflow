@@ -20,7 +20,6 @@ import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
 import path from 'path';
 import ansis from 'ansis';
-import { parallelPreload } from './parallel-loader';
 import { runPrebuild, mapToPrebuildPaths } from './prebuilder';
 import { createLogger } from '../utils/tsflow-logger';
 
@@ -138,35 +137,6 @@ Running from: ${__dirname}
 		'originalCoordinates' in options.support
 			? (options.support as SupportCodeLibrary)
 			: await (async () => {
-					// Parallel preload phase: warm transpiler caches in worker threads
-					if (!options.runtime.prebuild && options.runtime.parallelLoad) {
-						runLogger.checkpoint('Running parallel preload phase');
-						consoleLogger.info(ansis.cyanBright('Pre-warming transpiler caches in parallel...\n'));
-						try {
-							const result = await parallelPreload({
-								requirePaths,
-								importPaths,
-								requireModules: supportCoordinates.requireModules,
-								loaders: supportCoordinates.loaders,
-								experimentalDecorators: options.runtime.experimentalDecorators,
-								threadCount: options.runtime.parallelLoad
-							});
-							runLogger.checkpoint('Parallel preload completed', {
-								descriptors: result.descriptors.length,
-								files: result.loadedFiles.length,
-								durationMs: result.durationMs
-							});
-							consoleLogger.info(
-								ansis.cyanBright(
-									`Parallel preload completed in ${result.durationMs}ms ` +
-										`(${result.loadedFiles.length} files, ${result.descriptors.length} bindings)\n`
-								)
-							);
-						} catch (err: any) {
-							runLogger.error('Parallel preload failed, falling back to serial load', err);
-						}
-					}
-
 					return getSupportCodeLibrary({
 						logger,
 						cwd,

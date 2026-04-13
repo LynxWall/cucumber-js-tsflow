@@ -144,12 +144,6 @@ export const loadConfiguration = async (
 
 	logger.checkpoint('Experimental decorators configured', { experimentalDecorators });
 
-	// Configure parallel loading
-	if (original.parallelLoad === undefined) {
-		original.parallelLoad = false;
-	}
-	logger.checkpoint('Parallel load configured', { parallelLoad: original.parallelLoad });
-
 	/**
 	 * Ensures JSDOM environment is initialized before any test files are loaded.
 	 */

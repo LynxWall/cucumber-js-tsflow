@@ -162,7 +162,15 @@ if (typeof globalThis.window === 'undefined') {
 	windowShim.scroll = noop;
 	windowShim.scrollTo = noop;
 	windowShim.scrollBy = noop;
-	windowShim.CustomEvent = class CustomEvent extends Event {};
+	windowShim.CustomEvent =
+		globalThis.CustomEvent ??
+		class CustomEvent extends Event {
+			detail: unknown;
+			constructor(type: string, init?: { detail?: unknown } & EventInit) {
+				super(type, init);
+				this.detail = init?.detail;
+			}
+		};
 	windowShim.HTMLElement = HTMLElementStub;
 	windowShim.Element = ElementStub;
 	windowShim.XMLSerializer = XMLSerializerStub;

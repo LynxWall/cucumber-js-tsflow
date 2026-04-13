@@ -16,3 +16,6 @@ cucumber-tsflow-specs/reports/*
 #!/.yarn/cache
 /.pnp.*
 .DS_Store
+
+.tsflow-build
+

@@ -19,6 +19,8 @@ export interface ITsflowConfiguration extends IConfiguration {
 	enableVueStyle: boolean;
 	experimentalDecorators: boolean;
 	parallelLoad: boolean | number;
+	prebuild: boolean;
+	watch: boolean;
 }
 
 export interface IParsedArgv {
@@ -124,7 +126,9 @@ const ArgvParser = {
 			.option('--parallel <NUMBER_OF_WORKERS>', 'run in parallel with the given number of workers', val =>
 				ArgvParser.validateCountOption(val, '--parallel')
 			)
+			.option('--prebuild', 'AOT prebuild step files (much faster load for Vue components and large projects)')
 			.option('--publish', 'Publish a report to https://reports.cucumber.io')
+			.option('--watch', 'Watch mode for AOT prebuild (continuously rebuilds temp files)')
 			.option(
 				'-r, --require <GLOB|DIR|FILE>',
 				'require files before executing features (repeatable)',

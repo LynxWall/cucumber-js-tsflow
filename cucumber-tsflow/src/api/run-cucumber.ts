@@ -18,8 +18,10 @@ import 'polyfill-symbol-metadata';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
+import path from 'path';
 import ansis from 'ansis';
 import { parallelPreload } from './parallel-loader';
+import { runPrebuild, mapToPrebuildPaths } from './prebuilder';
 import { createLogger } from '../utils/tsflow-logger';
 
 const runLogger = createLogger('run-cucumber');
@@ -88,7 +90,44 @@ Running from: ${__dirname}
 
 	const resolvedPaths = await resolvePaths(logger, cwd, options.sources, supportCoordinates);
 	pluginManager.emit('paths:resolve', resolvedPaths);
-	const { sourcePaths, requirePaths, importPaths } = resolvedPaths;
+	let { sourcePaths, requirePaths, importPaths } = resolvedPaths;
+
+	// Handle Prebuild logic
+	if (options.runtime.prebuild && !('originalCoordinates' in options.support)) {
+		const outdir = path.join(cwd, '.tsflow-build');
+
+		consoleLogger.info(ansis.cyanBright('Running AOT Prebuild (bypassing runtime transpilers)...\n'));
+		await runPrebuild({
+			cwd,
+			outdir,
+			watch: options.runtime.watch,
+			format: supportCoordinates.loaders.length > 0 ? 'esm' : 'cjs'
+		});
+
+		runLogger.checkpoint('Prebuild completed, remapping paths', { outdir });
+
+		// Remap paths to the .tsflow-build directory
+		requirePaths = mapToPrebuildPaths(requirePaths, cwd, outdir);
+		importPaths = mapToPrebuildPaths(importPaths, cwd, outdir);
+
+		// If we are prebuilding, we should also bypass loaders / transpilation require hooks
+		// since the code is already valid JS. For Vue transpilers, swap in the standalone
+		// jsdom-setup module so the DOM environment is available without loading ts-node/esbuild hooks.
+		const vueTranspilerIdx = supportCoordinates.requireModules.findIndex(
+			(m: string) => m.includes('tsflow/lib/transpilers/') && /vue/.test(m)
+		);
+		if (vueTranspilerIdx !== -1) {
+			// Replace the Vue transpiler with the lightweight jsdom-setup module
+			supportCoordinates.requireModules[vueTranspilerIdx] = supportCoordinates.requireModules[vueTranspilerIdx].replace(
+				/\/transpilers\/.*$/,
+				'/transpilers/vue-jsdom-setup'
+			);
+		}
+		supportCoordinates.requireModules = supportCoordinates.requireModules.filter(
+			(m: string) => !m.includes('tsflow/lib/transpilers/') || m.includes('vue-jsdom-setup')
+		);
+		supportCoordinates.loaders = [];
+	}
 
 	/**
 	 * The support code library contains all of the hook and step definitions.
@@ -100,7 +139,7 @@ Running from: ${__dirname}
 			? (options.support as SupportCodeLibrary)
 			: await (async () => {
 					// Parallel preload phase: warm transpiler caches in worker threads
-					if (options.runtime.parallelLoad) {
+					if (!options.runtime.prebuild && options.runtime.parallelLoad) {
 						runLogger.checkpoint('Running parallel preload phase');
 						consoleLogger.info(ansis.cyanBright('Pre-warming transpiler caches in parallel...\n'));
 						try {

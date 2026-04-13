@@ -22,6 +22,8 @@ export default class Cli {
 	private readonly stderr: IFormatterStream;
 	private readonly env: NodeJS.ProcessEnv;
 
+	public isWatchMode: boolean = false;
+
 	constructor({
 		argv,
 		cwd,
@@ -113,6 +115,7 @@ export default class Cli {
 			);
 			configuration = loaded.useConfiguration;
 			runConfiguration = loaded.runConfiguration;
+			this.isWatchMode = !!runConfiguration.runtime?.watch;
 			logger.checkpoint('Configuration loaded', {
 				transpiler: configuration.transpiler,
 				loaders: runConfiguration.support?.loaders,

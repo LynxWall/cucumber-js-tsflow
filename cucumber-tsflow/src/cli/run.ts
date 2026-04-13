@@ -56,9 +56,14 @@ export default async function run(): Promise<void> {
 
 	logger.checkpoint('Exiting', { exitCode });
 
-	if (result.shouldExitImmediately) {
-		process.exit(exitCode);
+	if (!cli.isWatchMode) {
+		if (result.shouldExitImmediately) {
+			process.exit(exitCode);
+		} else {
+			process.exitCode = exitCode;
+		}
 	} else {
-		process.exitCode = exitCode;
+		// Keep process alive for watch mode
+		logger.checkpoint('Watch mode enabled, keeping process alive');
 	}
 }

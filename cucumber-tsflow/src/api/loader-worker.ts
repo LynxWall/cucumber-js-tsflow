@@ -182,6 +182,15 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import 'polyfill-symbol-metadata';
+import {
+	startTimer,
+	recordPhase,
+	recordFile,
+	timingRegisterOptions,
+	collectLoaderTimings,
+	getTimingSnapshot,
+	TimingSnapshot
+} from '../utils/tsflow-timing';
 
 // Signal that we're in a loader-worker context so decorators skip Cucumber APIs
 (global as any).__LOADER_WORKER = true;
@@ -212,6 +221,8 @@ export interface LoaderWorkerResponse {
 	error?: string;
 	/** Per-file errors that were caught but did not kill the worker */
 	fileErrors?: string[];
+	/** Startup timings recorded in this worker (only when TSFLOW_TIMING=true) */
+	timing?: TimingSnapshot;
 }
 
 async function processMessage(message: LoaderWorkerRequest): Promise<void> {
@@ -227,44 +238,62 @@ async function processMessage(message: LoaderWorkerRequest): Promise<void> {
 		process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(message.experimentalDecorators);
 
 		// Load require modules (transpiler setup) — these are critical, fail fast
+		let phaseStart = startTimer();
 		for (const modulePath of message.requireModules) {
 			require(modulePath);
 		}
+		recordPhase('support:require-modules', phaseStart);
 
 		// Register ESM loaders — also critical for import phase
+		phaseStart = startTimer();
 		for (const specifier of message.loaders) {
-			register(specifier, pathToFileURL('./'));
+			register(specifier, pathToFileURL('./'), timingRegisterOptions());
 		}
+		recordPhase('support:register-loaders', phaseStart);
 
 		// Load support files via require (CJS) — per-file isolation
+		phaseStart = startTimer();
 		for (const filePath of message.requirePaths) {
+			const fileStart = startTimer();
 			try {
 				require(filePath);
 			} catch (err: any) {
 				fileErrors.push(`CJS ${filePath}: ${err.message || String(err)}`);
 			}
+			recordFile('require', filePath, fileStart);
 		}
+		recordPhase('support:require', phaseStart);
 
 		// Load support files via import (ESM) — per-file isolation
+		phaseStart = startTimer();
 		for (const filePath of message.importPaths) {
+			const fileStart = startTimer();
 			try {
 				await import(pathToFileURL(filePath).toString());
 			} catch (err: any) {
 				fileErrors.push(`ESM ${filePath}: ${err.message || String(err)}`);
 			}
+			recordFile('import', filePath, fileStart);
 		}
+		recordPhase('support:import', phaseStart);
 
 		// Extract descriptors from the binding registry
+		phaseStart = startTimer();
 		const { BindingRegistry } = require('../bindings/binding-registry');
 		const registry = BindingRegistry.instance;
 		const descriptors = registry.toDescriptors();
 		const loadedFiles: string[] = Array.from(registry.getDescriptorSourceFiles());
+		recordPhase('registry:descriptors', phaseStart);
+
+		// Pull timings from this thread's ESM loader hooks before reporting
+		await collectLoaderTimings();
 
 		const response: LoaderWorkerResponse = {
 			type: 'LOADED',
 			descriptors,
 			loadedFiles,
-			fileErrors: fileErrors.length > 0 ? fileErrors : undefined
+			fileErrors: fileErrors.length > 0 ? fileErrors : undefined,
+			timing: getTimingSnapshot()
 		};
 		parentPort!.postMessage(response);
 	} catch (err: any) {

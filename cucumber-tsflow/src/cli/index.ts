@@ -7,6 +7,7 @@ import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
 import ArgvParser from './argv-parser';
 import debug from 'debug';
 import { createLogger } from '../utils/tsflow-logger';
+import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 const logger = createLogger('cli');
 
@@ -103,6 +104,7 @@ export default class Cli {
 				configFile: options.config,
 				profiles: options.profile
 			});
+			const configStart = startTimer();
 			const loaded = await loadConfiguration(
 				{
 					file: options.config,
@@ -113,6 +115,7 @@ export default class Cli {
 			);
 			configuration = loaded.useConfiguration;
 			runConfiguration = loaded.runConfiguration;
+			recordPhase('config', configStart);
 			logger.checkpoint('Configuration loaded', {
 				transpiler: configuration.transpiler,
 				loaders: runConfiguration.support?.loaders,

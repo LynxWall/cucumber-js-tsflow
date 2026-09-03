@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [Unreleased]
+
+### Added
+
+- **Startup timing instrumentation** (`TSFLOW_TIMING=true`) — records wall-clock time per startup phase (`bootstrap`, `config`, `preload`, `support:require-modules`, `support:require`, `support:register-loaders`, `support:import`, `support:finalize`, `registry:update`, `formatters:init`, `gherkin`, `runtime:run`) and per file (esbuild/Vue transpile, ESM `load` hook, top-level `require`/`import`), then prints a report to stderr when the run completes. Timings from the ESM loader hooks thread, each parallel preload worker thread and each parallel child process are collected and aggregated in the main process, so the report shows how many times every file is transpiled across contexts and a "slowest 25 files" table. Every instrumentation point is a single boolean check when the variable is not set.
+- New `initialize` export on the ESM loaders (`esnode-loader`, `esvue-loader`, `tsnode-loader`, `vue-loader`) and a `TIMING` worker-to-coordinator IPC message, both used only to carry timing data.
+
+### Changed
+
+- Per-file `logger.checkpoint` calls in the ESM resolve/load hooks, the esbuild transpilers and the Vue SFC compiler are now guarded behind `isVerbose()`, so their detail objects (including a full source-to-string conversion in `loadVue`) are no longer built when `TSFLOW_VERBOSE` is off.
+
+### Removed
+
+- Dead `cucumber-tsflow-specs` path check in the ESM `esbuild.mjs` `supports()` export, which would have disabled transpilation for every consumer project had anything called it.
+
 ## [7.7.2]
 
 ### Fixed

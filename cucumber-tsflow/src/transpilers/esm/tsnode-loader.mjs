@@ -3,12 +3,22 @@ import { createRequire } from 'node:module';
 import { resolveSpecifier } from './loader-utils.mjs';
 import { loadConfig } from 'tsconfig-paths';
 import path from 'path';
-import { createLogger } from '../../utils/tsflow-logger.mjs';
+import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
+
+// TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
+export { initialize } from '../../utils/tsflow-timing.mjs';
 
 const logger = createLogger('tsnode-loader');
 const require = createRequire(import.meta.url);
 
+// Per-file checkpoints in the resolve/load hot paths are guarded so their detail
+// objects and template strings are never built when verbose logging is off.
+const verbose = isVerbose();
+
 logger.checkpoint('Initializing tsnode-loader');
+
+const initStart = startTimer();
 
 // Load tsconfig to get paths
 const configLoaderResult = loadConfig(process.cwd());
@@ -61,92 +71,109 @@ logger.checkpoint('ts-node service created');
 // Create ESM hooks from the service
 const esmHooks = tsNode.createEsmHooks(service);
 logger.checkpoint('ESM hooks created');
+recordPhase('esm:hooks-init', initStart);
 
 export async function resolve(specifier, context, nextResolve) {
-	logger.checkpoint('resolve', { specifier, parentURL: context.parentURL });
+	if (verbose) logger.checkpoint('resolve', { specifier, parentURL: context.parentURL });
+	const resolveStart = startTimer();
 
-	// Try common resolution logic
-	const resolved = await resolveSpecifier(specifier, context, {
-		checkExtensions: true,
-		handleTsFiles: true,
-		tsNodeHooks: esmHooks,
-		nextResolve
-	});
+	try {
+		// Try common resolution logic
+		const resolved = await resolveSpecifier(specifier, context, {
+			checkExtensions: true,
+			handleTsFiles: true,
+			tsNodeHooks: esmHooks,
+			nextResolve
+		});
 
-	if (resolved) {
-		logger.checkpoint('resolve success', { specifier, url: resolved.url });
-		return resolved;
+		if (resolved) {
+			if (verbose) logger.checkpoint('resolve success', { specifier, url: resolved.url });
+			return resolved;
+		}
+
+		// Fall back to ts-node's resolver
+		if (verbose) logger.checkpoint('resolve delegating to ts-node', { specifier });
+		return esmHooks.resolve(specifier, context, nextResolve);
+	} finally {
+		recordPhase('esm:resolve', resolveStart);
 	}
-
-	// Fall back to ts-node's resolver
-	logger.checkpoint('resolve delegating to ts-node', { specifier });
-	return esmHooks.resolve(specifier, context, nextResolve);
 }
 
 export const load = async (url, context, nextLoad) => {
-	logger.checkpoint('load', { url });
+	if (verbose) logger.checkpoint('load', { url });
+	const loadStart = startTimer();
 
-	// Only intercept TypeScript files for path rewriting
-	if (url.endsWith('.ts') || url.endsWith('.tsx')) {
-		logger.checkpoint('load handling TypeScript', { url });
+	try {
+		// Only intercept TypeScript files for path rewriting
+		if (url.endsWith('.ts') || url.endsWith('.tsx')) {
+			if (verbose) logger.checkpoint('load handling TypeScript', { url });
 
-		try {
-			// First, let ts-node load the file
-			const result = await esmHooks.load(url, context, nextLoad);
+			try {
+				// First, let ts-node load the file
+				const result = await esmHooks.load(url, context, nextLoad);
 
-			// If we have path mappings, check if we need to rewrite the source
-			if (configLoaderResult.resultType === 'success' && configLoaderResult.paths) {
-				let code = result.source.toString();
-				let modified = false;
-				let replacementCount = 0;
+				// If we have path mappings, check if we need to rewrite the source
+				if (configLoaderResult.resultType === 'success' && configLoaderResult.paths) {
+					let code = result.source.toString();
+					let modified = false;
+					let replacementCount = 0;
 
-				for (const [pattern, replacements] of Object.entries(configLoaderResult.paths)) {
-					const searchPattern = pattern.replace('/*', '/');
-					const searchRegex = new RegExp(`(from\\s+['"])${searchPattern}([^'"]+)(['"])`, 'g');
+					for (const [pattern, replacements] of Object.entries(configLoaderResult.paths)) {
+						const searchPattern = pattern.replace('/*', '/');
+						const searchRegex = new RegExp(`(from\\s+['"])${searchPattern}([^'"]+)(['"])`, 'g');
 
-					if (searchRegex.test(code)) {
-						const replacementPath = replacements[0].replace('/*', '');
+						if (searchRegex.test(code)) {
+							const replacementPath = replacements[0].replace('/*', '');
 
-						code = code.replace(searchRegex, (match, prefix, importPath, suffix) => {
-							const fullPath = path.join(configLoaderResult.absoluteBaseUrl, replacementPath, importPath);
-							const fileUrl = pathToFileURL(fullPath).href;
+							code = code.replace(searchRegex, (match, prefix, importPath, suffix) => {
+								const fullPath = path.join(configLoaderResult.absoluteBaseUrl, replacementPath, importPath);
+								const fileUrl = pathToFileURL(fullPath).href;
 
-							replacementCount++;
-							logger.checkpoint('Path rewritten', {
-								from: `${searchPattern}${importPath}`,
-								to: fileUrl
+								replacementCount++;
+								if (verbose) {
+									logger.checkpoint('Path rewritten', {
+										from: `${searchPattern}${importPath}`,
+										to: fileUrl
+									});
+								}
+
+								return `${prefix}${fileUrl}${suffix}`;
 							});
 
-							return `${prefix}${fileUrl}${suffix}`;
-						});
+							modified = true;
+						}
+					}
 
-						modified = true;
+					if (modified) {
+						recordFile('load', url, loadStart);
+						if (verbose) {
+							logger.checkpoint('load complete with path rewrites', {
+								url,
+								replacementCount
+							});
+						}
+						return {
+							...result,
+							source: code
+						};
 					}
 				}
 
-				if (modified) {
-					logger.checkpoint('load complete with path rewrites', {
-						url,
-						replacementCount
-					});
-					return {
-						...result,
-						source: code
-					};
-				}
+				recordFile('load', url, loadStart);
+				if (verbose) logger.checkpoint('load complete', { url });
+				return result;
+			} catch (error) {
+				logger.error('load failed', error, { url });
+				throw error;
 			}
-
-			logger.checkpoint('load complete', { url });
-			return result;
-		} catch (error) {
-			logger.error('load failed', error, { url });
-			throw error;
 		}
-	}
 
-	// For non-TypeScript files, let ts-node handle it
-	logger.checkpoint('load delegating to ts-node', { url });
-	return esmHooks.load(url, context, nextLoad);
+		// For non-TypeScript files, let ts-node handle it
+		if (verbose) logger.checkpoint('load delegating to ts-node', { url });
+		return esmHooks.load(url, context, nextLoad);
+	} finally {
+		recordPhase('esm:load', loadStart);
+	}
 };
 
 export const getFormat = esmHooks.getFormat;

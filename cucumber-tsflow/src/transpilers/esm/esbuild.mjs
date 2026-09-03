@@ -2,9 +2,13 @@ import { transformSync } from 'esbuild';
 import path from 'path';
 import { loadConfig } from 'tsconfig-paths';
 import { pathToFileURL } from 'url';
-import { createLogger } from '../../utils/tsflow-logger.mjs';
+import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { startTimer, recordFile } from '../../utils/tsflow-timing.mjs';
 
 const logger = createLogger('esbuild');
+
+// Per-file checkpoints are guarded so their detail objects are never built when verbose logging is off
+const verbose = isVerbose();
 
 export const defaultOptions = {
 	debug: true
@@ -15,7 +19,7 @@ let tsconfigCache = null;
 
 function loadTsConfigPaths() {
 	if (tsconfigCache) {
-		logger.checkpoint('loadTsConfigPaths (cached)');
+		if (verbose) logger.checkpoint('loadTsConfigPaths (cached)');
 		return tsconfigCache;
 	}
 
@@ -49,7 +53,7 @@ function rewritePathMappings(code, filename) {
 	const { absoluteBaseUrl, paths } = loadTsConfigPaths();
 
 	if (!paths || !absoluteBaseUrl) {
-		logger.checkpoint('rewritePathMappings skipped (no paths)', { filename });
+		if (verbose) logger.checkpoint('rewritePathMappings skipped (no paths)', { filename });
 		return code;
 	}
 
@@ -68,16 +72,18 @@ function rewritePathMappings(code, filename) {
 			const fileUrl = pathToFileURL(absolutePath).href;
 
 			replacementCount++;
-			logger.checkpoint('Path mapping replaced', {
-				from: `${searchPattern}${subPath || ''}`,
-				to: fileUrl
-			});
+			if (verbose) {
+				logger.checkpoint('Path mapping replaced', {
+					from: `${searchPattern}${subPath || ''}`,
+					to: fileUrl
+				});
+			}
 
 			return `${prefix}${fileUrl}${suffix}`;
 		});
 	}
 
-	if (replacementCount > 0) {
+	if (verbose && replacementCount > 0) {
 		logger.checkpoint('rewritePathMappings complete', { filename, replacementCount });
 	}
 
@@ -127,7 +133,6 @@ export const supports = filename => {
 		return false;
 	}
 	if (filename.includes('node_modules')) return false;
-	if (!filename.includes('cucumber-tsflow-specs')) return false;
 
 	return path.extname(filename) in loaders;
 };
@@ -141,37 +146,45 @@ const getLoaders = options => {
 };
 
 export const transpileCode = (code, filename, ext, _options) => {
-	logger.checkpoint('transpileCode', {
-		filename,
-		ext,
-		codeLength: code?.length
-	});
+	if (verbose) {
+		logger.checkpoint('transpileCode', {
+			filename,
+			ext,
+			codeLength: code?.length
+		});
+	}
 
 	const options = { ...defaultOptions, ..._options };
 	const loadersMap = getLoaders(options);
 	const loaderExt = ext != undefined ? ext : path.extname(filename);
 
-	logger.checkpoint('Rewriting path mappings', { filename });
+	if (verbose) logger.checkpoint('Rewriting path mappings', { filename });
 	let processedCode = rewritePathMappings(code, filename);
 
-	logger.checkpoint('Calling esbuild transformSync', {
-		filename,
-		loader: loadersMap[loaderExt],
-		processedCodeLength: processedCode?.length
-	});
+	if (verbose) {
+		logger.checkpoint('Calling esbuild transformSync', {
+			filename,
+			loader: loadersMap[loaderExt],
+			processedCodeLength: processedCode?.length
+		});
+	}
 
 	try {
+		const start = startTimer();
 		const ret = transformSync(processedCode, {
 			...commonOptions,
 			...(options.esbuild || {}),
 			loader: loadersMap[loaderExt],
 			sourcefile: filename
 		});
+		recordFile('transpile', filename, start);
 
-		logger.checkpoint('esbuild transformSync success', {
-			filename,
-			outputLength: ret.code?.length
-		});
+		if (verbose) {
+			logger.checkpoint('esbuild transformSync success', {
+				filename,
+				outputLength: ret.code?.length
+			});
+		}
 
 		return { output: ret.code, sourceMap: ret.map };
 	} catch (error) {

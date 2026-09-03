@@ -6,9 +6,10 @@ import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
 import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
-import { FinalizeCommand, RunCommand, WorkerToCoordinatorEvent } from '@cucumber/cucumber/lib/runtime/parallel/types';
+import { FinalizeCommand, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
-import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime } from '../types';
+import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime, TsFlowWorkerToCoordinatorEvent } from '../types';
+import { mergeTimingSnapshot } from '../../utils/tsflow-timing';
 
 const runWorkerPath = path.resolve(__dirname, 'run-worker');
 
@@ -51,8 +52,11 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly coordinates: ISourcesCoordinates
 	) {}
 
-	parseWorkerMessage(worker: ManagedWorker, message: WorkerToCoordinatorEvent): void {
+	parseWorkerMessage(worker: ManagedWorker, message: TsFlowWorkerToCoordinatorEvent): void {
 		switch (message.type) {
+			case 'TIMING':
+				mergeTimingSnapshot(`worker:${message.workerId}`, message.snapshot);
+				break;
 			case 'READY':
 				worker.state = WorkerState.idle;
 				this.awakenWorkers(worker);
@@ -101,7 +105,7 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		});
 		const worker = { state: WorkerState.new, process: workerProcess, id };
 		this.workers[id] = worker;
-		worker.process.on('message', (message: WorkerToCoordinatorEvent) => {
+		worker.process.on('message', (message: TsFlowWorkerToCoordinatorEvent) => {
 			this.parseWorkerMessage(worker, message);
 		});
 		worker.process.on('close', exitCode => {

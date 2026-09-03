@@ -1,10 +1,14 @@
 import Cli, { ICliRunResult } from './index';
 import { validateNodeEngineVersion } from '@cucumber/cucumber/lib/cli/validate_node_engine_version';
 import { createLogger } from '../utils/tsflow-logger';
+import { recordPhase } from '../utils/tsflow-timing';
 
 const logger = createLogger('run');
 
 export default async function run(): Promise<void> {
+	// Time from process start until the CLI begins: module loading of the library and its dependencies
+	recordPhase('bootstrap', 0);
+
 	logger.checkpoint('Starting cucumber-tsflow', {
 		nodeVersion: process.version,
 		cwd: process.cwd()

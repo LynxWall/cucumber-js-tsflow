@@ -1,9 +1,12 @@
 import { parse, compileScript, compileTemplate, compileStyle } from 'vue/compiler-sfc';
 import hash from 'hash-sum';
 import { transformSync } from 'esbuild';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, isVerbose } from '../utils/tsflow-logger';
+import { startTimer, recordFile } from '../utils/tsflow-timing';
 
 const logger = createLogger('vue-sfc');
+// Per-file checkpoints are guarded so the detail objects are not built when verbose logging is off
+const verbose = isVerbose();
 
 export type VueSFCFormat = 'cjs' | 'esm';
 
@@ -29,8 +32,9 @@ export type VueSFCOptions = {
  */
 export function compileVueSFC(source: string, filename: string, options: VueSFCOptions = {}): { code: string } {
 	const { enableStyle = false, format = 'cjs' } = options;
+	const compileStart = startTimer();
 
-	logger.checkpoint('compileVueSFC started', { filename, format, enableStyle });
+	if (verbose) logger.checkpoint('compileVueSFC started', { filename, format, enableStyle });
 
 	if (!source) throw new Error(`Invalid source for ${filename}: source is ${typeof source}`);
 	if (!filename) throw new Error('Filename is required for Vue SFC compilation');
@@ -48,13 +52,14 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 	const id = hash(filename);
 	const hasScoped = descriptor.styles.some(s => s.scoped);
 
-	logger.checkpoint('SFC parsed', {
-		hasScript: !!descriptor.script,
-		hasScriptSetup: !!descriptor.scriptSetup,
-		hasTemplate: !!descriptor.template,
-		styleCount: descriptor.styles?.length,
-		hasScoped
-	});
+	if (verbose)
+		logger.checkpoint('SFC parsed', {
+			hasScript: !!descriptor.script,
+			hasScriptSetup: !!descriptor.scriptSetup,
+			hasTemplate: !!descriptor.template,
+			styleCount: descriptor.styles?.length,
+			hasScoped
+		});
 
 	const isTS = descriptor.script?.lang === 'ts' || descriptor.scriptSetup?.lang === 'ts';
 
@@ -104,7 +109,7 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 				templateOptions: { transformAssetUrls: false }
 			} as any);
 			rawScriptContent = compiledScript.content;
-			logger.checkpoint('Script compiled', { contentLength: rawScriptContent.length });
+			if (verbose) logger.checkpoint('Script compiled', { contentLength: rawScriptContent.length });
 		} catch (e: any) {
 			throw new Error(`Failed to compile script in ${filename}: ${e.message}`, { cause: e });
 		}
@@ -123,7 +128,7 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 				tsconfigRaw
 			});
 			scriptCode = result.code;
-			logger.checkpoint('Script transpiled (ESM)', { outputLength: scriptCode.length });
+			if (verbose) logger.checkpoint('Script transpiled (ESM)', { outputLength: scriptCode.length });
 		} catch (e: any) {
 			throw new Error(`Failed to transpile TypeScript in ${filename}: ${e.message}`, { cause: e });
 		}
@@ -156,7 +161,7 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 			}
 
 			templateCode = template.code;
-			logger.checkpoint('Template compiled', { outputLength: templateCode.length });
+			if (verbose) logger.checkpoint('Template compiled', { outputLength: templateCode.length });
 		} catch (e: any) {
 			throw new Error(`Failed to compile template in ${filename}: ${e.message}`, { cause: e });
 		}
@@ -262,13 +267,14 @@ if (typeof document !== 'undefined') {
 				tsconfigRaw
 			});
 			finalCode = result.code;
-			logger.checkpoint('CJS transpilation complete', { outputLength: finalCode.length });
+			if (verbose) logger.checkpoint('CJS transpilation complete', { outputLength: finalCode.length });
 		} catch (e: any) {
 			throw new Error(`Failed to transpile Vue SFC to CJS in ${filename}: ${e.message}`, { cause: e });
 		}
 	}
 
-	logger.checkpoint('compileVueSFC complete', { filename, outputLength: finalCode.length });
+	if (verbose) logger.checkpoint('compileVueSFC complete', { filename, outputLength: finalCode.length });
+	recordFile('transpile', filename, compileStart);
 
 	return { code: finalCode };
 }

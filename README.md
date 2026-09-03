@@ -446,6 +446,16 @@ echo $LastExitCode
 echo $?
 ```
 
+### Startup timing diagnostics
+
+Set `TSFLOW_TIMING=true` to find out where startup time goes. When the run completes, cucumber-tsflow prints a report to stderr with the wall-clock time of each startup phase (configuration, parallel preload, support-code require/import, registration, gherkin parsing, test execution), the same phases for every preload worker thread and parallel child process, per-context file totals, and a table of the 25 slowest files by transpile, ESM load, and top-level require/import time.
+
+```bash
+TSFLOW_TIMING=true npx cucumber-tsflow -p default
+```
+
+The report is diagnostic output only and does not change how tests run. Without the variable set, the instrumentation is inactive. `TSFLOW_VERBOSE=true` remains available for untimed checkpoint logging.
+
 ## New Configuration options
 
 As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/configuration.md>

@@ -8,6 +8,7 @@ import { initializeForLoadSupport } from '@cucumber/cucumber/lib/api/plugins';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
+import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 const logger = createLogger('load-support');
 
@@ -52,6 +53,7 @@ export async function loadSupport(
 	// Parallel preload phase: warm transpiler caches in worker threads
 	if (options.parallelLoad) {
 		logger.checkpoint('Running parallel preload phase');
+		const preloadStart = startTimer();
 		try {
 			const result = await parallelPreload({
 				requirePaths,
@@ -69,6 +71,7 @@ export async function loadSupport(
 		} catch (err: any) {
 			logger.error('Parallel preload failed, falling back to serial load', err);
 		}
+		recordPhase('preload', preloadStart);
 	}
 
 	let supportCodeLibrary = await getSupportCodeLibrary({
@@ -85,8 +88,10 @@ export async function loadSupport(
 	// Set support to the updated step and hook definitions
 	// in the supportCodeLibrary. We also need to initialize originalCoordinates
 	// to support parallel execution.
+	const updateStart = startTimer();
 	supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
 	supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
+	recordPhase('registry:update', updateStart);
 
 	return supportCodeLibrary;
 }

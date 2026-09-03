@@ -21,6 +21,7 @@ import { Console } from 'console';
 import ansis from 'ansis';
 import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
+import { startTimer, recordPhase, collectLoaderTimings, printTimingReport } from '../utils/tsflow-timing';
 
 const runLogger = createLogger('run-cucumber');
 
@@ -103,6 +104,7 @@ Running from: ${__dirname}
 					if (options.runtime.parallelLoad) {
 						runLogger.checkpoint('Running parallel preload phase');
 						consoleLogger.info(ansis.cyanBright('Pre-warming transpiler caches in parallel...\n'));
+						const preloadStart = startTimer();
 						try {
 							const result = await parallelPreload({
 								requirePaths,
@@ -126,6 +128,7 @@ Running from: ${__dirname}
 						} catch (err: any) {
 							runLogger.error('Parallel preload failed, falling back to serial load', err);
 						}
+						recordPhase('preload', preloadStart);
 					}
 
 					return getSupportCodeLibrary({
@@ -142,9 +145,17 @@ Running from: ${__dirname}
 	// Set support to the updated step and hook definitions
 	// in the supportCodeLibrary. We also need to initialize originalCoordinates
 	// to support parallel execution.
+	let phaseStart = startTimer();
 	supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
 	supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
 	options.support = supportCodeLibrary;
+	recordPhase('registry:update', phaseStart);
+
+	// Gather ESM loader hook timings and print the TSFLOW_TIMING report (no-op when disabled)
+	const finishTiming = async (): Promise<void> => {
+		await collectLoaderTimings();
+		printTimingReport(stderr);
+	};
 
 	const eventBroadcaster = new EventEmitter();
 	if (onMessage) {
@@ -161,6 +172,7 @@ Running from: ${__dirname}
 	const eventDataCollector = global.messageCollector as unknown as EventDataCollector;
 
 	let formatterStreamError = false;
+	phaseStart = startTimer();
 	const cleanupFormatters = await initializeFormatters({
 		env,
 		cwd,
@@ -175,9 +187,11 @@ Running from: ${__dirname}
 		pluginManager
 	});
 	await emitMetaMessage(eventBroadcaster, env);
+	recordPhase('formatters:init', phaseStart);
 
 	let filteredPickles: ReadonlyArray<IFilterablePickle> = [];
 	let parseErrors: ParseError[] = [];
+	phaseStart = startTimer();
 	if (sourcePaths.length > 0) {
 		const gherkinResult = await getPicklesAndErrors({
 			newId,
@@ -190,12 +204,14 @@ Running from: ${__dirname}
 		filteredPickles = await pluginManager.transform('pickles:order', filteredPickles);
 		parseErrors = gherkinResult.parseErrors;
 	}
+	recordPhase('gherkin', phaseStart);
 	if (parseErrors.length) {
 		parseErrors.forEach(parseError => {
 			logger.error(`Parse error in "${parseError.source.uri}" ${parseError.message}`);
 		});
 		await cleanupFormatters();
 		await pluginManager.cleanup();
+		await finishTiming();
 		return {
 			success: false,
 			support: supportCodeLibrary
@@ -208,6 +224,7 @@ Running from: ${__dirname}
 		newId
 	});
 
+	phaseStart = startTimer();
 	const runtime = await makeRuntime({
 		environment,
 		logger,
@@ -219,8 +236,10 @@ Running from: ${__dirname}
 		coordinates: options.sources
 	});
 	const success = await runtime.run();
+	recordPhase('runtime:run', phaseStart);
 	await pluginManager.cleanup();
 	await cleanupFormatters();
+	await finishTiming();
 
 	return {
 		success: success && !formatterStreamError,

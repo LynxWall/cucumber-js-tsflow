@@ -1,5 +1,6 @@
 import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions } from 'esbuild';
 import path from 'path';
+import { startTimer, recordFile } from '../utils/tsflow-timing';
 
 export type TranspileOptions = {
 	debug: boolean;
@@ -72,12 +73,14 @@ export const transpileCode = (
 	const loaders = getLoaders(options);
 	const loaderExt = ext != undefined ? ext : path.extname(filename);
 
+	const start = startTimer();
 	const ret = transformSync(code, {
 		...commonOptions,
 		...(options.esbuild as TransformOptions | undefined),
 		loader: loaders[loaderExt],
 		sourcefile: filename
 	});
+	recordFile('transpile', filename, start);
 
 	return { output: ret.code, sourceMap: ret.map };
 };

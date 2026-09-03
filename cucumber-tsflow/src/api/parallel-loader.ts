@@ -15,6 +15,7 @@ import path from 'node:path';
 import type { LoaderWorkerRequest, LoaderWorkerResponse } from './loader-worker';
 import type { SerializableBindingDescriptor } from '../bindings/step-binding';
 import { createLogger } from '../utils/tsflow-logger';
+import { mergeTimingSnapshot } from '../utils/tsflow-timing';
 
 const logger = createLogger('parallel-loader');
 
@@ -69,6 +70,7 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 
 	// Launch workers
 	const workerPromises: Promise<LoaderWorkerResponse>[] = [];
+	const workerIndices: number[] = [];
 
 	for (let i = 0; i < threads; i++) {
 		// Only launch a worker if it has files to process
@@ -86,6 +88,7 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 		};
 
 		workerPromises.push(runWorker(workerScript, request, i));
+		workerIndices.push(i);
 	}
 
 	// Await all workers
@@ -97,10 +100,12 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 	let errors = 0;
 	let fileWarnings = 0;
 
-	for (const result of results) {
+	for (let i = 0; i < results.length; i++) {
+		const result = results[i];
 		if (result.status === 'fulfilled') {
 			const response = result.value;
 			if (response.type === 'LOADED') {
+				mergeTimingSnapshot(`preload:${workerIndices[i]}`, response.timing);
 				if (response.descriptors) {
 					allDescriptors.push(...response.descriptors);
 				}

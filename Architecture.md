@@ -165,6 +165,26 @@ The parallel preload system warms transpiler on-disk caches before the main load
 
 The preload runs in the main process before any child processes are forked. Parallel child processes benefit from the warm on-disk cache without needing their own preload phase.
 
+## Diagnostics
+
+Two environment variables expose what the runtime is doing. Both are read once per thread and cost a single boolean check per call site when unset.
+
+- `TSFLOW_VERBOSE=true` — untimed checkpoint logging via `src/utils/tsflow-logger.ts` (and its `.mjs` twin for the ESM loaders). Per-file checkpoints in the resolve/load hooks, transpilers and Vue SFC compiler are guarded behind `isVerbose()` so their detail objects are never built when off.
+- `TSFLOW_TIMING=true` — startup timing via `src/utils/tsflow-timing.ts` (and its `.mjs` twin). Records wall-clock time per phase and per file, then `runCucumber()` prints a report to stderr with a phase table per context, file totals per context, and a slowest-25-files table.
+
+### Timing collection
+
+Every execution context records into its own store on `globalThis.__TSFLOW_TIMING` (shared between the CJS build, the `.mjs` twin and the bundled esbuild transpiler within one thread) and the main process aggregates them:
+
+| Context | Scope | Channel back to the main process |
+| --- | --- | --- |
+| Main process | `main` | — |
+| ESM loader hooks thread (`module.register()`) | `esm-hooks` | `MessageChannel` port passed as `register()` `data`; the loader's `initialize` export stores it and answers snapshot requests |
+| Preload worker thread | `preload:<n>` | `timing` field on the `LOADED` response |
+| Parallel child process | `worker:<id>` | `TIMING` IPC message sent before `READY` |
+
+Nested contexts compose as `preload:<n>/esm-hooks`. Per-file records have four kinds: `transpile` (esbuild `transformSync` / `compileVueSFC` only — ts-node's TypeScript transpile is not observable), `load` (ESM `load` hook wall time), and `require` / `import` (top-level support-file load including dependencies). The same file appearing under `main`, `preload:*` and `worker:*` is the N+1 transpile multiplication made visible.
+
 ## Transpilers
 
 Transpilers are loaded as CJS `requireModule` entries or ESM `loader` entries based on configuration.

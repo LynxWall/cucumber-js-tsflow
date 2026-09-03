@@ -14,3 +14,6 @@ const loader = createEsbuildLoader({
 logger.checkpoint('esvue-loader initialized');
 
 export const { resolve, load, getFormat, transformSource } = loader;
+
+// TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
+export { initialize } from '../../utils/tsflow-timing.mjs';

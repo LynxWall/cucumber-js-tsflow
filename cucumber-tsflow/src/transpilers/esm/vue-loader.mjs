@@ -27,9 +27,6 @@ async function getTsLoader() {
 	logger.checkpoint('getTsLoader initializing');
 
 	try {
-		// Ensure ts-node respects tsconfig.json files
-		process.env.TS_NODE_FILES = process.env.TS_NODE_FILES || 'true';
-
 		logger.checkpoint('Importing ts-node-maintained/esm');
 		const initStart = startTimer();
 		const tsNodeEsm = await import('ts-node-maintained/esm');

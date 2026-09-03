@@ -29,15 +29,16 @@ export function createTsNodeService(options = {}) {
 		return serviceCache.get(cacheKey);
 	}
 
-	// Ensure ts-node respects tsconfig.json files
-	process.env.TS_NODE_FILES = process.env.TS_NODE_FILES || 'true';
-
 	const experimentalDecorators = process.env.CUCUMBER_EXPERIMENTAL_DECORATORS === 'true';
 
 	const defaultOptions = {
 		esm: true,
 		experimentalSpecifierResolution: 'node',
-		files: true,
+		// `files` only controls whether ts-node globs the tsconfig `files`/`include` set to seed the
+		// language service, and that list is consumed only when `transpileOnly` is false. With
+		// `transpileOnly: true` the walk is pure cost, so it is disabled here regardless of the
+		// consumer's tsconfig `ts-node.files` setting.
+		files: false,
 		transpileOnly: true,
 		compilerOptions: {
 			experimentalDecorators,

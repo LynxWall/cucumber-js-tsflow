@@ -67,26 +67,16 @@ export function initializeTsconfigPaths() {
 	return matchPath;
 }
 
-// Extension resolution helper
-export async function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
-	if (verbose) loggerResolve.checkpoint('resolveWithExtensions', { specifier, parentURL });
+// Extension-probe cache: absolute extensionless path (plus the extension list when it is not the
+// default) -> resolved file URL, or null when nothing matched. Keying on the resolved path rather
+// than on specifier + parentURL means `../fixtures/context` imported from ten files in one directory
+// and `@fixtures/context` mapped to the same location all share a single set of existsSync probes.
+// Negative results are cached too. Both caches live for the process lifetime, which is correct for a
+// one-shot CLI run; a long-lived process that adds, removes or moves files must call
+// clearResolutionCaches() before resolving again.
+const extensionResolutionCache = new Map();
 
-	let resolvedPath;
-
-	try {
-		if (specifier.startsWith('file://')) {
-			resolvedPath = fileURLToPath(specifier);
-		} else {
-			const parentPath = fileURLToPath(parentURL);
-			const parentDir = path.dirname(parentPath);
-			resolvedPath = path.resolve(parentDir, specifier);
-		}
-		if (verbose) loggerResolve.checkpoint('Resolved base path', { resolvedPath });
-	} catch (error) {
-		loggerResolve.error('Failed to resolve base path', error, { specifier, parentURL });
-		return null;
-	}
-
+function probeExtensions(resolvedPath, extensions) {
 	// Try various extensions
 	for (const ext of extensions) {
 		const fullPath = resolvedPath + ext;
@@ -107,11 +97,51 @@ export async function resolveWithExtensions(specifier, parentURL, extensions = C
 		}
 	}
 
-	if (verbose) loggerResolve.checkpoint('No resolution found', { specifier });
 	return null;
 }
 
+// Extension resolution helper
+export async function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
+	if (verbose) loggerResolve.checkpoint('resolveWithExtensions', { specifier, parentURL });
+
+	let resolvedPath;
+
+	try {
+		if (specifier.startsWith('file://')) {
+			resolvedPath = fileURLToPath(specifier);
+		} else {
+			const parentPath = fileURLToPath(parentURL);
+			const parentDir = path.dirname(parentPath);
+			resolvedPath = path.resolve(parentDir, specifier);
+		}
+		if (verbose) loggerResolve.checkpoint('Resolved base path', { resolvedPath });
+	} catch (error) {
+		loggerResolve.error('Failed to resolve base path', error, { specifier, parentURL });
+		return null;
+	}
+
+	const cacheKey = extensions === CODE_EXTENSIONS ? resolvedPath : `${resolvedPath}\0${extensions.join(',')}`;
+	let result = extensionResolutionCache.get(cacheKey);
+
+	if (result === undefined) {
+		result = probeExtensions(resolvedPath, extensions);
+		extensionResolutionCache.set(cacheKey, result);
+	} else if (verbose) {
+		loggerResolve.checkpoint('Resolved from extension cache', { resolvedPath, result });
+	}
+
+	if (result === null && verbose) loggerResolve.checkpoint('No resolution found', { specifier });
+	return result;
+}
+
 const pathResolutionCache = new Map();
+
+// Drops every cached resolution result. Not called by the one-shot CLI; intended for a long-lived
+// process (e.g. a future watch mode) whose source tree changes between resolutions.
+export function clearResolutionCaches() {
+	extensionResolutionCache.clear();
+	pathResolutionCache.clear();
+}
 
 export function resolveTsconfigPaths(specifier) {
 	// Fast path: skip what we know won't match
@@ -341,8 +371,17 @@ export function handleCommonFileTypes(url, context, nextLoad, loaderName = 'load
 	return null;
 }
 
+// `tsNodeHooks` is an already-created hooks object; `getTsNodeHooks` is an async thunk that creates
+// (or returns the cached) hooks on demand. The thunk is only invoked when a .ts/.tsx specifier
+// actually needs ts-node, so bare and relative specifiers never trigger ts-node service construction.
 export async function resolveSpecifier(specifier, context, options = {}) {
-	const { checkExtensions = true, handleTsFiles = false, tsNodeHooks = null, nextResolve } = options;
+	const {
+		checkExtensions = true,
+		handleTsFiles = false,
+		tsNodeHooks = null,
+		getTsNodeHooks = null,
+		nextResolve
+	} = options;
 
 	if (verbose) loggerResolve.checkpoint('resolveSpecifier', { specifier, checkExtensions, handleTsFiles });
 
@@ -371,10 +410,11 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 	}
 
 	// 2. Handle TypeScript files if requested
-	if (handleTsFiles && tsNodeHooks && (specifier.endsWith('.ts') || specifier.endsWith('.tsx'))) {
+	if (handleTsFiles && (tsNodeHooks || getTsNodeHooks) && (specifier.endsWith('.ts') || specifier.endsWith('.tsx'))) {
 		try {
 			if (verbose) loggerResolve.checkpoint('Delegating .ts to ts-node hooks', { specifier });
-			const resolved = await tsNodeHooks.resolve(specifier, context, nextResolve);
+			const hooks = tsNodeHooks ?? (await getTsNodeHooks());
+			const resolved = await hooks.resolve(specifier, context, nextResolve);
 			return { ...resolved, format: 'module' };
 		} catch (error) {
 			if (verbose) {
@@ -468,10 +508,12 @@ export function createEsbuildLoader(options = {}) {
 			const resolveStart = startTimer();
 
 			try {
+				// Pass the hooks lazily: constructing the ts-node service is deferred until the first
+				// .ts/.tsx specifier that needs it, instead of happening on the very first resolve.
 				const resolved = await resolveSpecifier(specifier, context, {
 					checkExtensions: true,
 					handleTsFiles: true,
-					tsNodeHooks: await getLocalEsmHooks(),
+					getTsNodeHooks: getLocalEsmHooks,
 					nextResolve
 				});
 

@@ -22,10 +22,15 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 - `BindingRegistry.updateSupportCodeLibrary` indexes each definition array by `cucumberKey` before back-patching callsites, replacing an O(bindings × definitions) scan with map reads.
 - `TestCaseRunner` selects the before/after step hooks that apply to its pickle once in the constructor and resolves hook and step definitions through per-library id indexes, instead of re-filtering and linear-scanning the support library on every step.
 - Decorators reuse one `short-uuid` translator per module instead of constructing one per binding, and `BindingRegistry.registerStepBinding` deduplicates a class's bindings through a key set instead of a linear scan.
+- **ESM loaders no longer walk the project tree at startup.** The `ts-node` services created by `ts-node-esm`, `es-node-esm` and `es-vue-esm` now pass `files: false`. The option only controls whether ts-node globs the tsconfig `files`/`include` set to seed its language service, and that list is consumed only when `transpileOnly` is off; these services always run with `transpileOnly: true`, so the recursive directory walk (paid once per process, per parallel child and per preload thread) was pure cost. This overrides a `"ts-node": { "files": true }` block in the consumer's tsconfig for those three transpilers. `ts-vue-esm` delegates to `ts-node-maintained/esm` directly and is governed by the consumer's tsconfig as before.
+- The ESM loaders compile the tsconfig `paths` alias regexes once per process instead of once per alias per loaded file, and `tsnode-loader` no longer makes a separate full-source `RegExp.test` pass before each rewrite.
+- ESM extension resolution (`./foo` → `./foo.ts`, `./foo/index.ts`, …) caches its result per resolved path, including misses, so a module imported from many files is probed on disk once instead of up to fourteen `existsSync` calls per importer. `clearResolutionCaches()` is exported from `loader-utils.mjs` for any future long-lived process.
+- The esbuild ESM loaders create their `ts-node` service lazily on the first `.ts`/`.tsx` specifier or load, instead of eagerly on the very first `resolve` call regardless of specifier.
 
 ### Removed
 
 - Dead `cucumber-tsflow-specs` path check in the ESM `esbuild.mjs` `supports()` export, which would have disabled transpilation for every consumer project had anything called it.
+- The `TS_NODE_FILES=true` environment assignments in `tsnode-service.mjs` and `vue-loader.mjs`. Both ran after `ts-node-maintained` had already been required (and had already read its environment defaults) at module initialization, so they had no effect.
 
 ## [7.7.2]
 

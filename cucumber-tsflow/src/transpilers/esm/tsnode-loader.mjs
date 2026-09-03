@@ -40,6 +40,20 @@ if (configLoaderResult.resultType === 'success') {
 	});
 }
 
+// Compile the tsconfig path-mapping regexes once per process; `load` runs them once per file.
+function compilePathMappings(paths) {
+	return Object.entries(paths || {}).map(([pattern, replacements]) => {
+		const searchPattern = pattern.replace('/*', '/');
+		return {
+			searchPattern,
+			replacementPath: replacements[0].replace('/*', ''),
+			searchRegex: new RegExp(`(from\\s+['"])${searchPattern}([^'"]+)(['"])`, 'g')
+		};
+	});
+}
+
+const pathMappings = configLoaderResult.resultType === 'success' ? compilePathMappings(configLoaderResult.paths) : [];
+
 // Create ts-node service with our configuration
 logger.checkpoint('Loading ts-node-maintained');
 const tsNode = require('ts-node-maintained');
@@ -55,7 +69,11 @@ logger.checkpoint('Creating ts-node service', {
 const service = tsNode.create({
 	esm: true,
 	experimentalSpecifierResolution: 'node',
-	files: true,
+	// `files` only controls whether ts-node globs the tsconfig `files`/`include` set to seed the
+	// language service, and that list is consumed only when `transpileOnly` is false. With
+	// `transpileOnly: true` the walk is pure cost, so it is disabled here regardless of the
+	// consumer's tsconfig `ts-node.files` setting.
+	files: false,
 	transpileOnly: true,
 	compilerOptions: {
 		experimentalDecorators,
@@ -112,39 +130,30 @@ export const load = async (url, context, nextLoad) => {
 				// First, let ts-node load the file
 				const result = await esmHooks.load(url, context, nextLoad);
 
-				// If we have path mappings, check if we need to rewrite the source
-				if (configLoaderResult.resultType === 'success' && configLoaderResult.paths) {
+				// If we have path mappings, rewrite aliased imports to absolute file URLs. A single
+				// `replace` pass per alias both detects and rewrites, so no separate scan is needed.
+				if (pathMappings.length > 0) {
 					let code = result.source.toString();
-					let modified = false;
 					let replacementCount = 0;
 
-					for (const [pattern, replacements] of Object.entries(configLoaderResult.paths)) {
-						const searchPattern = pattern.replace('/*', '/');
-						const searchRegex = new RegExp(`(from\\s+['"])${searchPattern}([^'"]+)(['"])`, 'g');
+					for (const { searchPattern, replacementPath, searchRegex } of pathMappings) {
+						code = code.replace(searchRegex, (match, prefix, importPath, suffix) => {
+							const fullPath = path.join(configLoaderResult.absoluteBaseUrl, replacementPath, importPath);
+							const fileUrl = pathToFileURL(fullPath).href;
 
-						if (searchRegex.test(code)) {
-							const replacementPath = replacements[0].replace('/*', '');
+							replacementCount++;
+							if (verbose) {
+								logger.checkpoint('Path rewritten', {
+									from: `${searchPattern}${importPath}`,
+									to: fileUrl
+								});
+							}
 
-							code = code.replace(searchRegex, (match, prefix, importPath, suffix) => {
-								const fullPath = path.join(configLoaderResult.absoluteBaseUrl, replacementPath, importPath);
-								const fileUrl = pathToFileURL(fullPath).href;
-
-								replacementCount++;
-								if (verbose) {
-									logger.checkpoint('Path rewritten', {
-										from: `${searchPattern}${importPath}`,
-										to: fileUrl
-									});
-								}
-
-								return `${prefix}${fileUrl}${suffix}`;
-							});
-
-							modified = true;
-						}
+							return `${prefix}${fileUrl}${suffix}`;
+						});
 					}
 
-					if (modified) {
+					if (replacementCount > 0) {
 						recordFile('load', url, loadStart);
 						if (verbose) {
 							logger.checkpoint('load complete with path rewrites', {

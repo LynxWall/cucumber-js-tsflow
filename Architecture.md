@@ -212,6 +212,16 @@ Transpilers are loaded as CJS `requireModule` entries or ESM `loader` entries ba
 
 ESM loaders live under `src/transpilers/esm/` and act as Node.js custom loaders registered via `node:module.register()`.
 
+### ESM loader caches
+
+The hooks thread keeps three process-lifetime caches in `loader-utils.mjs`, all correct for a one-shot CLI run and all cleared together by the exported `clearResolutionCaches()`:
+
+- `pathResolutionCache` — bare specifier → tsconfig `paths` match (or `null`)
+- `extensionResolutionCache` — absolute extensionless path → resolved file URL (or `null`), shared by every importer of the same module and by aliased and relative spellings of it
+- the ESM hooks cache in `getEsmHooks()`, populated lazily on the first `.ts`/`.tsx` specifier or load rather than on the first `resolve` call
+
+The tsconfig `paths` rewrite regexes used by `esbuild.mjs` and `tsnode-loader.mjs` are compiled once per process, and the `ts-node` services those loaders create pass `files: false` because with `transpileOnly: true` the tsconfig `include` walk feeds nothing.
+
 ## Formatters
 
 ### Behave JSON Formatter

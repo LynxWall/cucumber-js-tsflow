@@ -322,6 +322,7 @@ import { helper } from '@/utils/helper';   // Resolves to src/utils/helper.ts
 
 - First run may be slower due to compilation; subsequent runs use ts-node's cache
 - Consider using transpileOnly: true in ts-node config for faster test runs
+- The `ts-node-esm`, `es-node-esm` and `es-vue-esm` transpilers always run ts-node with `transpileOnly: true` and `files: false`, so a `"ts-node": { "files": true }` entry in your tsconfig has no effect on them and no project-tree walk happens at startup. `ts-vue-esm` uses `ts-node-maintained/esm` directly and honours your `ts-node` tsconfig block, including `files`, which it needs when type-checking `.vue` shims.
 
 ## Migration from CommonJS
 

@@ -17,6 +17,18 @@ export const defaultOptions = {
 // Cache for tsconfig data
 let tsconfigCache = null;
 
+// Compile the tsconfig path-mapping regexes once per process; rewritePathMappings runs them once per file.
+function compilePathMappings(paths) {
+	return Object.entries(paths || {}).map(([pattern, replacements]) => {
+		const searchPattern = pattern.replace('/*', '');
+		return {
+			searchPattern,
+			replacementPath: replacements[0].replace('/*', ''),
+			regex: new RegExp(`(from\\s+['"])${searchPattern}(/[^'"]+)?(['"])`, 'g')
+		};
+	});
+}
+
 function loadTsConfigPaths() {
 	if (tsconfigCache) {
 		if (verbose) logger.checkpoint('loadTsConfigPaths (cached)');
@@ -35,7 +47,8 @@ function loadTsConfigPaths() {
 		if (configLoaderResult.resultType === 'success') {
 			tsconfigCache = {
 				absoluteBaseUrl: configLoaderResult.absoluteBaseUrl,
-				paths: configLoaderResult.paths
+				paths: configLoaderResult.paths,
+				mappings: compilePathMappings(configLoaderResult.paths)
 			};
 			logger.checkpoint('tsconfig paths cached', {
 				absoluteBaseUrl: tsconfigCache.absoluteBaseUrl,
@@ -46,11 +59,11 @@ function loadTsConfigPaths() {
 		logger.error('Failed to load tsconfig for aliases', error);
 	}
 
-	return tsconfigCache || { paths: {} };
+	return tsconfigCache || { paths: {}, mappings: [] };
 }
 
 function rewritePathMappings(code, filename) {
-	const { absoluteBaseUrl, paths } = loadTsConfigPaths();
+	const { absoluteBaseUrl, paths, mappings } = loadTsConfigPaths();
 
 	if (!paths || !absoluteBaseUrl) {
 		if (verbose) logger.checkpoint('rewritePathMappings skipped (no paths)', { filename });
@@ -60,12 +73,7 @@ function rewritePathMappings(code, filename) {
 	let modifiedCode = code;
 	let replacementCount = 0;
 
-	for (const [pattern, replacements] of Object.entries(paths)) {
-		const searchPattern = pattern.replace('/*', '');
-		const replacementPath = replacements[0].replace('/*', '');
-
-		const regex = new RegExp(`(from\\s+['"])${searchPattern}(/[^'"]+)?(['"])`, 'g');
-
+	for (const { searchPattern, replacementPath, regex } of mappings) {
 		modifiedCode = modifiedCode.replace(regex, (match, prefix, subPath, suffix) => {
 			const pathSuffix = subPath ? subPath.substring(1) : '';
 			const absolutePath = path.resolve(absoluteBaseUrl, replacementPath, pathSuffix);

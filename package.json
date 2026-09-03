@@ -66,5 +66,8 @@
 		"typescript": "~5.9.2",
 		"vue-eslint-parser": "10.1.1"
 	},
+	"resolutions": {
+		"nwsapi": "2.2.24"
+	},
 	"packageManager": "yarn@3.5.0"
 }

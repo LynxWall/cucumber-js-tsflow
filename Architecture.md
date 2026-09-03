@@ -89,7 +89,7 @@ Parallel execution uses Node.js child processes:
 
 `MessageCollector` extends CucumberJS's `EventDataCollector` and listens to `envelope` events. It is stored as `global.messageCollector` and provides:
 
-- `getStepScenarioContext()` — matches a step's pattern to find the running scenario's `ManagedScenarioContext`
+- `getStepScenarioContext()` — returns the `ManagedScenarioContext` of the test case currently running in this process (tracked from `testCaseStarted` to `endTestCase`)
 - `getHookScenarioContext()` — retrieves context for hook execution
 - `startTestCase()` — creates a new `ManagedScenarioContext` for each test case
 

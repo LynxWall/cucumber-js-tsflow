@@ -39,6 +39,9 @@ export default class TestCaseRunner {
 	private readonly skip: boolean;
 	private readonly filterStackTraces: boolean;
 	private readonly supportCodeLibrary: SupportCodeLibrary;
+	private readonly definitionIndex: DefinitionIndex;
+	private readonly beforeStepHookDefinitions: TestStepHookDefinition[];
+	private readonly afterStepHookDefinitions: TestStepHookDefinition[];
 	private testStepResults?: messages.TestStepResult[];
 	private world: any;
 	private readonly worldParameters: any;
@@ -88,6 +91,16 @@ export default class TestCaseRunner {
 		this.worldParameters = worldParameters;
 		this.resetTestProgressData();
 		this.bindingRegistry = BindingRegistry.instance;
+		this.definitionIndex = getDefinitionIndex(supportCodeLibrary);
+		// The pickle is fixed for the runner's lifetime, so the step hooks that apply
+		// to it can be selected once here rather than on every step.
+		this.beforeStepHookDefinitions = supportCodeLibrary.beforeTestStepHookDefinitions.filter(hookDefinition =>
+			hookDefinition.appliesToTestCase(this.pickle)
+		);
+		this.afterStepHookDefinitions = supportCodeLibrary.afterTestStepHookDefinitions
+			.slice(0)
+			.reverse()
+			.filter(hookDefinition => hookDefinition.appliesToTestCase(this.pickle));
 	}
 
 	resetTestProgressData(): void {
@@ -101,16 +114,11 @@ export default class TestCaseRunner {
 	}
 
 	getBeforeStepHookDefinitions(): TestStepHookDefinition[] {
-		return this.supportCodeLibrary.beforeTestStepHookDefinitions.filter(hookDefinition =>
-			hookDefinition.appliesToTestCase(this.pickle)
-		);
+		return this.beforeStepHookDefinitions;
 	}
 
 	getAfterStepHookDefinitions(): TestStepHookDefinition[] {
-		return this.supportCodeLibrary.afterTestStepHookDefinitions
-			.slice(0)
-			.reverse()
-			.filter(hookDefinition => hookDefinition.appliesToTestCase(this.pickle));
+		return this.afterStepHookDefinitions;
 	}
 
 	getWorstStepResult(): messages.TestStepResult {
@@ -214,7 +222,7 @@ export default class TestCaseRunner {
 							this.getWorstStepResult().status === messages.TestStepResultStatus.FAILED && moreAttemptsRemaining;
 					}
 					return await this.runHook(
-						findHookDefinition(testStep.hookId!, this.supportCodeLibrary),
+						this.definitionIndex.hooksById.get(testStep.hookId!)!,
 						hookParameter,
 						!didWeRunStepsYet
 					);
@@ -300,7 +308,7 @@ export default class TestCaseRunner {
 
 	async runStep(pickleStep: messages.PickleStep, testStep: messages.TestStep): Promise<messages.TestStepResult> {
 		const stepDefinitions = testStep.stepDefinitionIds?.map(stepDefinitionId => {
-			return findStepDefinition(stepDefinitionId, this.supportCodeLibrary);
+			return this.definitionIndex.stepsById.get(stepDefinitionId)!;
 		});
 
 		if (!stepDefinitions || stepDefinitions.length === 0) {
@@ -326,7 +334,7 @@ export default class TestCaseRunner {
 			(stepDefinitions[0].options as any).cucumberKey
 		);
 		if (!stepBinding) throw new Error('===323 test-case-runner.ts: Unable to find StepBinding!');
-		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
+		const scenarioContext = global.messageCollector.getStepScenarioContext();
 		if (!scenarioContext) throw new Error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
 
@@ -373,12 +381,41 @@ export default class TestCaseRunner {
 	}
 }
 
-function findHookDefinition(id: string, supportCodeLibrary: SupportCodeLibrary): TestCaseHookDefinition {
-	return [...supportCodeLibrary.beforeTestCaseHookDefinitions, ...supportCodeLibrary.afterTestCaseHookDefinitions].find(
-		definition => definition.id === id
-	)!;
+/**
+ * Per-library indexes of the definitions a test case runner looks up by id.
+ */
+interface DefinitionIndex {
+	hooksById: Map<string, TestCaseHookDefinition>;
+	stepsById: Map<string, StepDefinition>;
 }
 
-function findStepDefinition(id: string, supportCodeLibrary: SupportCodeLibrary): StepDefinition {
-	return supportCodeLibrary.stepDefinitions.find(definition => definition.id === id)!;
+/**
+ * Indexes built once per support code library object. A library comes out of
+ * `supportCodeLibraryBuilder.finalize()` with fresh definition arrays that are never
+ * mutated afterwards, so an index keyed on the library's identity stays valid for as
+ * long as that library is in use; a reload produces a new library and a new index.
+ */
+const definitionIndexes = new WeakMap<SupportCodeLibrary, DefinitionIndex>();
+
+function getDefinitionIndex(supportCodeLibrary: SupportCodeLibrary): DefinitionIndex {
+	let index = definitionIndexes.get(supportCodeLibrary);
+	if (!index) {
+		index = {
+			hooksById: indexById([
+				...supportCodeLibrary.beforeTestCaseHookDefinitions,
+				...supportCodeLibrary.afterTestCaseHookDefinitions
+			]),
+			stepsById: indexById(supportCodeLibrary.stepDefinitions)
+		};
+		definitionIndexes.set(supportCodeLibrary, index);
+	}
+	return index;
+}
+
+function indexById<T extends { id: string }>(definitions: T[]): Map<string, T> {
+	const index = new Map<string, T>();
+	for (const definition of definitions) {
+		index.set(definition.id, definition);
+	}
+	return index;
 }

@@ -144,7 +144,7 @@ function bindStepDefinition(stepBinding: StepBinding): void {
 	const stepFunction = function (this: WritableWorld): any {
 		const bindingRegistry = BindingRegistry.instance;
 
-		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
+		const scenarioContext = global.messageCollector.getStepScenarioContext();
 
 		if (scenarioContext) {
 			const matchingStepBindings = bindingRegistry.getStepBindings(

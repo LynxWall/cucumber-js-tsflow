@@ -17,6 +17,11 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 ### Changed
 
 - Per-file `logger.checkpoint` calls in the ESM resolve/load hooks, the esbuild transpilers and the Vue SFC compiler are now guarded behind `isVerbose()`, so their detail objects (including a full source-to-string conversion in `loadVue`) are no longer built when `TSFLOW_VERBOSE` is off.
+- **Step scenario-context lookup is now O(1).** `MessageCollector` tracks the context of the running test case and `getStepScenarioContext()` returns it directly, instead of scanning every pickle in the run and regex-matching every step text on each step invocation. This is also a behaviour change: the old scan could resolve to a _different_ scenario's context whenever a step pattern also matched text in another pickle, or find none when a tagged binding's tags did not match the running scenario. Steps now always receive the running scenario's context; the tag-scoped binding is still selected from the registry as before. Support code that depended on the previous cross-scenario resolution will see the running scenario's context instead.
+- `hasMatchingStep` memoizes the compiled `RegExp` per step pattern, and `hasMatchingTags` lower-cases the tag list once per call instead of once per parser token.
+- `BindingRegistry.updateSupportCodeLibrary` indexes each definition array by `cucumberKey` before back-patching callsites, replacing an O(bindings × definitions) scan with map reads.
+- `TestCaseRunner` selects the before/after step hooks that apply to its pickle once in the constructor and resolves hook and step definitions through per-library id indexes, instead of re-filtering and linear-scanning the support library on every step.
+- Decorators reuse one `short-uuid` translator per module instead of constructing one per binding, and `BindingRegistry.registerStepBinding` deduplicates a class's bindings through a key set instead of a linear scan.
 
 ### Removed
 

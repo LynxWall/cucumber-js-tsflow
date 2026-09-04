@@ -7,6 +7,7 @@ import {
 } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import { IRunConfiguration, IRunOptionsRuntime, ISourcesCoordinates } from '@cucumber/cucumber/api';
 import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/types';
+import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
 import type { TimingSnapshot } from '../utils/tsflow-timing';
 
 export interface IMessageData {
@@ -32,6 +33,8 @@ export interface TsFlowRuntimeOptions extends RuntimeOptions {
 export interface InitializeTsflowCommand extends InitializeCommand {
 	messageData: IMessageData;
 	options: TsFlowRuntimeOptions;
+	/** Support paths the coordinator has already resolved from the globs, so the child does not glob again */
+	resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>;
 }
 
 export type CoordinatorToWorkerCommand = InitializeTsflowCommand | RunCommand | FinalizeCommand;

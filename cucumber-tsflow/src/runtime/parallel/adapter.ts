@@ -6,6 +6,7 @@ import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
 import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
+import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
 import { FinalizeCommand, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
 import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime, TsFlowWorkerToCoordinatorEvent } from '../types';
@@ -49,7 +50,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly options: ITsFlowRunOptionsRuntime,
 		private readonly snippetOptions: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>,
 		private readonly supportCodeLibrary: SupportCodeLibrary,
-		private readonly coordinates: ISourcesCoordinates
+		private readonly coordinates: ISourcesCoordinates,
+		private readonly resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>
 	) {}
 
 	parseWorkerMessage(worker: ManagedWorker, message: TsFlowWorkerToCoordinatorEvent): void {
@@ -129,7 +131,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				afterTestRunHookDefinitionIds: this.supportCodeLibrary.afterTestRunHookDefinitions.map(h => h.id)
 			},
 			options: this.options,
-			messageData: messageData
+			messageData: messageData,
+			resolvedSupportPaths: this.resolvedSupportPaths
 		} satisfies InitializeTsflowCommand);
 	}
 

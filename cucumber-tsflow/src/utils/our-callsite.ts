@@ -1,21 +1,81 @@
+import path from 'node:path';
 import * as sourceMapSupport from 'source-map-support';
 import { CallSite } from 'source-map-support';
 
 /**
+ * Frames on the stack when `capture()` takes it: `capture()` itself, the decorator factory that called it
+ * (`given`, `before`, …) and the support file that applied the decorator. Only the last one is wanted.
+ */
+const CAPTURE_DEPTH = 3;
+
+/**
+ * Runs `fn` with `source-map-support`'s browser detection defeated.
+ *
+ * The library decides it is running in a browser when `window` and `XMLHttpRequest` are globals — exactly
+ * what a jsdom set-up creates — and then fetches every source file it sees with a synchronous
+ * `XMLHttpRequest` before reading it from disk anyway. jsdom services a synchronous request by spawning a
+ * process, so each support file costs hundreds of milliseconds. Removing the constructor for the duration
+ * of the (synchronous) lookup keeps the library on its file-system path; nothing else can observe the gap.
+ */
+function withoutBrowserDetection<T>(fn: () => T): T {
+	const globals = globalThis as { window?: unknown; XMLHttpRequest?: unknown };
+	if (typeof globals.window === 'undefined' || typeof globals.XMLHttpRequest !== 'function') {
+		return fn();
+	}
+	const descriptor = Object.getOwnPropertyDescriptor(globals, 'XMLHttpRequest');
+	if (!descriptor?.configurable) {
+		return fn();
+	}
+	delete globals.XMLHttpRequest;
+	try {
+		return fn();
+	} finally {
+		Object.defineProperty(globals, 'XMLHttpRequest', descriptor);
+	}
+}
+
+/**
  * Represents a callsite of where a step binding is being applied.
+ *
+ * The raw V8 stack frame is taken when the decorator factory runs, which is once per binding while support
+ * code loads. Mapping that frame through source maps is the expensive part (the first frame from a file
+ * parses that file's source map), so it is deferred to the first read of `filename` or `lineNumber`. Those
+ * reads happen after loading, when the registry back-patches the CucumberJS definitions or an error message
+ * is built, and never while a support file is being evaluated.
  */
 export class Callsite {
-	private static cwd = process.cwd();
+	private static readonly cwdPrefix = `${process.cwd()}${path.sep}`;
+	private resolved?: { filename: string; lineNumber: number };
+
+	private constructor(private readonly frame: CallSite | undefined) {}
+
 	/**
-	 * Initializes a new [[Callsite]].
-	 *
-	 * @param filename The filename of the callsite.
-	 * @param lineNumber The line number of the callsite.
+	 * The filename of the callsite, mapped through source maps and made relative to the working directory
+	 * when it lies beneath it.
 	 */
-	constructor(
-		public filename: string,
-		public lineNumber: number
-	) {}
+	public get filename(): string {
+		return this.resolve().filename;
+	}
+
+	/**
+	 * The line number of the callsite, mapped through source maps.
+	 */
+	public get lineNumber(): number {
+		return this.resolve().lineNumber;
+	}
+
+	/**
+	 * The position of the callsite in the code V8 executed, before source mapping. Distinct decorator
+	 * expressions always have distinct raw positions and reading it costs nothing, so the registry uses it
+	 * as a binding's identity.
+	 */
+	public get rawPosition(): string {
+		const frame = this.frame;
+		if (!frame) {
+			return '';
+		}
+		return `${frame.getFileName() ?? ''}:${frame.getLineNumber() ?? -1}:${frame.getColumnNumber() ?? -1}`;
+	}
 
 	/**
 	 * Returns a string representation of the callsite.
@@ -27,22 +87,36 @@ export class Callsite {
 		return `${this.filename}:${this.lineNumber}`;
 	}
 
-	private static callsites() {
-		const _prepareStackTrace = Error.prepareStackTrace;
-		Error.prepareStackTrace = (_, stack) => stack;
-		const stack = new Error().stack?.slice(1) ?? ['', '', 'unknown'];
-		Error.prepareStackTrace = _prepareStackTrace;
-		return stack;
-	}
 	/**
 	 * Captures the current [[Callsite]] object.
 	 */
 	public static capture(): Callsite {
-		const stack = Callsite.callsites()[2] as unknown as CallSite;
-		const tsStack = sourceMapSupport.wrapCallSite(stack);
-		const ourCallsite = new Callsite(tsStack.getFileName() || '', tsStack.getLineNumber() || -1);
-		ourCallsite.filename = ourCallsite.filename.replace(`${this.cwd}\\`, '');
+		// Both are process-wide V8 hooks; save them so they can be restored unchanged.
+		const previousLimit = Error.stackTraceLimit;
+		const previousPrepare = Error.prepareStackTrace;
+		// Record only the three frames of interest and return them as raw CallSite objects, not a formatted string.
+		Error.stackTraceLimit = CAPTURE_DEPTH;
+		Error.prepareStackTrace = (_, stack) => stack;
+		// Creating the Error records the frames; reading `.stack` invokes the hook above. Nothing is thrown.
+		const stack = new Error().stack as unknown as CallSite[] | undefined;
+		// Restore before anything else can observe the changed hooks (no await between set and restore).
+		Error.prepareStackTrace = previousPrepare;
+		Error.stackTraceLimit = previousLimit;
 
-		return ourCallsite;
+		// Frame 0 is capture(), 1 the decorator factory, 2 the support file that applied the decorator.
+		return new Callsite(stack?.[CAPTURE_DEPTH - 1]);
+	}
+
+	private resolve(): { filename: string; lineNumber: number } {
+		if (!this.resolved) {
+			const frame = this.frame;
+			const mapped = frame ? withoutBrowserDetection(() => sourceMapSupport.wrapCallSite(frame)) : undefined;
+			let filename = mapped?.getFileName() || '';
+			if (filename.startsWith(Callsite.cwdPrefix)) {
+				filename = filename.slice(Callsite.cwdPrefix.length);
+			}
+			this.resolved = { filename, lineNumber: mapped?.getLineNumber() || -1 };
+		}
+		return this.resolved;
 	}
 }

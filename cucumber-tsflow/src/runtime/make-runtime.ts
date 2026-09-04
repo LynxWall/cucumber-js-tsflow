@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { IdGenerator } from '@cucumber/messages';
 import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
+import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
 import { SourcedPickle } from '@cucumber/cucumber/lib/assemble/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -25,6 +26,7 @@ export async function makeRuntime({
 	supportCodeLibrary,
 	options,
 	coordinates,
+	resolvedSupportPaths,
 	snippetOptions = {}
 }: {
 	environment: IRunEnvironment;
@@ -35,6 +37,7 @@ export async function makeRuntime({
 	supportCodeLibrary: SupportCodeLibrary;
 	options: ITsFlowRunOptionsRuntime;
 	coordinates: ISourcesCoordinates;
+	resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>;
 	snippetOptions?: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>;
 }): Promise<Runtime> {
 	const testRunStartedId = newId();
@@ -48,7 +51,8 @@ export async function makeRuntime({
 					options,
 					snippetOptions,
 					supportCodeLibrary,
-					coordinates
+					coordinates,
+					resolvedSupportPaths
 				)
 			: new InProcessAdapter(testRunStartedId, eventBroadcaster, newId, options, supportCodeLibrary);
 	return new Coordinator(testRunStartedId, eventBroadcaster, newId, sourcedPickles, supportCodeLibrary, adapter);

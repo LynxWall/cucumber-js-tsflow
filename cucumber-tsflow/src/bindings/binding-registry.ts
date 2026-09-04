@@ -354,16 +354,16 @@ export class BindingRegistry {
 
 /**
  * Builds the identity key used to detect duplicate registrations of a step binding.
- * Step definitions are identified by callsite, tags and pattern; hooks additionally by
- * binding type and method name, since several hooks can share a callsite.
+ * Step definitions are identified by the raw callsite position, tags and pattern; hooks additionally by
+ * binding type and method name, since several hooks can share a callsite. The raw position is used rather
+ * than the source-mapped filename and line so that building the key does not force source-map resolution
+ * while support code is still loading.
  *
  * @param binding The step binding to key.
  * @returns A string that is equal for two bindings exactly when they are the same registration.
  */
 function stepBindingKey(binding: StepBinding): string {
-	const key = `${binding.callsite.filename}\n${binding.callsite.lineNumber}\n${String(binding.tags)}\n${String(
-		binding.stepPattern
-	)}`;
+	const key = `${binding.callsite.rawPosition}\n${String(binding.tags)}\n${String(binding.stepPattern)}`;
 
 	if (binding.bindingType & StepBindingFlags.Hooks) {
 		return `${key}\n${binding.bindingType}\n${String(binding.classPropertyKey)}`;

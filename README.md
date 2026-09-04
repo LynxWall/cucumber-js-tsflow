@@ -456,6 +456,10 @@ TSFLOW_TIMING=true npx cucumber-tsflow -p default
 
 The report is diagnostic output only and does not change how tests run. Without the variable set, the instrumentation is inactive. `TSFLOW_VERBOSE=true` remains available for untimed checkpoint logging.
 
+### Compile cache
+
+On Node 22.8 or later the `cucumber-tsflow` command enables Node's module compile cache, so the V8 bytecode for the library, its dependencies and your transpiled support code is reused across runs, and parallel child processes and preload threads share the same cache directory. Set `NODE_DISABLE_COMPILE_CACHE=1` to turn it off, or `NODE_COMPILE_CACHE=<dir>` to choose where it lives (Node's default is a `node-compile-cache` directory under the OS temp directory).
+
 ## New Configuration options
 
 As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/configuration.md>
@@ -587,6 +591,8 @@ export default class MySteps {
     ...
 }
 ```
+
+Step-definition files can also import from `@lynxwall/cucumber-tsflow/bindings`, which exposes the decorators, the context classes and the CucumberJS support-code helpers (`DataTable`, `World`, `Status`, `defineParameterType`, …) without the formatters and CLI the package root also loads. It is the lighter import for support code; the package root remains the full API and re-exports everything in it.
 
 ## Step Definitions
 

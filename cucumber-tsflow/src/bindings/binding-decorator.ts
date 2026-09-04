@@ -1,19 +1,14 @@
-import {
-	After,
-	AfterStep,
-	AfterAll,
-	Before,
-	BeforeStep,
-	BeforeAll,
-	Given,
-	Then,
-	When,
-	World
-} from '@cucumber/cucumber';
+import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
+import type { default as World } from '@cucumber/cucumber/lib/support_code_library_builder/world';
 import { getStepBindings, getStepBindingsExp, getCollectedBindings } from './binding-context';
 import { BindingRegistry, DEFAULT_TAG } from './binding-registry';
 import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern } from './types';
+
+// The CucumberJS step and hook functions exported from '@cucumber/cucumber' are these methods; taking them
+// from the builder keeps that package's root barrel (formatters, CLI, runtime) out of the support-code load.
+const { After, AfterStep, AfterAll, Before, BeforeStep, BeforeAll, Given, Then, When } =
+	supportCodeLibraryBuilder.methods;
 
 interface WritableWorld extends World {
 	[key: string]: any;

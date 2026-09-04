@@ -35,6 +35,11 @@
 			"import": "./lib/api/wrapper.mjs",
 			"require": "./lib/api/index.js"
 		},
+		"./bindings": {
+			"types": "./lib/bindings.d.ts",
+			"import": "./lib/bindings.mjs",
+			"require": "./lib/bindings.js"
+		},
 		"./lib/*": {
 			"require": "./lib/*.js"
 		},
@@ -107,6 +112,7 @@
 		"README.md",
 		"api/",
 		"bin/",
+		"bindings/",
 		"lib/"
 	]
 }

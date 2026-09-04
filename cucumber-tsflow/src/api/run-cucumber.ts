@@ -233,7 +233,8 @@ Running from: ${__dirname}
 		newId,
 		supportCodeLibrary,
 		options: options.runtime,
-		coordinates: options.sources
+		coordinates: options.sources,
+		resolvedSupportPaths: { requirePaths, importPaths }
 	});
 	const success = await runtime.run();
 	recordPhase('runtime:run', phaseStart);

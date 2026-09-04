@@ -7,8 +7,6 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import tryRequire from '@cucumber/cucumber/lib/try_require';
 import { Worker } from '../worker';
 import { RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
-import logger from '../../utils/logger';
-import { resolvePaths } from '@cucumber/cucumber/lib/paths/paths';
 import { BindingRegistry } from '../../bindings/binding-registry';
 import {
 	InitializeTsflowCommand,
@@ -85,14 +83,15 @@ export class ChildProcessWorker {
 		supportCodeCoordinates,
 		supportCodeIds,
 		options,
-		messageData
+		messageData,
+		resolvedSupportPaths
 	}: InitializeTsflowCommand): Promise<void> {
 		// reset the message collector with message data passed in
 		global.messageCollector.reset(messageData);
 
-		// Get correct paths and reset the support code library
-		const resolvedPaths = await resolvePaths(logger, this.cwd, messageData.coordinates, supportCodeCoordinates);
-		const { requirePaths, importPaths } = resolvedPaths;
+		// Reset the support code library with the paths the coordinator already resolved; the globs are not
+		// expanded again in this process.
+		const { requirePaths, importPaths } = resolvedSupportPaths;
 		supportCodeLibraryBuilder.reset(this.cwd, this.newId, {
 			requirePaths,
 			requireModules: supportCodeCoordinates.requireModules,

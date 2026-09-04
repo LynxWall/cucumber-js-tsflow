@@ -47,10 +47,10 @@ The bindings system maps TypeScript decorators to CucumberJS step and hook defin
 
 ### Registration Flow
 
-1. Method decorators (`@given()`, `@when()`, etc.) create `StepBinding` objects and buffer them in a context-appropriate store
+1. Method decorators (`@given()`, `@when()`, etc.) create `StepBinding` objects and buffer them in a context-appropriate store. Each captures a `Callsite` holding only the raw V8 stack frame of the decorated line (`Error.stackTraceLimit` is lowered to the three frames needed); mapping that frame through `source-map-support` is deferred to the first read of `callsite.filename`/`lineNumber`, so no source map is parsed while support files are evaluating
 1. The `@binding()` class decorator runs last (class decorators execute after method decorators)
 1. It reads all buffered bindings, sets `classPrototype`, and registers them in `BindingRegistry`
-1. Each binding is then registered with CucumberJS (`Given()`, `Before()`, etc.) via a trampoline function
+1. Each binding is then registered with CucumberJS (`Given()`, `Before()`, etc.) via a trampoline function; these are taken from `supportCodeLibraryBuilder.methods` rather than the `@cucumber/cucumber` root barrel so that a support file's import graph stays small
 1. At runtime the trampoline resolves the correct class instance through `ManagedScenarioContext`
 
 ### Registry Internals
@@ -61,7 +61,9 @@ The `BindingRegistry` maintains three primary indexes:
 - `_classBindings`: `Map<prototype, ClassBinding>` — per-class bindings and context types
 - `_cucumberKeyIndex`: `Map<string, StepBinding>` — O(1) lookup by generated `cucumberKey`
 
-`updateSupportCodeLibrary()` patches CucumberJS's `SupportCodeLibrary` with tsflow-specific metadata (timeouts, tags, binding references) so that the runtime can resolve back to the correct decorator-based definitions.
+Duplicate registrations (a file re-evaluated by `reloadSupport()`, for example) are detected with a key built from `callsite.rawPosition` (file, line and column of the executed code), tags and pattern, so registering a binding never triggers source-map resolution.
+
+`updateSupportCodeLibrary()` patches CucumberJS's `SupportCodeLibrary` with tsflow-specific metadata (timeouts, tags, binding references) so that the runtime can resolve back to the correct decorator-based definitions. Reading `callsite.filename`/`lineNumber` here, once per binding after all support code has loaded, is where source maps are actually consulted. That lookup runs with the `XMLHttpRequest` global hidden: `source-map-support` treats a process with `window` and `XMLHttpRequest` globals (any jsdom set-up) as a browser and fetches each source file with a synchronous XHR that jsdom services by spawning a process, several hundred milliseconds per support file.
 
 ## Runtime System
 
@@ -77,8 +79,8 @@ The `BindingRegistry` maintains three primary indexes:
 
 Parallel execution uses Node.js child processes:
 
-- `ChildProcessAdapter` forks child processes via `child_process.fork()`, manages worker lifecycle, and distributes test cases over IPC (`INITIALIZE`/`RUN`/`FINALIZE` commands)
-- `ChildProcessWorker` runs inside each forked process: loads support code (re-running transpiler registration and decorators), creates its own `MessageCollector`, and executes tests via `Worker`
+- `ChildProcessAdapter` forks child processes via `child_process.fork()`, manages worker lifecycle, and distributes test cases over IPC (`INITIALIZE`/`RUN`/`FINALIZE` commands). `INITIALIZE` carries the coordinator's already-resolved `requirePaths`/`importPaths` (`resolvedSupportPaths`) alongside the original coordinates, so children do not expand the support globs again
+- `ChildProcessWorker` runs inside each forked process: loads support code from those paths (re-running transpiler registration and decorators), creates its own `MessageCollector`, and executes tests via `Worker`
 - `run-worker.ts` is the entry point script forked by the adapter
 
 ### Test Case Execution
@@ -245,7 +247,7 @@ Format aliases in configuration: `behave:path` maps to `@lynxwall/cucumber-tsflo
 
 ## CLI
 
-The CLI entry point is `bin/cucumber-tsflow.js`, which delegates to the `Cli` class.
+The CLI entry point is `bin/cucumber-tsflow.js`. Before requiring anything else it enables Node's module compile cache (`module.enableCompileCache()`, Node 22.8 or later) and exports the cache directory as `NODE_COMPILE_CACHE`, so that the library, its dependencies and the transpiled support code are served from cached V8 bytecode in this process and in every forked child and worker thread. It then delegates to the `Cli` class.
 
 `Cli` parses arguments via `ArgvParser` (built on `commander`) and adds custom options beyond CucumberJS:
 
@@ -269,7 +271,8 @@ The public programmatic API (`@lynxwall/cucumber-tsflow/api`) exposes:
 
 | Export Path | Purpose |
 | --- | --- |
-| `.` | Main entry (decorators, types, CucumberJS re-exports) |
+| `.` | Main entry: everything in `./bindings` plus the formatters, snippet syntax, `version` and the deprecated `Cli` (required lazily on first construction) |
+| `./bindings` | Decorators, context classes and CucumberJS support-code helpers only — the light import for step-definition files |
 | `./api` | Programmatic API |
 | `./behave` | Behave JSON formatter |
 | `./junitbamboo` | JUnit Bamboo formatter |
@@ -282,6 +285,8 @@ The public programmatic API (`@lynxwall/cucumber-tsflow/api`) exposes:
 | `./tsvue-exp` | ts-node Vue experimental decorators |
 | `./lib/transpilers/esm/*` | ESM loaders |
 | `./lib/*` | Internal CJS modules |
+
+`.`, `./bindings` and `./api` each pair a CJS build with a hand-written `.mjs` wrapper (`src/wrapper.mjs`, `src/bindings.mjs`, `src/api/wrapper.mjs`) that re-exports the CJS module's names for ESM consumers; `api/index.d.ts` and `bindings/index.d.ts` at the package root are stubs for TypeScript configurations that do not read `exports`.
 
 ## Monorepo Structure
 

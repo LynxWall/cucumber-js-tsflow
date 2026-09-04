@@ -176,16 +176,16 @@ Two environment variables expose what the runtime is doing. Both are read once p
 
 ### Timing collection
 
-Every execution context records into its own store on `globalThis.__TSFLOW_TIMING` (shared between the CJS build, the `.mjs` twin and the bundled esbuild transpiler within one thread) and the main process aggregates them:
+Every execution context records into its own store on `globalThis.__TSFLOW_TIMING` (shared between the CJS build and the `.mjs` twin within one thread) and the main process aggregates them:
 
 | Context | Scope | Channel back to the main process |
 | --- | --- | --- |
 | Main process | `main` | — |
-| ESM loader hooks thread (`module.register()`) | `esm-hooks` | `MessageChannel` port passed as `register()` `data`; the loader's `initialize` export stores it and answers snapshot requests |
+| ESM loader hooks thread (`module.register()`: the ts-node loaders, third-party loaders, or `TSFLOW_ESM_HOOKS=async`) | `esm-hooks` | `MessageChannel` port passed as `register()` `data`; the loader's `initialize` export stores it and answers snapshot requests |
 | Preload worker thread | `preload:<n>` | `timing` field on the `LOADED` response |
 | Parallel child process | `worker:<id>` | `TIMING` IPC message sent before `READY` |
 
-Nested contexts compose as `preload:<n>/esm-hooks`. Per-file records have four kinds: `transpile` (esbuild `transformSync` / `compileVueSFC` only — ts-node's TypeScript transpile is not observable), `load` (ESM `load` hook wall time), and `require` / `import` (top-level support-file load including dependencies). The same file appearing under `main`, `preload:*` and `worker:*` is the N+1 transpile multiplication made visible.
+Loaders attached in-thread with `module.registerHooks()` (the esbuild loaders, see [ESM loader registration](#esm-loader-registration)) share the registering thread's store, so their `esm:hooks-init`, `esm:resolve` and `esm:load` phases appear directly under `main`, `preload:<n>` or `worker:<id>` and no `esm-hooks` section is produced for them. Nested contexts compose as `preload:<n>/esm-hooks`. Per-file records have four kinds: `transpile` (esbuild `transformSync` / `compileVueSFC` only — ts-node's TypeScript transpile is not observable), `load` (ESM `load` hook wall time), and `require` / `import` (top-level support-file load including dependencies). The same file appearing under `main`, `preload:*` and `worker:*` is the N+1 transpile multiplication made visible.
 
 ## Transpilers
 
@@ -212,17 +212,25 @@ Transpilers are loaded as CJS `requireModule` entries or ESM `loader` entries ba
 - `esbuild-transpiler.ts` — implements `ts-node-maintained`'s `Transpiler` interface using the esbuild wrapper
 - `vue-sfc-compiler.ts` — compiles `.vue` SFCs using `vue/compiler-sfc` (`parse`, `compileScript`, `compileTemplate`, `compileStyle`) then transpiles the output via esbuild
 
-ESM loaders live under `src/transpilers/esm/` and act as Node.js custom loaders registered via `node:module.register()`.
+ESM loaders live under `src/transpilers/esm/` (authored `.mjs`, copied verbatim to `lib/`) and act as Node.js module customization hooks. `esnode-loader.mjs` and `esvue-loader.mjs` are built by `createEsbuildLoader()` in `loader-utils.mjs` and transpile `.ts`/`.tsx` with `esbuild.transformSync` directly (`esbuild.mjs`, inline source map) and `.vue` with the shared SFC compiler; they do not use ts-node. `tsnode-loader.mjs` (`ts-node-esm`) creates a `ts-node-maintained` service and delegates to its ESM hooks; `vue-loader.mjs` (`ts-vue-esm`) delegates TypeScript to `ts-node-maintained/esm`.
+
+### ESM loader registration
+
+`src/api/register-loaders.ts` (`registerLoader()`) is the single place the three registering contexts — `getSupportCodeLibrary` in the main process, the preload worker and the parallel child — attach a loader, and it chooses between two mechanisms:
+
+- **Synchronous, in-thread** (`module.registerHooks()`, Node 22.15 / 23.5 or later): used for tsflow's own esbuild loaders. The `.mjs` module is `import()`ed into the registering thread by path and its `resolve`/`load` are passed to `registerHooks()`. Nothing crosses a thread boundary: no `postMessage` per resolve, no structured clone of each transformed source. Registration is deduplicated per thread, since hooks stack.
+- **Asynchronous, hooks thread** (`module.register()`): used for the ts-node loaders (their hooks await ts-node's asynchronous hooks), for any third-party loader in the `loader` list, on Node versions without `registerHooks`, and when `TSFLOW_ESM_HOOKS=async` is set.
+
+The esbuild loaders' hooks are written to work under both mechanisms: every helper in `loader-utils.mjs` is synchronous, the hooks read sources with `readFileSync` instead of consulting `nextLoad`, and they never inspect what `nextResolve`/`nextLoad` return (a value in-thread, a promise on the hooks thread) — they return it as-is. Synchronous hooks are also invoked for every `require()` on the thread; `isRequire(context)` (`context.conditions` contains `'require'`) short-circuits those to Node's default loader, because the extension probing and `format: 'module'` results are only correct for `import`.
 
 ### ESM loader caches
 
-The hooks thread keeps three process-lifetime caches in `loader-utils.mjs`, all correct for a one-shot CLI run and all cleared together by the exported `clearResolutionCaches()`:
+`loader-utils.mjs` keeps two process-lifetime caches, both correct for a one-shot CLI run and cleared together by the exported `clearResolutionCaches()`:
 
 - `pathResolutionCache` — bare specifier → tsconfig `paths` match (or `null`)
 - `extensionResolutionCache` — absolute extensionless path → resolved file URL (or `null`), shared by every importer of the same module and by aliased and relative spellings of it
-- the ESM hooks cache in `getEsmHooks()`, populated lazily on the first `.ts`/`.tsx` specifier or load rather than on the first `resolve` call
 
-The tsconfig `paths` rewrite regexes used by `esbuild.mjs` and `tsnode-loader.mjs` are compiled once per process, and the `ts-node` services those loaders create pass `files: false` because with `transpileOnly: true` the tsconfig `include` walk feeds nothing.
+The tsconfig `paths` rewrite regexes used by `esbuild.mjs` and `tsnode-loader.mjs` are compiled once per process, and the `ts-node` service `tsnode-loader.mjs` creates passes `files: false` because with `transpileOnly: true` the tsconfig `include` walk feeds nothing.
 
 ## Formatters
 

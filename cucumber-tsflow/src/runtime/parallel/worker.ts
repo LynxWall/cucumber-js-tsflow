@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { pathToFileURL } from 'node:url';
-import { register } from 'node:module';
+import { registerLoader } from '../../api/register-loaders';
 import { Envelope, IdGenerator } from '@cucumber/messages';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -19,7 +19,6 @@ import {
 	startTimer,
 	recordPhase,
 	recordFile,
-	timingRegisterOptions,
 	collectLoaderTimings,
 	getTimingSnapshot
 } from '../../utils/tsflow-timing';
@@ -121,7 +120,7 @@ export class ChildProcessWorker {
 
 		phaseStart = startTimer();
 		for (const specifier of supportCodeCoordinates.loaders) {
-			register(specifier, pathToFileURL('./'), timingRegisterOptions());
+			await registerLoader(specifier);
 		}
 		recordPhase('support:register-loaders', phaseStart);
 

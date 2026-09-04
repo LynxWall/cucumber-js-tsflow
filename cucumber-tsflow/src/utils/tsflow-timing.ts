@@ -12,7 +12,9 @@
  *
  * - the main process itself (scope `main`)
  * - the ESM loader hooks thread created by `module.register()` (scope `esm-hooks`), which
- *   reports back over a `MessageChannel` handed to the loader's `initialize` hook
+ *   reports back over a `MessageChannel` handed to the loader's `initialize` hook; loaders
+ *   attached in-thread with `module.registerHooks()` record straight into the registering
+ *   context's store instead (see api/register-loaders.ts)
  * - each parallel preload `worker_threads` worker (scope `preload:<n>`), which returns its
  *   snapshot in the `LOADED` response
  * - each parallel child process (scope `worker:<id>`), which sends a `TIMING` IPC message

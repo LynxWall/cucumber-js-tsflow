@@ -9,6 +9,9 @@ import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.m
 // TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
 export { initialize } from '../../utils/tsflow-timing.mjs';
 
+// This loader delegates to ts-node's asynchronous ESM hooks, so it is always registered with
+// module.register() and runs on the loader hooks thread.
+
 const logger = createLogger('tsnode-loader');
 const require = createRequire(import.meta.url);
 
@@ -96,22 +99,22 @@ export async function resolve(specifier, context, nextResolve) {
 	const resolveStart = startTimer();
 
 	try {
-		// Try common resolution logic
-		const resolved = await resolveSpecifier(specifier, context, {
-			checkExtensions: true,
-			handleTsFiles: true,
-			tsNodeHooks: esmHooks,
-			nextResolve
-		});
+		// Try common resolution logic (tsconfig paths, extension probing)
+		const resolved = resolveSpecifier(specifier, context, { checkExtensions: true });
 
 		if (resolved) {
 			if (verbose) logger.checkpoint('resolve success', { specifier, url: resolved.url });
 			return resolved;
 		}
 
-		// Fall back to ts-node's resolver
+		// Fall back to ts-node's resolver. Explicit `.ts`/`.tsx` specifiers are always ES modules here,
+		// whatever ts-node's package-type classification says.
 		if (verbose) logger.checkpoint('resolve delegating to ts-node', { specifier });
-		return esmHooks.resolve(specifier, context, nextResolve);
+		const result = await esmHooks.resolve(specifier, context, nextResolve);
+		if (specifier.endsWith('.ts') || specifier.endsWith('.tsx')) {
+			return { ...result, format: 'module' };
+		}
+		return result;
 	} finally {
 		recordPhase('esm:resolve', resolveStart);
 	}

@@ -199,10 +199,10 @@ CUCUMBER_ENABLE_VUE_STYLE=true npm test
    - ESM: Uses import and export
 2. Loader Mechanism
    - CJS: Registers transpilers via require.extensions
-   - ESM: Uses Node.js loader hooks (resolve, load, etc.)
+   - ESM: Uses Node.js module customization hooks (resolve, load). `es-node-esm` and `es-vue-esm` run their hooks synchronously on the importing thread via `module.registerHooks()` (Node 22.15 / 23.5 or later; `module.register()` is used on older versions or when `TSFLOW_ESM_HOOKS=async` is set); `ts-node-esm` and `ts-vue-esm` always run on Node's loader hooks thread via `module.register()`
 3. TypeScript Handling
    - CJS: Inline transpilation with configurable transpiler
-   - ESM: Delegates to ts-node-maintained/esm for TypeScript compilation
+   - ESM: `es-node-esm` and `es-vue-esm` transpile with esbuild inside the `load` hook; `ts-node-esm` and `ts-vue-esm` delegate to ts-node-maintained
 4. Configuration
    - CJS: Uses require option in cucumber.json
    - ESM: Uses loader option in cucumber.json
@@ -322,7 +322,8 @@ import { helper } from '@/utils/helper';   // Resolves to src/utils/helper.ts
 
 - First run may be slower due to compilation; subsequent runs use ts-node's cache
 - Consider using transpileOnly: true in ts-node config for faster test runs
-- The `ts-node-esm`, `es-node-esm` and `es-vue-esm` transpilers always run ts-node with `transpileOnly: true` and `files: false`, so a `"ts-node": { "files": true }` entry in your tsconfig has no effect on them and no project-tree walk happens at startup. `ts-vue-esm` uses `ts-node-maintained/esm` directly and honours your `ts-node` tsconfig block, including `files`, which it needs when type-checking `.vue` shims.
+- The `ts-node-esm` transpiler always runs ts-node with `transpileOnly: true` and `files: false`, so a `"ts-node": { "files": true }` entry in your tsconfig has no effect on it and no project-tree walk happens at startup. `es-node-esm` and `es-vue-esm` do not use ts-node at all: they transpile TypeScript with esbuild directly in the `load` hook. `ts-vue-esm` uses `ts-node-maintained/esm` directly and honours your `ts-node` tsconfig block, including `files`, which it needs when type-checking `.vue` shims.
+- On Node 22.15 / 23.5 and later the `es-node-esm` and `es-vue-esm` hooks run synchronously on the importing thread (`module.registerHooks()`), which removes a thread round trip per resolve and per load. Set `TSFLOW_ESM_HOOKS=async` to force the previous `module.register()` behaviour.
 
 ## Migration from CommonJS
 

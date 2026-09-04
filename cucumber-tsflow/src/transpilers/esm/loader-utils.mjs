@@ -1,11 +1,16 @@
 import { compileVueSFC } from './vue-sfc-compiler.mjs';
+import { transpileCode } from './esbuild.mjs';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
-import { createEsmHooks } from './tsnode-service.mjs';
 import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
+
+// Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
+// `nextLoad`, so the same hook functions work under both registration mechanisms: `module.registerHooks()`
+// (synchronous, in-thread - `next*` returns a value) and `module.register()` (asynchronous, on the loader
+// hooks thread - `next*` returns a promise that is handed straight back to Node).
 
 // Create loggers for different concerns
 const loggerUtils = createLogger('loader-utils');
@@ -31,6 +36,17 @@ export const ASSET_EXTENSIONS = [
 	'.eot'
 ];
 export const CODE_EXTENSIONS = ['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+
+/**
+ * True when the hook was invoked for a CommonJS `require()`. Synchronous hooks registered with
+ * `module.registerHooks()` see every `require()` in the thread as well as every `import`; the
+ * transpilation, extension probing and `format: 'module'` short-circuits here are only correct for
+ * `import`, so `require()` requests must be handed straight to the default loader. Hooks registered with
+ * `module.register()` never receive `require()` calls, so this is always false there.
+ */
+export function isRequire(context) {
+	return context?.conditions?.includes('require') === true;
+}
 
 // TSConfig paths initialization
 let matchPath;
@@ -101,7 +117,7 @@ function probeExtensions(resolvedPath, extensions) {
 }
 
 // Extension resolution helper
-export async function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
+export function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
 	if (verbose) loggerResolve.checkpoint('resolveWithExtensions', { specifier, parentURL });
 
 	let resolvedPath;
@@ -215,6 +231,12 @@ export function resolveTsconfigPaths(specifier) {
 	return null;
 }
 
+// Reads a module's source from disk. The hooks read files themselves rather than asking `nextLoad`,
+// because the default `nextLoad` returns a value under registerHooks() and a promise under register().
+function readSource(url) {
+	return readFileSync(fileURLToPath(url), 'utf8');
+}
+
 // Asset loader helper
 export function loadAsset(url) {
 	if (verbose) loggerLoad.checkpoint('loadAsset', { url });
@@ -236,7 +258,7 @@ export function shouldEnableVueStyle() {
 	return enabled;
 }
 
-async function transformImports(code, parentURL) {
+function transformImports(code, parentURL) {
 	if (verbose) loggerLoad.checkpoint('transformImports', { parentURL, codeLength: code?.length });
 
 	try {
@@ -283,21 +305,19 @@ async function transformImports(code, parentURL) {
 	}
 }
 
-export async function loadVue(url, context, nextLoad) {
+export function loadVue(url) {
 	if (verbose) loggerLoad.checkpoint('loadVue', { url });
 
-	let source;
+	let code;
 	try {
 		if (verbose) loggerLoad.checkpoint('Loading Vue source');
-		const result = await nextLoad(url, { ...context, format: 'module' });
-		source = result.source;
-		if (verbose) loggerLoad.checkpoint('Vue source loaded', { sourceLength: source?.toString()?.length });
+		code = readSource(url);
+		if (verbose) loggerLoad.checkpoint('Vue source loaded', { sourceLength: code.length });
 	} catch (error) {
 		loggerLoad.error('Failed to load Vue source', error, { url });
 		throw new Error(`Failed to load Vue source from ${url}: ${error.message}`, { cause: error });
 	}
 
-	const code = source.toString();
 	const filename = fileURLToPath(url);
 
 	let compiled;
@@ -314,7 +334,7 @@ export async function loadVue(url, context, nextLoad) {
 
 	let transformed;
 	try {
-		transformed = await transformImports(compiled.code, url);
+		transformed = transformImports(compiled.code, url);
 		if (verbose) loggerLoad.checkpoint('Vue imports transformed');
 	} catch (error) {
 		loggerLoad.error('Failed to transform Vue imports', error, { url });
@@ -328,20 +348,33 @@ export async function loadVue(url, context, nextLoad) {
 	};
 }
 
-// Common load handlers
-export async function loadJson(url, context, nextLoad) {
+/**
+ * Transpile a `.ts`/`.tsx` module with esbuild and return it as an ES module with an inline source
+ * map. This replaces the `ts-node` service the esbuild loaders used to route every TypeScript file
+ * through: ts-node contributed only its own wrapper around the same `transpileCode()` call, a
+ * JSON.parse/stringify/base64 round trip to attach the map, and a module-format decision that these
+ * loaders already fix at `'module'`.
+ */
+export function loadTypeScript(url) {
+	if (verbose) loggerLoad.checkpoint('loadTypeScript', { url });
+	const filename = fileURLToPath(url);
+	const code = readSource(url);
+	const { output } = transpileCode(code, filename, undefined, { esbuild: { sourcemap: 'inline' } });
+	return {
+		format: 'module',
+		source: output,
+		shortCircuit: true
+	};
+}
+
+// JSON is returned with `format: 'json'` so consumers can import it without an import attribute, as before.
+export function loadJson(url) {
 	if (verbose) loggerLoad.checkpoint('loadJson', { url });
 
 	try {
-		const result = await nextLoad(url, {
-			...context,
-			format: 'json',
-			importAttributes: { type: 'json' }
-		});
-
 		return {
-			...result,
 			format: 'json',
+			source: readSource(url),
 			shortCircuit: true
 		};
 	} catch (error) {
@@ -350,7 +383,8 @@ export async function loadJson(url, context, nextLoad) {
 	}
 }
 
-export function handleCommonFileTypes(url, context, nextLoad, loaderName = 'loader') {
+// Common load handlers: assets and JSON. Returns null for anything else.
+export function handleCommonFileTypes(url) {
 	const ext = path.extname(url).toLowerCase();
 
 	if (ASSET_EXTENSIONS.includes(ext)) {
@@ -358,32 +392,20 @@ export function handleCommonFileTypes(url, context, nextLoad, loaderName = 'load
 		return loadAsset(url);
 	}
 
-	if (url.endsWith('.json')) {
+	if (ext === '.json') {
 		if (verbose) loggerLoad.checkpoint('Handling JSON', { url });
-		try {
-			return loadJson(url, context, nextLoad);
-		} catch (error) {
-			loggerLoad.error(`Failed to compile ${url}`, error);
-			throw new Error(`Failed to compile ${url}: ${error.message}`, { cause: error });
-		}
+		return loadJson(url);
 	}
 
 	return null;
 }
 
-// `tsNodeHooks` is an already-created hooks object; `getTsNodeHooks` is an async thunk that creates
-// (or returns the cached) hooks on demand. The thunk is only invoked when a .ts/.tsx specifier
-// actually needs ts-node, so bare and relative specifiers never trigger ts-node service construction.
-export async function resolveSpecifier(specifier, context, options = {}) {
-	const {
-		checkExtensions = true,
-		handleTsFiles = false,
-		tsNodeHooks = null,
-		getTsNodeHooks = null,
-		nextResolve
-	} = options;
+// tsconfig `paths` mapping first, then extension probing for relative / absolute / file: specifiers.
+// Returns a resolve result or null; the caller decides how to fall through.
+export function resolveSpecifier(specifier, context, options = {}) {
+	const { checkExtensions = true } = options;
 
-	if (verbose) loggerResolve.checkpoint('resolveSpecifier', { specifier, checkExtensions, handleTsFiles });
+	if (verbose) loggerResolve.checkpoint('resolveSpecifier', { specifier, checkExtensions });
 
 	// 1. Handle TypeScript path mappings first
 	try {
@@ -391,7 +413,7 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 		if (mappedResult) {
 			const mappedUrl = mappedResult.url;
 			if (checkExtensions && !path.extname(mappedUrl)) {
-				const resolved = await resolveWithExtensions(mappedUrl, context.parentURL);
+				const resolved = resolveWithExtensions(mappedUrl, context.parentURL);
 				if (resolved) {
 					if (verbose) loggerResolve.checkpoint('Resolved via tsconfig paths + extension', { specifier, resolved });
 					return {
@@ -409,27 +431,13 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 		loggerResolve.error('tsconfig path resolution failed', error, { specifier });
 	}
 
-	// 2. Handle TypeScript files if requested
-	if (handleTsFiles && (tsNodeHooks || getTsNodeHooks) && (specifier.endsWith('.ts') || specifier.endsWith('.tsx'))) {
-		try {
-			if (verbose) loggerResolve.checkpoint('Delegating .ts to ts-node hooks', { specifier });
-			const hooks = tsNodeHooks ?? (await getTsNodeHooks());
-			const resolved = await hooks.resolve(specifier, context, nextResolve);
-			return { ...resolved, format: 'module' };
-		} catch (error) {
-			if (verbose) {
-				loggerResolve.checkpoint('ts-node resolution failed, falling through', { specifier, error: error.message });
-			}
-		}
-	}
-
-	// 3. Extension resolution for relative imports and file:// URLs
+	// 2. Extension resolution for relative imports and file:// URLs
 	if (checkExtensions && (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('file://'))) {
 		const hasExtension = path.extname(specifier) !== '';
 
 		if (!hasExtension && context.parentURL) {
 			try {
-				const resolved = await resolveWithExtensions(specifier, context.parentURL);
+				const resolved = resolveWithExtensions(specifier, context.parentURL);
 				if (resolved) {
 					if (verbose) loggerResolve.checkpoint('Resolved with extension', { specifier, resolved });
 					return {
@@ -448,80 +456,33 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 	return null;
 }
 
-// Cache for different ESM hooks by transpiler path
-const esmHooksCache = new Map();
-
-export async function getEsmHooks(transpilerPath, loaderName = 'loader') {
-	if (verbose) loggerUtils.checkpoint('getEsmHooks', { transpilerPath, loaderName });
-
-	if (esmHooksCache.has(transpilerPath)) {
-		if (verbose) loggerUtils.checkpoint('Returning cached ESM hooks', { transpilerPath });
-		return esmHooksCache.get(transpilerPath);
-	}
-
-	try {
-		loggerUtils.checkpoint('Creating ESM hooks', { transpilerPath });
-		const initStart = startTimer();
-		const hooks = await createEsmHooks(transpilerPath);
-		recordPhase('esm:hooks-init', initStart);
-		esmHooksCache.set(transpilerPath, hooks);
-		loggerUtils.checkpoint('ESM hooks created and cached');
-		return hooks;
-	} catch (error) {
-		loggerUtils.error(`Failed to load ESM hooks with transpiler ${transpilerPath}`, error);
-		throw new Error(`Failed to load ESM hooks: ${error.message}`, { cause: error });
-	}
-}
-
-// Helper to create hook exports
-export function createHookExports(getHooksFn) {
-	return {
-		getFormat: async (...args) => {
-			if (verbose) loggerUtils.checkpoint('getFormat called', { url: args[0] });
-			return (await getHooksFn()).getFormat(...args);
-		},
-		transformSource: async (...args) => {
-			if (verbose) loggerUtils.checkpoint('transformSource called', { url: args[1]?.url });
-			return (await getHooksFn()).transformSource(...args);
-		}
-	};
-}
-
-// Common loader factory for esbuild-based loaders
+// Common loader factory for esbuild-based loaders. The returned hooks are synchronous and work under
+// both `module.registerHooks()` and `module.register()`; see the note at the top of this file.
 export function createEsbuildLoader(options = {}) {
-	const {
-		loaderName = 'loader',
-		handleVue = false,
-		transpilerPath = '@lynxwall/cucumber-tsflow/lib/transpilers/esm/esbuild-transpiler-cjs'
-	} = options;
+	const { loaderName = 'loader', handleVue = false } = options;
 
-	loggerUtils.checkpoint('createEsbuildLoader', { loaderName, handleVue, transpilerPath });
+	loggerUtils.checkpoint('createEsbuildLoader', { loaderName, handleVue });
 
 	// Create a loader-specific logger
 	const loaderLogger = createLogger(loaderName);
 
-	const getLocalEsmHooks = () => getEsmHooks(transpilerPath, loaderName);
-
 	return {
-		resolve: async (specifier, context, nextResolve) => {
+		resolve: (specifier, context, nextResolve) => {
+			if (isRequire(context)) return nextResolve(specifier, context);
+
 			if (verbose) loaderLogger.checkpoint('resolve', { specifier, parentURL: context?.parentURL });
 			const resolveStart = startTimer();
 
 			try {
-				// Pass the hooks lazily: constructing the ts-node service is deferred until the first
-				// .ts/.tsx specifier that needs it, instead of happening on the very first resolve.
-				const resolved = await resolveSpecifier(specifier, context, {
-					checkExtensions: true,
-					handleTsFiles: true,
-					getTsNodeHooks: getLocalEsmHooks,
-					nextResolve
-				});
+				const resolved = resolveSpecifier(specifier, context, { checkExtensions: true });
 
 				if (resolved) {
 					if (verbose) loaderLogger.checkpoint('resolve success', { specifier, url: resolved.url });
 					return resolved;
 				}
 
+				// Everything else, including explicit `.ts`/`.tsx` specifiers, is resolved by Node; `load`
+				// decides what to do with the URL.
 				if (verbose) loaderLogger.checkpoint('resolve delegating to nextResolve', { specifier });
 				return nextResolve(specifier, context);
 			} catch (error) {
@@ -532,13 +493,15 @@ export function createEsbuildLoader(options = {}) {
 			}
 		},
 
-		load: async (url, context, nextLoad) => {
+		load: (url, context, nextLoad) => {
+			if (isRequire(context)) return nextLoad(url, context);
+
 			if (verbose) loaderLogger.checkpoint('load', { url });
 			const loadStart = startTimer();
 
 			try {
 				// Check common file types first
-				const commonResult = await handleCommonFileTypes(url, context, nextLoad, loaderName);
+				const commonResult = handleCommonFileTypes(url);
 				if (commonResult) {
 					if (verbose) loaderLogger.checkpoint('load handled as common file type', { url });
 					return commonResult;
@@ -548,7 +511,7 @@ export function createEsbuildLoader(options = {}) {
 				if (handleVue && url.endsWith('.vue')) {
 					if (verbose) loaderLogger.checkpoint('load handling Vue file', { url });
 					try {
-						const result = await loadVue(url, context, nextLoad);
+						const result = loadVue(url);
 						recordFile('load', url, loadStart);
 						if (verbose) loaderLogger.checkpoint('Vue file loaded successfully', { url });
 						return result;
@@ -562,13 +525,12 @@ export function createEsbuildLoader(options = {}) {
 				if (url.endsWith('.ts') || url.endsWith('.tsx')) {
 					if (verbose) loaderLogger.checkpoint('load handling TypeScript file', { url });
 					try {
-						const tsNodeHooks = await getLocalEsmHooks();
-						const result = await tsNodeHooks.load(url, context, nextLoad);
+						const result = loadTypeScript(url);
 						recordFile('load', url, loadStart);
 						if (verbose) loaderLogger.checkpoint('TypeScript file loaded successfully', { url });
 						return result;
 					} catch (error) {
-						loaderLogger.error(`ts-node failed for ${url}`, error);
+						loaderLogger.error(`esbuild failed for ${url}`, error);
 						throw error;
 					}
 				}
@@ -581,8 +543,6 @@ export function createEsbuildLoader(options = {}) {
 			} finally {
 				recordPhase('esm:load', loadStart);
 			}
-		},
-
-		...createHookExports(getLocalEsmHooks)
+		}
 	};
 }

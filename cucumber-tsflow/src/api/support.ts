@@ -1,4 +1,3 @@
-import { register } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { IdGenerator } from '@cucumber/messages';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -6,7 +5,8 @@ import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_libra
 import tryRequire from '@cucumber/cucumber/lib/try_require';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
 import { resetStepPatternRegistrations } from '../bindings/binding-decorator';
-import { startTimer, recordPhase, recordFile, timingRegisterOptions } from '../utils/tsflow-timing';
+import { startTimer, recordPhase, recordFile } from '../utils/tsflow-timing';
+import { registerLoader } from './register-loaders';
 
 export async function getSupportCodeLibrary({
 	logger,
@@ -61,7 +61,8 @@ export async function getSupportCodeLibrary({
 	phaseStart = startTimer();
 	for (const specifier of loaders) {
 		logger.debug(`Attempting to register loader "${specifier}"`);
-		register(specifier, pathToFileURL('./'), timingRegisterOptions());
+		const mode = await registerLoader(specifier);
+		logger.debug(`Registered loader "${specifier}" using ${mode} hooks`);
 	}
 	recordPhase('support:register-loaders', phaseStart);
 

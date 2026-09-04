@@ -9,6 +9,9 @@ import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.m
 // TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
 export { initialize } from '../../utils/tsflow-timing.mjs';
 
+// This loader delegates TypeScript to `ts-node-maintained/esm`, whose hooks are asynchronous, so it is
+// always registered with module.register() and runs on the loader hooks thread.
+
 const logger = createLogger('vue-loader');
 
 // Per-file checkpoints in the resolve/load hot paths are guarded so their detail
@@ -47,7 +50,7 @@ export async function load(url, context, nextLoad) {
 
 	try {
 		// Check common file types first
-		const commonResult = await handleCommonFileTypes(url, context, nextLoad);
+		const commonResult = handleCommonFileTypes(url);
 		if (commonResult) {
 			if (verbose) logger.checkpoint('load handled as common file type', { url });
 			return commonResult;
@@ -57,7 +60,7 @@ export async function load(url, context, nextLoad) {
 		if (url.endsWith('.vue')) {
 			if (verbose) logger.checkpoint('load handling Vue file', { url });
 			try {
-				const result = await loadVue(url, context, nextLoad);
+				const result = loadVue(url);
 				recordFile('load', url, loadStart);
 				if (verbose) logger.checkpoint('Vue file loaded successfully', { url });
 				return result;
@@ -96,11 +99,7 @@ export async function resolve(specifier, context, nextResolve) {
 
 	try {
 		// Try common resolution logic
-		const resolved = await resolveSpecifier(specifier, context, {
-			checkExtensions: true,
-			handleTsFiles: false,
-			nextResolve
-		});
+		const resolved = resolveSpecifier(specifier, context, { checkExtensions: true });
 
 		if (resolved) {
 			if (verbose) logger.checkpoint('resolve success', { specifier, url: resolved.url });

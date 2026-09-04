@@ -179,14 +179,13 @@ if (typeof globalThis.window === 'undefined') {
 }
 
 import { parentPort, workerData } from 'node:worker_threads';
-import { register } from 'node:module';
+import { registerLoader } from './register-loaders';
 import { pathToFileURL } from 'node:url';
 import 'polyfill-symbol-metadata';
 import {
 	startTimer,
 	recordPhase,
 	recordFile,
-	timingRegisterOptions,
 	collectLoaderTimings,
 	getTimingSnapshot,
 	TimingSnapshot
@@ -247,7 +246,7 @@ async function processMessage(message: LoaderWorkerRequest): Promise<void> {
 		// Register ESM loaders — also critical for import phase
 		phaseStart = startTimer();
 		for (const specifier of message.loaders) {
-			register(specifier, pathToFileURL('./'), timingRegisterOptions());
+			await registerLoader(specifier);
 		}
 		recordPhase('support:register-loaders', phaseStart);
 

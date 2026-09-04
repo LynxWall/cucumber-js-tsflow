@@ -13,7 +13,9 @@ const loader = createEsbuildLoader({
 
 logger.checkpoint('esnode-loader initialized');
 
-export const { resolve, load, getFormat, transformSource } = loader;
+// Synchronous hooks. Attached in-thread with module.registerHooks() on Node >= 22.15 / 23.5, or on the
+// loader hooks thread with module.register() otherwise (see src/api/register-loaders.ts).
+export const { resolve, load } = loader;
 
-// TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
+// TSFLOW_TIMING support under module.register(): receives the timing MessagePort passed as `data`
 export { initialize } from '../../utils/tsflow-timing.mjs';

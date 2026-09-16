@@ -172,43 +172,51 @@ const LOTR_THEME: StartupTheme = {
 	detail: text => ansis.dim(text),
 	mark: text => gold(text),
 	separator: ' — ',
-	waiting: 'the road goes ever on, {elapsed} so far',
-	quips: ['{done} of {total} behind us, {left} ahead', 'not all those who wander are lost: {done} of {total}'],
+	waiting: 'the road goes ever on 🚶, {elapsed} so far',
+	quips: ['{done} of {total} behind us, {left} ahead 🌄', 'not all those who wander are lost 🧭 {done} of {total}'],
 	relief: [
-		'we are through Moria. Onward, and quickly, before anything else wakes up',
-		'"Fly, you fools!" Right, that one is behind us. Back to the road',
-		'the Dead Marshes are behind us. Do not follow the lights'
+		'we are through Moria 🪨 Onward, and quickly, before anything else wakes up',
+		'"Fly, you fools!" 🦅 Right, that one is behind us. Back to the road',
+		'the Dead Marshes are behind us 👻 Do not follow the lights'
 	],
 	phases: {
-		resolve: { title: 'Assembling the Fellowship' },
+		// The nine walkers: Gandalf, Aragorn, Boromir (and his horn), Legolas, Gimli, Frodo, Sam (po-ta-toes), Merry and Pippin
+		resolve: { title: 'Assembling the Fellowship 🧙👑📯🧝🪓💍🥔🍄🍄' },
 		preload: {
-			title: 'Lighting the beacons of Gondor',
-			waiting: 'the first beacon is not yet lit — the worker threads are still starting up',
+			title: 'Stoking the forges of Isengard 🔨🔥🔨',
+			waiting: 'the forges are still cold 🔦 the worker threads are starting up',
 			quips: [
-				'the beacons are lit! Gondor calls for aid: {done} of {total} files warmed',
-				'and Rohan will answer. {done} warmed, {left} to go'
+				'"The trees are strong, my lord. Their roots go deep." 🌳 {done} of {total} files warmed',
+				'"Rip them all down." 🪓 {done} warmed, {left} to go',
+				'the orcs are working through the night 🔥 {done} of {total}. Work never stopped at Isengard'
 			]
 		},
 		load: {
-			title: 'One does not simply walk into Mordor',
+			title: 'Lighting the beacons of Gondor 🔥🔥🔥',
 			waiting:
-				'the first file drags its whole import graph along like a Fellowship of dependencies; the rest move faster',
+				'the first beacon is not yet lit 🔦 the first file drags its whole import graph along; the rest catch quickly',
 			quips: [
-				'{done} leagues behind us, {left} to go. Po-ta-toes would help about now',
-				'one does not simply load {total} files. {done} down, {left} to go',
-				'"I can not carry it for you, but I can carry you!" {done} of {total}',
-				'"If I take one more step, it will be the farthest from home I have ever been." {done} of {total}',
-				'"Is it secret? Is it safe?" {done} files in, {left} still unaccounted for'
+				'the beacons are lit! 🔥 Gondor calls for aid: {done} of {total}',
+				'and Rohan will answer 🐎 {done} lit, {left} to go',
+				'Amon Dîn, Eilenach, Nardol, Erelas, Min-Rimmon... 🌄 {done} of {total} beacons ablaze',
+				'"Hope is kindled." 🔥 {done} down, {left} to go. Po-ta-toes would help about now 🥔',
+				'"Is it secret? Is it safe?" 💍 {done} files in, {left} still unaccounted for',
+				'"I can not carry it for you, but I can carry you!" 🧗 {done} of {total}'
 			]
 		},
 		assemble: {
-			title: 'Reading the Red Book of Westmarch',
-			quips: ['{done} of {total} chapters read. Bilbo did go on a bit']
+			title: 'Gathering the Ents of Fangorn 🌳🌲🌳🌲🌳',
+			waiting: 'the Entmoot has not begun 🌳 nothing is hasty in Old Entish, {elapsed} so far',
+			quips: [
+				'"Hoom, hom. Do not be hasty." 🌳 {done} of {total} feature files, and the Ents are still saying good morning',
+				'"The trees have grown wild and dangerous." 🌲 {done} of {total} parsed',
+				'"Come, my friends. The Ents are going to war." 🌳🌲🌳 {done} of {total}'
+			]
 		},
 		launch: {
-			title: 'Mustering the Rohirrim',
-			waiting: 'the horn of Helm Hammerhand sounds — BeforeAll hooks are running, {elapsed} so far',
-			quips: ['"Ride now! Ride for ruin!" {done} of {total} riders mustered, each loading the support code']
+			title: 'Mustering the Rohirrim 🐎🐎🐎🐎🐎',
+			waiting: 'the horn of Helm Hammerhand sounds 📯 BeforeAll hooks are running, {elapsed} so far',
+			quips: ['"Ride now! Ride for ruin!" 🏇 {done} of {total} riders mustered, each loading the support code']
 		}
 	}
 };
@@ -525,9 +533,20 @@ function counterText(ticks: number, total: number | undefined): string {
 // eslint-disable-next-line no-control-regex
 const ESCAPE_SEQUENCE = /\x1b\[[\d;?]*[ -/]*[@-~]/g;
 
-/** Number of terminal cells `text` occupies: code points outside escape sequences (everything drawn here is single-cell). */
+/** Code points in the pictographic emoji blocks (U+1F300–U+1FAFF), which terminals draw two cells wide. */
+const WIDE_EMOJI = /^[\u{1F300}-\u{1FAFF}]$/u;
+
+/**
+ * Number of terminal cells `text` occupies: one per code point outside escape sequences, two for emoji. The
+ * themes only use single-code-point emoji with default emoji presentation (no variation selectors or ZWJ
+ * sequences), so a per-code-point count is exact for everything drawn here.
+ */
 function visibleWidth(text: string): number {
-	return [...text.replace(ESCAPE_SEQUENCE, '')].length;
+	let width = 0;
+	for (const char of text.replace(ESCAPE_SEQUENCE, '')) {
+		width += WIDE_EMOJI.test(char) ? 2 : 1;
+	}
+	return width;
 }
 
 /** Messages from `StartupProgress` to the spinner worker thread. */

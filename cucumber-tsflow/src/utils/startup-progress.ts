@@ -524,10 +524,10 @@ function phaseText(theme: StartupTheme, id: StartupPhaseId, detail: string | und
 	return detail ? title + theme.detail(theme.separator + detail) : title;
 }
 
-/** The counter at the end of the phase line: ` done/total`, ` done` when the total is unknown, nothing before the first tick. */
+/** The counter at the end of the phase line: ` (done/total)`, ` (done)` when the total is unknown, nothing before the first tick. */
 function counterText(ticks: number, total: number | undefined): string {
-	if (total !== undefined) return ` ${ticks}/${total}`;
-	return ticks > 0 ? ` ${ticks}` : '';
+	if (total !== undefined) return ` (${ticks}/${total})`;
+	return ticks > 0 ? ` (${ticks})` : '';
 }
 
 // eslint-disable-next-line no-control-regex

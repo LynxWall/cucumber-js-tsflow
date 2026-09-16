@@ -1,4 +1,6 @@
+import { originalPositionFor, TraceMap } from '@jridgewell/trace-mapping';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as sourceMapSupport from 'source-map-support';
 import { CallSite } from 'source-map-support';
 
@@ -7,6 +9,39 @@ import { CallSite } from 'source-map-support';
  * (`given`, `before`, …) and the support file that applied the decorator. Only the last one is wanted.
  */
 const CAPTURE_DEPTH = 3;
+
+/** Decoded maps from `__CUCUMBER_TSFLOW_SOURCE_MAPS`, by module URL; `null` records a URL with no map. */
+const traceMaps = new Map<string, TraceMap | null>();
+
+/**
+ * Map a position in a module the esbuild ESM loader transpiled on this thread back to its TypeScript
+ * line. The loader keeps each module's source map on `__CUCUMBER_TSFLOW_SOURCE_MAPS` (see
+ * `loadTypeScript()` in `transpilers/esm/loader-utils.mjs`) because the transpiled code exists only in
+ * memory, so `source-map-support`, which reads the file on disk, cannot find a map for it. Returns
+ * undefined when the module was not loaded that way or the position has no mapping, and the caller falls
+ * back to `source-map-support`.
+ *
+ * @param url - The frame's file name, a `file:` URL for an ES module
+ * @param line - 1-based line in the transpiled code
+ * @param column - 1-based column in the transpiled code, as V8 reports it
+ */
+function traceLoaderMap(
+	url: string,
+	line: number,
+	column: number
+): { filename: string; lineNumber: number } | undefined {
+	let map = traceMaps.get(url);
+	if (map === undefined) {
+		const raw = globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS?.get(url);
+		map = raw ? new TraceMap(raw) : null;
+		traceMaps.set(url, map);
+	}
+	if (!map) return undefined;
+	const position = originalPositionFor(map, { line, column: Math.max(0, column - 1) });
+	if (position.line === null) return undefined;
+	// The map is for a single-file transform, so its only source is the module itself.
+	return { filename: fileURLToPath(url), lineNumber: position.line };
+}
 
 /**
  * Runs `fn` with `source-map-support`'s browser detection defeated.
@@ -110,12 +145,20 @@ export class Callsite {
 	private resolve(): { filename: string; lineNumber: number } {
 		if (!this.resolved) {
 			const frame = this.frame;
-			const mapped = frame ? withoutBrowserDetection(() => sourceMapSupport.wrapCallSite(frame)) : undefined;
-			let filename = mapped?.getFileName() || '';
+			const url = frame?.getFileName();
+			let traced =
+				frame && url?.startsWith('file:')
+					? traceLoaderMap(url, frame.getLineNumber() ?? 0, frame.getColumnNumber() ?? 0)
+					: undefined;
+			if (!traced) {
+				const mapped = frame ? withoutBrowserDetection(() => sourceMapSupport.wrapCallSite(frame)) : undefined;
+				traced = { filename: mapped?.getFileName() || '', lineNumber: mapped?.getLineNumber() || -1 };
+			}
+			let { filename } = traced;
 			if (filename.startsWith(Callsite.cwdPrefix)) {
 				filename = filename.slice(Callsite.cwdPrefix.length);
 			}
-			this.resolved = { filename, lineNumber: mapped?.getLineNumber() || -1 };
+			this.resolved = { filename, lineNumber: traced.lineNumber };
 		}
 		return this.resolved;
 	}

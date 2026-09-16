@@ -463,7 +463,7 @@ The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in
 Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears; while nothing has completed yet it explains why (the first support file pulls in its whole import graph before it counts). When work resumes after a stall that long, a relief message takes the slot instead:
 
 ```text
-[ - ] Packing the jars — transpiling and loading 312 support files with es-node-esm 2/312
+[ - ] Packing the jars — transpiling and loading 312 support files with es-node-esm (2/312)
       phew, that was a big jar. Back to the quick ones
 ```
 

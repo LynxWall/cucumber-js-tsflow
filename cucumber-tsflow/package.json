@@ -66,6 +66,7 @@
 	"dependencies": {
 		"@cucumber/cucumber": "~12.7.0",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
+		"@jridgewell/trace-mapping": "~0.3.31",
 		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",
 		"commander": "^10.0.1",

@@ -39,6 +39,10 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 - The package root no longer loads the CLI when imported. The deprecated `Cli` export constructs the real class on first use, so `import { binding } from '@lynxwall/cucumber-tsflow'` pulls in 540 modules instead of 593 — `runCucumber`, `makeRuntime`, the parallel adapter, `commander`, `ansis` and `debug` leave the decorator load path. `new Cli(...).run()` works as before; `instanceof Cli` against the exported symbol does not.
 - `binding-decorator.ts` takes `Given`, `When`, `Before`, … from `supportCodeLibraryBuilder.methods` (the same functions `@cucumber/cucumber` re-exports) instead of importing the `@cucumber/cucumber` root barrel, which is what keeps the `bindings` entry point small.
 
+### Fixed
+
+- **Step definitions loaded by the esbuild ESM loaders report their TypeScript line and a working-directory-relative `uri`.** Under `es-node-esm` and `es-vue-esm` the location of a `@given`/`@when`/`@then` or hook in reports, messages and ambiguity errors was the line in esbuild's transpiled output and the module's `file:` URL: the transpiled code (with its inline map) exists only in memory, so `source-map-support`, which reads the file on disk, found no map for it. The `load` hook now keeps each module's source map (`sourcemap: 'both'`) on the thread that will resolve callsites, and `Callsite` traces positions through it with `@jridgewell/trace-mapping` (new dependency) before falling back to `source-map-support`. The ts-node ESM loaders, whose hooks run on a separate thread, are unchanged.
+
 ### Removed
 
 - Dead `cucumber-tsflow-specs` path check in the ESM `esbuild.mjs` `supports()` export, which would have disabled transpilation for every consumer project had anything called it.

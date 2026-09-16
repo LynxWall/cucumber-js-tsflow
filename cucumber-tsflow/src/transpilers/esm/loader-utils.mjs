@@ -349,17 +349,30 @@ export function loadVue(url) {
 }
 
 /**
+ * Source maps of the TypeScript modules this thread has transpiled, keyed by module URL, for
+ * `Callsite.resolve()` in `utils/our-callsite.ts`. A step definition's callsite is a V8 frame whose file
+ * name is the module URL and whose position is in the transpiled output; the file on disk is the `.ts`
+ * source, so `source-map-support` finds no map for it. With the hooks attached in-thread
+ * (`module.registerHooks()`) this map is on the same global object the resolver reads; under
+ * `module.register()` it lives on the hooks thread, the resolver never sees it and falls back to
+ * `source-map-support`.
+ */
+const sourceMaps = (globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS ??= new Map());
+
+/**
  * Transpile a `.ts`/`.tsx` module with esbuild and return it as an ES module with an inline source
- * map. This replaces the `ts-node` service the esbuild loaders used to route every TypeScript file
- * through: ts-node contributed only its own wrapper around the same `transpileCode()` call, a
- * JSON.parse/stringify/base64 round trip to attach the map, and a module-format decision that these
- * loaders already fix at `'module'`.
+ * map, keeping the map for callsite resolution. This replaces the `ts-node` service the esbuild
+ * loaders used to route every TypeScript file through: ts-node contributed only its own wrapper around
+ * the same `transpileCode()` call, a JSON.parse/stringify/base64 round trip to attach the map, and a
+ * module-format decision that these loaders already fix at `'module'`.
  */
 export function loadTypeScript(url) {
 	if (verbose) loggerLoad.checkpoint('loadTypeScript', { url });
 	const filename = fileURLToPath(url);
 	const code = readSource(url);
-	const { output } = transpileCode(code, filename, undefined, { esbuild: { sourcemap: 'inline' } });
+	// 'both': the inline map for Node (--enable-source-maps) and the map text for our own resolver.
+	const { output, sourceMap } = transpileCode(code, filename, undefined, { esbuild: { sourcemap: 'both' } });
+	if (sourceMap) sourceMaps.set(url, sourceMap);
 	return {
 		format: 'module',
 		source: output,

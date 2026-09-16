@@ -5,7 +5,8 @@
 # -Env is a string of KEY=VALUE pairs separated by ";" (a hashtable cannot cross a `pwsh -File` boundary; it
 # arrives as the literal text "System.Collections.Hashtable"). The variables are set for the child and
 # restored afterwards. Paths inside NODE_OPTIONS must use forward slashes: backslashes are stripped on the
-# way through the new process.
+# way through the new process. NO_COLOR is cleared for the child unless -Env sets it: Claude's PowerShell tool
+# runs with NO_COLOR=1, which the new console would inherit, and then nothing under test has any colour.
 param(
 	[Parameter(Mandatory = $true)][string]$Script,
 	[Parameter(Mandatory = $true)][string]$Out,
@@ -13,7 +14,7 @@ param(
 	[string]$Env = ''
 )
 foreach ($f in @($Out, "$Out.log")) { if (Test-Path $f) { Remove-Item $f } }
-$vars = @{}
+$vars = @{ NO_COLOR = '' }
 foreach ($pair in ($Env -split ';')) {
 	if ($pair.Trim() -eq '') { continue }
 	$eq = $pair.IndexOf('=')

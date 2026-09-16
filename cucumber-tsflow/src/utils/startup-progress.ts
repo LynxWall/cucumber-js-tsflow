@@ -9,8 +9,12 @@
  *
  * The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) inside brackets, advanced
  * every 130 ms, the interval the `cli-spinners` "line" preset uses. It appears the moment the phase line is
- * printed, so there is visible motion before the first unit of work completes. On an interactive terminal it
- * is drawn by a worker thread (`startup-progress-worker.ts`) writing straight to the terminal's file
+ * printed, so there is visible motion before the first unit of work completes. Its colour walks a twelve-colour
+ * wheel (six stops with a blend between each pair) at a constant rate unrelated to progress, one step every
+ * five frames, and each new colour enters at the left bracket and sweeps across the glyph and the right
+ * bracket over three frames. Five is not a multiple of the four frames in a rotation, so the sweep starts one
+ * glyph later each time, like an offbeat in a polyrhythm, and the two rhythms come back into step every
+ * twenty frames. On an interactive terminal it is drawn by a worker thread (`startup-progress-worker.ts`) writing straight to the terminal's file
  * descriptor, so it keeps turning while the main thread is blocked in synchronous transpile-and-load work.
  * On a non-TTY stream (CI logs, a file) nothing is redrawn and the output stays append-only.
  *
@@ -51,8 +55,8 @@ export interface StartupTheme {
 	label: (text: string) => string;
 	/** Colour applied to the plain-language detail, the heartbeat quips and the elapsed-time summary */
 	detail: (text: string) => string;
-	/** Colour applied to the spinner */
-	spinner: (text: string) => string;
+	/** Colour applied to the check mark that replaces the spinner when the phase completes */
+	mark: (text: string) => string;
 	/** Text printed between a title and its detail */
 	separator: string;
 	/** Heartbeat text while a phase has completed no units yet, for phases without their own */
@@ -66,6 +70,38 @@ export interface StartupTheme {
 
 /** Spinner frames, in clockwise order */
 const SPINNER_FRAMES = ['|', '/', '-', '\\'];
+/** The stops of the spinner's colour wheel, in order, as RGB */
+const WHEEL_STOPS: Array<[number, number, number]> = [
+	[0x5f, 0x87, 0xaf], // blue
+	[0x5f, 0xaf, 0x5f], // green
+	[0xd7, 0xaf, 0x5f], // yellow
+	[0xd7, 0x87, 0x00], // orange
+	[0xd7, 0x5f, 0x5f], // red
+	[0x87, 0x5f, 0xaf] // purple
+];
+/** Colours per stop: 1 shows the stops only; 2 adds one blended colour between each pair of stops, and so on */
+const STEPS_PER_STOP = 2;
+/**
+ * Frames between colour steps (may be fractional: 3.5 alternates holds of 3 and 4 frames). Deliberately not a
+ * multiple of the four frames in a rotation, so the colour change drifts around the turn instead of always
+ * landing on the same glyph. With the three-frame wipe below, 5 gives two frames of solid colour per step.
+ */
+const FRAMES_PER_COLOUR = 5;
+/**
+ * Frames by which each cell of the slot (`[`, glyph, `]`) lags the cell to its left when the colour changes,
+ * so a new colour enters at the left bracket and sweeps across in three frames instead of the whole slot
+ * changing at once. 0 turns the wipe off.
+ */
+const WIPE_LAG_FRAMES = 1;
+/** Colours the spinner cycles through: the stops with `STEPS_PER_STOP - 1` linear RGB blends between each pair */
+const SPINNER_WHEEL = WHEEL_STOPS.flatMap((from, i) => {
+	const to = WHEEL_STOPS[(i + 1) % WHEEL_STOPS.length];
+	return Array.from({ length: STEPS_PER_STOP }, (_, step) => {
+		const t = step / STEPS_PER_STOP;
+		const [r, g, b] = from.map((v, k) => Math.round(v + (to[k] - v) * t));
+		return ansis.rgb(r, g, b);
+	});
+});
 /** What the spinner slot shows once the phase has completed */
 const DONE_MARK = '✓';
 /** Time between spinner frames (the `cli-spinners` "line" preset interval) */
@@ -87,7 +123,7 @@ const PICKLE_THEME: StartupTheme = {
 	name: 'pickle',
 	label: text => steelBlue(text),
 	detail: text => ansis.dim(text),
-	spinner: text => steelBlue(text),
+	mark: text => steelBlue(text),
 	separator: ' — ',
 	waiting: 'still at it, {elapsed} so far',
 	quips: ['{done} of {total} done, {elapsed} in', 'still going: {done} down, {left} to go'],
@@ -134,7 +170,7 @@ const LOTR_THEME: StartupTheme = {
 	name: 'lotr',
 	label: text => gold(text),
 	detail: text => ansis.dim(text),
-	spinner: text => gold(text),
+	mark: text => gold(text),
 	separator: ' — ',
 	waiting: 'the road goes ever on, {elapsed} so far',
 	quips: ['{done} of {total} behind us, {left} ahead', 'not all those who wander are lost: {done} of {total}'],
@@ -176,6 +212,20 @@ const LOTR_THEME: StartupTheme = {
 		}
 	}
 };
+
+/** The wheel colour in force at frame `n`; frames before the phase began count as its first frame. */
+function wheelColour(frame: number): (text: string) => string {
+	return SPINNER_WHEEL[Math.floor(Math.max(0, frame) / FRAMES_PER_COLOUR) % SPINNER_WHEEL.length];
+}
+
+/**
+ * The spinner slot for frame `n` (counted from the start of the phase): the glyph for `n mod 4`, each of the
+ * three cells coloured for a frame `WIPE_LAG_FRAMES` behind the cell to its left.
+ */
+function spinnerSlot(frame: number): string {
+	const cells = ['[', ` ${SPINNER_FRAMES[frame % SPINNER_FRAMES.length]} `, ']'];
+	return cells.map((cell, i) => wheelColour(frame - i * WIPE_LAG_FRAMES)(cell)).join('');
+}
 
 /**
  * Resolve the theme selected by `TSFLOW_THEME`. Returns undefined when progress output is turned off.
@@ -230,6 +280,7 @@ interface OpenPhase {
 	ticks: number;
 	/** Units of work expected, when known */
 	total: number | undefined;
+	/** Spinner frames drawn since the phase began; drives both the glyph and the wheel colour */
 	frame: number;
 	lastFrame: number;
 	lastTick: number;
@@ -245,6 +296,8 @@ interface OpenPhase {
 	message: string | undefined;
 	/** When the message currently on screen should clear itself, if one is showing */
 	messageClearAt: number | undefined;
+	/** Rows the block occupied when last drawn; the cursor rests on the row after them */
+	drawnRows: number;
 }
 
 /**
@@ -254,10 +307,11 @@ interface OpenPhase {
  * own, so it can run on the main thread or inside the spinner worker thread.
  *
  * Nothing is fitted to the terminal width: every line is printed whole and wraps wherever the terminal
- * wraps it. In `tty` mode the block (phase line plus message line) is redrawn whole on every frame from its
- * top-left corner, where the cursor rests between writes: erase to the end of the screen, write the block,
- * move back up as many rows as the block occupies at the current width. That row count is the only use
- * of the width, and it is read on every redraw so a window resized mid-phase is redrawn correctly.
+ * wraps it. In `tty` mode the block (phase line plus message line) is redrawn whole on every frame: from
+ * the row after the block, where the cursor rests between writes so the terminal's caret never covers the
+ * spinner, move up as many rows as the block occupied when last drawn, erase to the end of the screen,
+ * write the block, and end on a fresh row. Row counts come from the width at the current draw, so a window
+ * resized mid-phase is redrawn correctly from the next frame.
  * In `plain` mode nothing is redrawn: the caller has already written the phase line, and messages and the
  * closing text are appended.
  */
@@ -289,12 +343,12 @@ export class PhaseRenderer {
 		tty: boolean
 	): string {
 		if (!tty) return phaseText(theme, id, detail);
-		return `${theme.spinner(`[ ${SPINNER_FRAMES[0]} ]`)} ${phaseText(theme, id, detail)}${theme.detail(counterText(0, total))}`;
+		return `${spinnerSlot(0)} ${phaseText(theme, id, detail)}${theme.detail(counterText(0, total))}`;
 	}
 
 	/** The finished form of a phase line: check mark, title and detail, closing text. */
 	static closingLine(theme: StartupTheme, id: StartupPhaseId, detail: string | undefined, text: string): string {
-		return `${theme.spinner(`[ ${DONE_MARK} ]`)} ${phaseText(theme, id, detail)}${theme.detail(` ${text}`)}`;
+		return `${theme.mark(`[ ${DONE_MARK} ]`)} ${phaseText(theme, id, detail)}${theme.detail(` ${text}`)}`;
 	}
 
 	/**
@@ -307,11 +361,13 @@ export class PhaseRenderer {
 
 	/**
 	 * Begin rendering a phase whose opening line has already been written. In `tty` mode the cursor must be
-	 * at the top-left of that line (its first row, column 0).
+	 * at column 0 of the row after that line.
 	 */
 	start(id: StartupPhaseId, detail: string | undefined, total: number | undefined): void {
 		const now = performance.now();
+		const opening = PhaseRenderer.openingLine(this.theme, id, detail, total, this.mode === 'tty');
 		this.current = {
+			drawnRows: PhaseRenderer.rows(opening, this.columns()),
 			id,
 			detail,
 			start: now,
@@ -361,21 +417,22 @@ export class PhaseRenderer {
 			this.clearMessage();
 		}
 		if (now - this.current.lastFrame >= SPINNER_INTERVAL_MS) {
-			this.current.frame = (this.current.frame + 1) % SPINNER_FRAMES.length;
+			this.current.frame++;
 			this.current.lastFrame = now;
 			this.redraw();
 		}
 	}
 
 	/**
-	 * Finish the phase: the spinner slot becomes a check mark, the closing text (summary and elapsed time)
+	 * Finish the phase: the spinner slot becomes a check mark in the theme colour, the closing text (summary and elapsed time)
 	 * replaces the counter, the message line is erased, and the cursor is left at the start of a fresh line.
 	 */
 	end(text: string): void {
 		if (!this.current) return;
 		if (this.mode === 'tty') {
-			const { id, detail } = this.current;
-			this.write(`${ERASE_DOWN}${PhaseRenderer.closingLine(this.theme, id, detail, text)}${NEW_LINE}`);
+			const { id, detail, drawnRows } = this.current;
+			const closing = PhaseRenderer.closingLine(this.theme, id, detail, text);
+			this.write(`${cursorUp(drawnRows)}${COLUMN_0}${ERASE_DOWN}${closing}${NEW_LINE}`);
 		} else {
 			this.write(`${this.theme.detail(` ${text}`)}\n`);
 		}
@@ -431,25 +488,25 @@ export class PhaseRenderer {
 	}
 
 	/**
-	 * Rewrite the whole block from its top-left corner: erase to the end of the screen, the phase line
-	 * (spinner slot, title and detail, counter), the message line when it has been opened, then back up to
-	 * the top-left so the next redraw starts from the same place. Writing forward and counting rows at the
-	 * current width is what lets a wrapped line be redrawn.
+	 * Rewrite the whole block: up from the resting row to the block's first row, erase to the end of the
+	 * screen, the phase line (spinner slot, title and detail, counter), the message line when it has been
+	 * opened, then a newline so the cursor rests on the row after the block again. Writing forward and
+	 * counting rows at the current width is what lets a wrapped line be redrawn.
 	 */
 	private redraw(): void {
 		if (!this.current || this.mode !== 'tty') return;
-		const { id, detail, frame, ticks, total, messageLineOpen, message } = this.current;
+		const { id, detail, frame, ticks, total, messageLineOpen, message, drawnRows } = this.current;
 		const columns = this.columns();
-		const slot = this.theme.spinner(`[ ${SPINNER_FRAMES[frame]} ]`);
-		const line = `${slot} ${phaseText(this.theme, id, detail)}${this.theme.detail(counterText(ticks, total))}`;
-		let text = `${ERASE_DOWN}${line}`;
-		let below = PhaseRenderer.rows(line, columns) - 1;
+		const line = `${spinnerSlot(frame)} ${phaseText(this.theme, id, detail)}${this.theme.detail(counterText(ticks, total))}`;
+		let text = line;
+		let rows = PhaseRenderer.rows(line, columns);
 		if (messageLineOpen) {
 			const messageText = message ? this.theme.detail(message) : '';
 			text += `${NEW_LINE}${messageText}`;
-			below += PhaseRenderer.rows(messageText, columns);
+			rows += PhaseRenderer.rows(messageText, columns);
 		}
-		this.write(`${text}${cursorUp(below)}${COLUMN_0}`);
+		this.write(`${cursorUp(drawnRows)}${COLUMN_0}${ERASE_DOWN}${text}${NEW_LINE}`);
+		this.current.drawnRows = rows;
 	}
 }
 
@@ -509,7 +566,9 @@ const END_HANDSHAKE_TIMEOUT_MS = 2000;
  * Every method is a no-op when the theme is turned off, so callers can wire progress unconditionally.
  */
 export class StartupProgress {
-	private current: { id: StartupPhaseId; detail: string | undefined; start: number } | undefined;
+	private current:
+		| { id: StartupPhaseId; detail: string | undefined; total: number | undefined; start: number }
+		| undefined;
 	/** In-thread renderer and its timer, used when there is no spinner worker */
 	private local: { renderer: PhaseRenderer; timer: ReturnType<typeof setInterval> } | undefined;
 	private worker: Worker | undefined;
@@ -532,8 +591,8 @@ export class StartupProgress {
 	/**
 	 * Start a phase: prints its themed title and a plain-language note on what is happening with the spinner
 	 * already in place, then hands the line to the renderer. Ends the previous phase first if it is still open.
-	 * The line is printed whole and wraps on a narrow terminal; on a TTY the cursor is then parked at the
-	 * line's top-left, which is where the renderer expects it.
+	 * The line is printed whole and wraps on a narrow terminal; on a TTY the cursor is then parked on the row
+	 * beneath it, which is where the renderer expects it and keeps the terminal's caret off the spinner.
 	 *
 	 * @param total - Expected number of units of work, shown in the counter and the heartbeat quips
 	 */
@@ -542,9 +601,8 @@ export class StartupProgress {
 		if (this.current) this.end();
 		const tty = Boolean(this.stream.isTTY);
 		const opening = PhaseRenderer.openingLine(this.theme, id, detail, total, tty);
-		const park = tty ? cursorUp(PhaseRenderer.rows(opening, this.width()) - 1) + COLUMN_0 : '';
-		this.stream.write(opening + park);
-		this.current = { id, detail, start: performance.now() };
+		this.stream.write(tty ? opening + NEW_LINE : opening);
+		this.current = { id, detail, total, start: performance.now() };
 
 		const worker = this.spinnerWorker();
 		if (worker) {
@@ -576,7 +634,7 @@ export class StartupProgress {
 	/** Finish the current phase: replaces the spinner with a check mark and the counter with the elapsed time (and an optional summary). */
 	end(summary?: string): void {
 		if (!this.theme || !this.current) return;
-		const { id, detail, start } = this.current;
+		const { id, detail, total, start } = this.current;
 		const elapsed = formatDuration(performance.now() - start);
 		const text = summary ? `${summary}, ${elapsed}` : elapsed;
 		this.current = undefined;
@@ -594,9 +652,13 @@ export class StartupProgress {
 			this.worker.postMessage({ type: 'end', text } satisfies SpinnerWorkerCommand);
 			const outcome = Atomics.wait(this.signal, 0, 0, END_HANDSHAKE_TIMEOUT_MS);
 			if (outcome === 'timed-out') {
-				// The cursor rests at the top-left of the block, so write the closing line the worker did not.
+				// Write the closing line the worker did not: the cursor rests on the row after the block, which is
+				// assumed to be the phase line alone (a message line open at this moment is left on screen).
 				this.disposeWorker();
-				this.stream.write(`${ERASE_DOWN}${PhaseRenderer.closingLine(this.theme, id, detail, text)}${NEW_LINE}`);
+				const width = this.width();
+				const rows = PhaseRenderer.rows(PhaseRenderer.openingLine(this.theme, id, detail, total, true), width);
+				const closing = PhaseRenderer.closingLine(this.theme, id, detail, text);
+				this.stream.write(`${cursorUp(rows)}${COLUMN_0}${ERASE_DOWN}${closing}${NEW_LINE}`);
 			}
 		}
 	}

@@ -456,7 +456,7 @@ Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output
 [ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm from the warm cache 41/312
 ```
 
-The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
+The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms, and its colour walks a twelve-colour wheel (blue, green, yellow, orange, red, purple, with a blend between each pair) one step every five frames. A new colour enters at the left bracket and sweeps across the glyph and the right bracket over three frames, and because five is not a multiple of the four frames in a rotation the sweep starts one glyph later each time, drifting around the turn like an offbeat and coming back into step every twenty frames. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
 
 `Making the brine` only appears when `parallelLoad` is enabled. The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over.
 
@@ -471,8 +471,8 @@ The theme is chosen with `TSFLOW_THEME`:
 
 | Value         | Effect                                                                                                                           |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| unset / other | Default pickling theme shown above (labels and spinner in muted steel blue)                                                      |
-| `lotr`        | The Lord of the Rings: the Fellowship assembles, the beacons of Gondor are lit, the Rohirrim muster (labels and spinner in gold) |
+| unset / other | Default pickling theme shown above (labels and check mark in muted steel blue)                                                   |
+| `lotr`        | The Lord of the Rings: the Fellowship assembles, the beacons of Gondor are lit, the Rohirrim muster (labels and check mark in gold) |
 | `off`         | No startup progress output                                                                                                       |
 
 ```bash

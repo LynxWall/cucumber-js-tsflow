@@ -209,7 +209,17 @@ export interface LoaderWorkerRequest {
 	experimentalDecorators: boolean;
 }
 
-/** Message types sent from worker back to main thread */
+/** Progress notification sent from worker to main thread after each support file is loaded */
+export interface LoaderWorkerProgress {
+	type: 'PROGRESS';
+	/** Absolute path of the file that was just loaded */
+	file: string;
+}
+
+/** Every message a worker posts to the main thread */
+export type LoaderWorkerMessage = LoaderWorkerResponse | LoaderWorkerProgress;
+
+/** Final message sent from worker back to main thread */
 export interface LoaderWorkerResponse {
 	type: 'LOADED' | 'ERROR';
 	/** Serializable binding descriptors extracted from the registry */
@@ -260,6 +270,7 @@ async function processMessage(message: LoaderWorkerRequest): Promise<void> {
 				fileErrors.push(`CJS ${filePath}: ${err.message || String(err)}`);
 			}
 			recordFile('require', filePath, fileStart);
+			parentPort!.postMessage({ type: 'PROGRESS', file: filePath } satisfies LoaderWorkerProgress);
 		}
 		recordPhase('support:require', phaseStart);
 
@@ -273,6 +284,7 @@ async function processMessage(message: LoaderWorkerRequest): Promise<void> {
 				fileErrors.push(`ESM ${filePath}: ${err.message || String(err)}`);
 			}
 			recordFile('import', filePath, fileStart);
+			parentPort!.postMessage({ type: 'PROGRESS', file: filePath } satisfies LoaderWorkerProgress);
 		}
 		recordPhase('support:import', phaseStart);
 

@@ -54,9 +54,9 @@ Profiles live in each workspace's `cucumber.json` (e.g. `esnode`/`tsnode` in [cu
 ## Build rules (important)
 
 - Always build with `tsc --build tsconfig.node.json` (i.e. via `yarn build`), never bare `tsc`. The base [cucumber-tsflow/tsconfig.json](cucumber-tsflow/tsconfig.json) has **no `outDir`** — it exists for editor/`--noEmit` type-checking. Bare `tsc` emits `.js`/`.js.map` into `src/`, which is wrong.
-- `yarn build` also runs `genversion` (regenerates [cucumber-tsflow/src/version.ts](cucumber-tsflow/src/version.ts)), copies hand-written `.mjs` files from `src/` into `lib/`, and runs `src/scripts/build-esm-transpiler-cjs.js`. A plain `tsc --build` alone is not a complete build.
+- `yarn build` also runs `genversion` (regenerates [cucumber-tsflow/src/version.ts](cucumber-tsflow/src/version.ts)), and copies hand-written `.mjs` files from `src/` into `lib/`. A plain `tsc --build` alone is not a complete build.
 - `src/transpilers/esm/*` is excluded from the TypeScript build; those are authored `.mjs` loaders copied verbatim.
-- After building, verify no stray `.js`/`.js.map` appeared under `src/` (legitimate exceptions: `src/scripts/`, `src/wrapper.mjs`).
+- After building, verify no stray `.js`/`.js.map` appeared under `src/` (legitimate exception: `src/wrapper.mjs`).
 - New public entry points need a matching key in the `exports` map of [cucumber-tsflow/package.json](cucumber-tsflow/package.json).
 
 ## Code style
@@ -76,3 +76,4 @@ Working preferences from [.github/copilot-instructions.md](.github/copilot-instr
 - **The full matrix is the real test suite.** A change to loading, transpilation, or registration can pass CJS+esbuild and fail ESM+ts-node. Run `yarn test:all` before considering such a change done.
 - Node **>= 22** is required; CI runs Node 24 on ubuntu-latest ([.github/workflows/ci.yml](.github/workflows/ci.yml): install → `yarn build` → `yarn test:all`).
 - Reports written to `cucumber-tsflow-specs/reports/` are gitignored build output.
+- **Terminal output is only verified on a real console.** Claude's shells capture stdout (`isTTY` is false), so spinners, in-place redraws, colours and non-ASCII glyphs cannot be checked there or with a simulated screen. Use the `verify-console-output` skill ([.claude/skills/verify-console-output/SKILL.md](.claude/skills/verify-console-output/SKILL.md)), which runs the built code in a fresh console window at several widths and reads the screen buffer back, before saying such output works.

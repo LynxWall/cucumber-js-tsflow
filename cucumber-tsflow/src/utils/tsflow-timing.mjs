@@ -4,8 +4,8 @@
  * Enable with: TSFLOW_TIMING=true
  *
  * This is the twin of tsflow-timing.ts for code that runs on the ESM loader hooks thread.
- * It shares the per-thread store on `globalThis.__TSFLOW_TIMING` with the CJS build (and with
- * the bundled esbuild transpiler), records phases and per-file timings, and answers snapshot
+ * It shares the per-thread store on `globalThis.__TSFLOW_TIMING` with the CJS build, records phases
+ * and per-file timings, and answers snapshot
  * requests from the registering thread over the `MessagePort` delivered to `initialize()`.
  *
  * Usage:

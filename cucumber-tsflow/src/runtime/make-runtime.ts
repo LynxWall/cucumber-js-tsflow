@@ -27,7 +27,8 @@ export async function makeRuntime({
 	options,
 	coordinates,
 	resolvedSupportPaths,
-	snippetOptions = {}
+	snippetOptions = {},
+	onWorkerReady
 }: {
 	environment: IRunEnvironment;
 	logger: ILogger;
@@ -39,6 +40,8 @@ export async function makeRuntime({
 	coordinates: ISourcesCoordinates;
 	resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>;
 	snippetOptions?: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>;
+	/** Parallel mode only: called when a child process has loaded its support code and reports READY */
+	onWorkerReady?: (workerId: string) => void;
 }): Promise<Runtime> {
 	const testRunStartedId = newId();
 	const adapter: RuntimeAdapter =
@@ -52,7 +55,8 @@ export async function makeRuntime({
 					snippetOptions,
 					supportCodeLibrary,
 					coordinates,
-					resolvedSupportPaths
+					resolvedSupportPaths,
+					onWorkerReady
 				)
 			: new InProcessAdapter(testRunStartedId, eventBroadcaster, newId, options, supportCodeLibrary);
 	return new Coordinator(testRunStartedId, eventBroadcaster, newId, sourcedPickles, supportCodeLibrary, adapter);

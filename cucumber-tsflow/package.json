@@ -56,7 +56,6 @@
 		"./lib/transpilers/esm/tsnode-loader": "./lib/transpilers/esm/tsnode-loader.mjs",
 		"./lib/transpilers/esm/esnode-loader": "./lib/transpilers/esm/esnode-loader.mjs",
 		"./lib/transpilers/esm/esvue-loader": "./lib/transpilers/esm/esvue-loader.mjs",
-		"./lib/transpilers/esm/esbuild-transpiler": "./lib/transpilers/esm/esbuild-transpiler.mjs",
 		"./lib/transpilers/esm/vue-jsdom-setup": "./lib/transpilers/esm/vue-jsdom-setup.mjs",
 		"./package.json": "./package.json"
 	},
@@ -96,8 +95,7 @@
 		"shx": "0.4.0"
 	},
 	"scripts": {
-		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs && yarn build:transpiler",
-		"build:transpiler": "node src/scripts/build-esm-transpiler-cjs.js",
+		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs",
 		"build:copy-mjs": "yarn copy:root-mjs && yarn copy:api-mjs && yarn copy:transpiler-mjs && yarn copy:utils-mjs",
 		"copy:root-mjs": "shx cp src/*.mjs lib/",
 		"copy:api-mjs": "shx cp src/api/*.mjs lib/api/",

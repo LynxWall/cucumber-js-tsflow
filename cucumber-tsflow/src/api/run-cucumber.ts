@@ -22,6 +22,7 @@ import ansis from 'ansis';
 import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
 import { startTimer, recordPhase, collectLoaderTimings, printTimingReport } from '../utils/tsflow-timing';
+import { StartupProgress, describeTranspiler, plural, resolveStartupTheme } from '../utils/startup-progress';
 
 const runLogger = createLogger('run-cucumber');
 
@@ -64,6 +65,9 @@ Running from: ${__dirname}
 		consoleLogger.info(ansis.cyanBright('Running Cucumber-TsFlow in Serial mode.\n'));
 	}
 
+	// Themed, append-only feedback for the startup phases that used to run silently (TSFLOW_THEME)
+	const progress = new StartupProgress(stdout, resolveStartupTheme());
+
 	const newId = IdGenerator.uuid();
 
 	const supportCoordinates =
@@ -79,6 +83,7 @@ Running from: ${__dirname}
 					options.support
 				);
 
+	progress.begin('resolve', 'resolving support-code globs and plugins');
 	const pluginManager = await initializeForRunCucumber(
 		{
 			...options,
@@ -90,66 +95,94 @@ Running from: ${__dirname}
 	const resolvedPaths = await resolvePaths(logger, cwd, options.sources, supportCoordinates);
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { sourcePaths, requirePaths, importPaths } = resolvedPaths;
+	const supportFileCount = requirePaths.length + importPaths.length;
+	progress.end(`${plural(supportFileCount, 'support file')}, ${plural(sourcePaths.length, 'feature file')}`);
 
 	/**
 	 * The support code library contains all of the hook and step definitions.
 	 * These are loaded into the library when calling getSupportCodeLibrary,
 	 * which loads all of the step definitions using require or import.
 	 */
-	let supportCodeLibrary =
-		'originalCoordinates' in options.support
-			? (options.support as SupportCodeLibrary)
-			: await (async () => {
-					// Parallel preload phase: warm transpiler caches in worker threads
-					if (options.runtime.parallelLoad) {
-						runLogger.checkpoint('Running parallel preload phase');
-						consoleLogger.info(ansis.cyanBright('Pre-warming transpiler caches in parallel...\n'));
-						const preloadStart = startTimer();
-						try {
-							const result = await parallelPreload({
-								requirePaths,
-								importPaths,
-								requireModules: supportCoordinates.requireModules,
-								loaders: supportCoordinates.loaders,
-								experimentalDecorators: options.runtime.experimentalDecorators,
-								threadCount: options.runtime.parallelLoad
-							});
-							runLogger.checkpoint('Parallel preload completed', {
-								descriptors: result.descriptors.length,
-								files: result.loadedFiles.length,
-								durationMs: result.durationMs
-							});
-							consoleLogger.info(
-								ansis.cyanBright(
-									`Parallel preload completed in ${result.durationMs}ms ` +
-										`(${result.loadedFiles.length} files, ${result.descriptors.length} bindings)\n`
-								)
+	let supportCodeLibrary: SupportCodeLibrary;
+	let phaseStart: number;
+	try {
+		supportCodeLibrary =
+			'originalCoordinates' in options.support
+				? (options.support as SupportCodeLibrary)
+				: await (async () => {
+						// Parallel preload phase: warm transpiler caches in worker threads
+						if (options.runtime.parallelLoad) {
+							runLogger.checkpoint('Running parallel preload phase');
+							progress.begin(
+								'preload',
+								`pre-warming transpiler caches for ${plural(supportFileCount, 'support file')} in worker threads`,
+								supportFileCount
 							);
-						} catch (err: any) {
-							runLogger.error('Parallel preload failed, falling back to serial load', err);
+							const preloadStart = startTimer();
+							try {
+								const result = await parallelPreload({
+									requirePaths,
+									importPaths,
+									requireModules: supportCoordinates.requireModules,
+									loaders: supportCoordinates.loaders,
+									experimentalDecorators: options.runtime.experimentalDecorators,
+									threadCount: options.runtime.parallelLoad,
+									onFileLoaded: () => progress.tick()
+								});
+								runLogger.checkpoint('Parallel preload completed', {
+									descriptors: result.descriptors.length,
+									files: result.loadedFiles.length,
+									durationMs: result.durationMs
+								});
+								progress.end(`${plural(result.descriptors.length, 'binding')} found`);
+							} catch (err: any) {
+								progress.end('failed, loading everything on the main thread instead');
+								runLogger.error('Parallel preload failed, falling back to serial load', err);
+							}
+							recordPhase('preload', preloadStart);
 						}
-						recordPhase('preload', preloadStart);
-					}
 
-					return getSupportCodeLibrary({
-						logger,
-						cwd,
-						newId,
-						requirePaths,
-						requireModules: supportCoordinates.requireModules,
-						importPaths,
-						loaders: supportCoordinates.loaders
-					});
-				})();
+						const transpiler = describeTranspiler(supportCoordinates.requireModules, supportCoordinates.loaders);
+						progress.begin(
+							'load',
+							`transpiling and loading ${plural(supportFileCount, 'support file')}` +
+								(transpiler ? ` with ${transpiler}` : '') +
+								(options.runtime.parallelLoad ? ' from the warm cache' : ''),
+							supportFileCount
+						);
+						return getSupportCodeLibrary({
+							logger,
+							cwd,
+							newId,
+							requirePaths,
+							requireModules: supportCoordinates.requireModules,
+							importPaths,
+							loaders: supportCoordinates.loaders,
+							onFileLoaded: () => progress.tick()
+						});
+					})();
 
-	// Set support to the updated step and hook definitions
-	// in the supportCodeLibrary. We also need to initialize originalCoordinates
-	// to support parallel execution.
-	let phaseStart = startTimer();
-	supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
-	supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
-	options.support = supportCodeLibrary;
-	recordPhase('registry:update', phaseStart);
+		// Set support to the updated step and hook definitions
+		// in the supportCodeLibrary. We also need to initialize originalCoordinates
+		// to support parallel execution.
+		phaseStart = startTimer();
+		supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
+		supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
+		options.support = supportCodeLibrary;
+		recordPhase('registry:update', phaseStart);
+	} catch (err) {
+		// Close the open progress line so the error that follows starts on its own line
+		progress.end('failed');
+		throw err;
+	}
+	const hookCount =
+		supportCodeLibrary.beforeTestCaseHookDefinitions.length +
+		supportCodeLibrary.afterTestCaseHookDefinitions.length +
+		supportCodeLibrary.beforeTestStepHookDefinitions.length +
+		supportCodeLibrary.afterTestStepHookDefinitions.length +
+		supportCodeLibrary.beforeTestRunHookDefinitions.length +
+		supportCodeLibrary.afterTestRunHookDefinitions.length;
+	progress.end(`${plural(supportCodeLibrary.stepDefinitions.length, 'step definition')}, ${plural(hookCount, 'hook')}`);
 
 	// Gather ESM loader hook timings and print the TSFLOW_TIMING report (no-op when disabled)
 	const finishTiming = async (): Promise<void> => {
@@ -172,6 +205,15 @@ Running from: ${__dirname}
 	const eventDataCollector = global.messageCollector as unknown as EventDataCollector;
 
 	let formatterStreamError = false;
+	progress.begin(
+		'assemble',
+		`initializing formatters and parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`,
+		sourcePaths.length
+	);
+	// One progress mark per parsed feature file
+	eventBroadcaster.on('envelope', (envelope: Envelope) => {
+		if (envelope.gherkinDocument) progress.tick();
+	});
 	phaseStart = startTimer();
 	const cleanupFormatters = await initializeFormatters({
 		env,
@@ -206,6 +248,7 @@ Running from: ${__dirname}
 	}
 	recordPhase('gherkin', phaseStart);
 	if (parseErrors.length) {
+		progress.finish();
 		parseErrors.forEach(parseError => {
 			logger.error(`Parse error in "${parseError.source.uri}" ${parseError.message}`);
 		});
@@ -218,10 +261,27 @@ Running from: ${__dirname}
 		};
 	}
 
+	progress.end(`${plural(filteredPickles.length, 'scenario')} to run`);
+
 	emitSupportCodeMessages({
 		eventBroadcaster,
 		supportCodeLibrary,
 		newId
+	});
+
+	// The last silent stretch: BeforeAll hooks in serial mode, or every child process loading the support
+	// code again in parallel mode. Ends when the first test case starts and the formatter takes over stdout.
+	if (options.runtime.parallel > 0) {
+		progress.begin(
+			'launch',
+			`starting ${plural(options.runtime.parallel, 'worker process')}, each loading the support code`,
+			options.runtime.parallel
+		);
+	} else {
+		progress.begin('launch', 'running BeforeAll hooks');
+	}
+	eventBroadcaster.on('envelope', (envelope: Envelope) => {
+		if (envelope.testCaseStarted) progress.finish();
 	});
 
 	phaseStart = startTimer();
@@ -234,9 +294,11 @@ Running from: ${__dirname}
 		supportCodeLibrary,
 		options: options.runtime,
 		coordinates: options.sources,
-		resolvedSupportPaths: { requirePaths, importPaths }
+		resolvedSupportPaths: { requirePaths, importPaths },
+		onWorkerReady: () => progress.tick()
 	});
 	const success = await runtime.run();
+	progress.finish();
 	recordPhase('runtime:run', phaseStart);
 	await pluginManager.cleanup();
 	await cleanupFormatters();

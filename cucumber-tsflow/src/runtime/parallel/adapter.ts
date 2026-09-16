@@ -51,7 +51,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly snippetOptions: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>,
 		private readonly supportCodeLibrary: SupportCodeLibrary,
 		private readonly coordinates: ISourcesCoordinates,
-		private readonly resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>
+		private readonly resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>,
+		private readonly onWorkerReady?: (workerId: string) => void
 	) {}
 
 	parseWorkerMessage(worker: ManagedWorker, message: TsFlowWorkerToCoordinatorEvent): void {
@@ -61,6 +62,7 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				break;
 			case 'READY':
 				worker.state = WorkerState.idle;
+				this.onWorkerReady?.(worker.id);
 				this.awakenWorkers(worker);
 				break;
 			case 'ENVELOPE':

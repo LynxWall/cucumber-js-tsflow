@@ -53,7 +53,7 @@ From the consumer directory, establish and report:
 ### 2. Build the library
 
 From this repo root: `yarn build`. It must succeed; then confirm no stray `.js` appeared under
-`cucumber-tsflow/src/` (exceptions: `src/scripts/`, `src/wrapper.mjs`). Record the built version from
+`cucumber-tsflow/src/` (exception: `src/wrapper.mjs`). Record the built version from
 `cucumber-tsflow/src/version.ts`.
 
 ### 3. Optional: cold baseline on the currently installed version

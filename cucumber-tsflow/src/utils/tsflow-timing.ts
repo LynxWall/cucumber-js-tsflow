@@ -21,8 +21,7 @@
  *   before `READY`
  *
  * State lives on `globalThis.__TSFLOW_TIMING` so that the CJS build of this module and the
- * `.mjs` twin used by the ESM loaders (and the bundled esbuild transpiler) share one store
- * per thread. When the mode is off every entry point is a single boolean check.
+ * `.mjs` twin used by the ESM loaders share one store per thread. When the mode is off every entry point is a single boolean check.
  */
 import { MessageChannel, MessagePort } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';

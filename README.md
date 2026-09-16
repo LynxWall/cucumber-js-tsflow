@@ -446,6 +446,41 @@ echo $LastExitCode
 echo $?
 ```
 
+### Startup progress
+
+Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output, cucumber-tsflow prints one line per startup phase so a large suite never sits silent while it transpiles and loads support code. Each line starts with a spinner in a fixed slot, then a themed label and a plain-language note on what is actually happening, and ends with a running count (support files loaded, feature files parsed, parallel workers ready). The line is redrawn in place while the phase is open; when it completes the spinner becomes a check mark and the count is replaced by a summary and the elapsed time:
+
+```text
+[ ✓ ] Prepping the cucumbers — resolving support-code globs and plugins 312 support files, 84 feature files, 41ms
+[ ✓ ] Making the brine — pre-warming transpiler caches for 312 support files in worker threads 1874 bindings found, 9.2s
+[ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm from the warm cache 41/312
+```
+
+The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
+
+`Making the brine` only appears when `parallelLoad` is enabled. The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over.
+
+Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears; while nothing has completed yet it explains why (the first support file pulls in its whole import graph before it counts). When work resumes after a stall that long, a relief message takes the slot instead:
+
+```text
+[ - ] Packing the jars — transpiling and loading 312 support files with es-node-esm 2/312
+      phew, that was a big jar. Back to the quick ones
+```
+
+The theme is chosen with `TSFLOW_THEME`:
+
+| Value         | Effect                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| unset / other | Default pickling theme shown above (labels and spinner in muted steel blue)                                                      |
+| `lotr`        | The Lord of the Rings: the Fellowship assembles, the beacons of Gondor are lit, the Rohirrim muster (labels and spinner in gold) |
+| `off`         | No startup progress output                                                                                                       |
+
+```bash
+TSFLOW_THEME=lotr npx cucumber-tsflow -p default
+```
+
+The spinner, counter and message line are only drawn when stdout is an interactive terminal. In CI logs and when stdout is redirected to a file the output is append-only: the phase line, any messages, and the summary. Anything your support code writes to stdout while a phase is open (for example a `console.log` in a `BeforeAll` hook) lands inside that line and can displace the spinner, exactly as it would land among the formatter's own progress dots.
+
 ### Startup timing diagnostics
 
 Set `TSFLOW_TIMING=true` to find out where startup time goes. When the run completes, cucumber-tsflow prints a report to stderr with the wall-clock time of each startup phase (configuration, parallel preload, support-code require/import, registration, gherkin parsing, test execution), the same phases for every preload worker thread and parallel child process, per-context file totals, and a table of the 25 slowest files by transpile, ESM load, and top-level require/import time.

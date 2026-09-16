@@ -15,7 +15,8 @@ export async function getSupportCodeLibrary({
 	requireModules,
 	requirePaths,
 	importPaths,
-	loaders
+	loaders,
+	onFileLoaded
 }: {
 	logger: ILogger;
 	cwd: string;
@@ -24,6 +25,8 @@ export async function getSupportCodeLibrary({
 	requirePaths: string[];
 	importPaths: string[];
 	loaders: string[];
+	/** Called after each support file (require or import path) has been loaded; used for startup progress */
+	onFileLoaded?: (path: string) => void;
 }): Promise<SupportCodeLibrary> {
 	// Clear the step pattern cache so decorators re-register with the fresh builder
 	resetStepPatternRegistrations();
@@ -55,6 +58,7 @@ export async function getSupportCodeLibrary({
 		const fileStart = startTimer();
 		tryRequire(path);
 		recordFile('require', path, fileStart);
+		onFileLoaded?.(path);
 	});
 	recordPhase('support:require', phaseStart);
 
@@ -72,6 +76,7 @@ export async function getSupportCodeLibrary({
 		const fileStart = startTimer();
 		await import(pathToFileURL(path).toString());
 		recordFile('import', path, fileStart);
+		onFileLoaded?.(path);
 	}
 	recordPhase('support:import', phaseStart);
 

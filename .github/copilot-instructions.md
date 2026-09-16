@@ -98,4 +98,4 @@
 
 * Use `tsc --noEmit` (with the base `tsconfig.json`) for type-checking only
 * Use `tsc --build tsconfig.node.json` when you need to emit compiled output
-* After building, verify no `.js` or `.js.map` files exist in `src/` (except `src/scripts/` and `src/wrapper.mjs`)
+* After building, verify no `.js` or `.js.map` files exist in `src/` (except `src/wrapper.mjs`)

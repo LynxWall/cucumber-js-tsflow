@@ -12,7 +12,7 @@
 import { Worker } from 'node:worker_threads';
 import { availableParallelism } from 'node:os';
 import path from 'node:path';
-import type { LoaderWorkerRequest, LoaderWorkerResponse } from './loader-worker';
+import type { LoaderWorkerMessage, LoaderWorkerRequest, LoaderWorkerResponse } from './loader-worker';
 import type { SerializableBindingDescriptor } from '../bindings/step-binding';
 import { createLogger } from '../utils/tsflow-logger';
 import { mergeTimingSnapshot } from '../utils/tsflow-timing';
@@ -32,6 +32,8 @@ export interface ParallelLoadOptions {
 	experimentalDecorators: boolean;
 	/** Number of threads (true = auto, number = explicit) */
 	threadCount: boolean | number;
+	/** Called on the main thread each time any worker finishes loading a file; used for startup progress */
+	onFileLoaded?: (file: string) => void;
 }
 
 export interface ParallelLoadResult {
@@ -87,7 +89,7 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 			experimentalDecorators: options.experimentalDecorators
 		};
 
-		workerPromises.push(runWorker(workerScript, request, i));
+		workerPromises.push(runWorker(workerScript, request, i, options.onFileLoaded));
 		workerIndices.push(i);
 	}
 
@@ -158,9 +160,15 @@ export async function parallelPreload(options: ParallelLoadOptions): Promise<Par
 }
 
 /**
- * Run a single loader-worker and return its response.
+ * Run a single loader-worker and return its final response. PROGRESS messages are forwarded to
+ * `onFileLoaded` and do not settle the promise.
  */
-function runWorker(workerScript: string, request: LoaderWorkerRequest, index: number): Promise<LoaderWorkerResponse> {
+function runWorker(
+	workerScript: string,
+	request: LoaderWorkerRequest,
+	index: number,
+	onFileLoaded?: (file: string) => void
+): Promise<LoaderWorkerResponse> {
 	return new Promise((resolve, reject) => {
 		const worker = new Worker(workerScript, {
 			workerData: request
@@ -168,7 +176,11 @@ function runWorker(workerScript: string, request: LoaderWorkerRequest, index: nu
 
 		let settled = false;
 
-		worker.on('message', (msg: LoaderWorkerResponse) => {
+		worker.on('message', (msg: LoaderWorkerMessage) => {
+			if (msg.type === 'PROGRESS') {
+				onFileLoaded?.(msg.file);
+				return;
+			}
 			if (!settled) {
 				settled = true;
 				logger.checkpoint(`Worker ${index} completed`, { type: msg.type });

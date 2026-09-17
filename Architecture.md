@@ -9,7 +9,7 @@ All source code lives under `cucumber-tsflow/src/`.
 | Layer | Directory | Purpose |
 | --- | --- | --- |
 | CLI | `src/cli/` | Command-line entry point, argv parsing, orchestrates configuration and execution |
-| API | `src/api/` | Programmatic API: `loadConfiguration`, `loadSupport`, `runCucumber`, parallel preloader |
+| API | `src/api/` | Programmatic API: `loadConfiguration`, `loadSupport`, `runCucumber` |
 | Runtime | `src/runtime/` | Serial and parallel execution, test case runner, worker, coordinator, context management, message collector |
 | Bindings | `src/bindings/` | Decorator registration, singleton binding registry, step binding types |
 | Formatters | `src/formatter/` | Custom formatters: Behave JSON, JUnit Bamboo, TsFlow snippet syntax |
@@ -25,7 +25,6 @@ CLI → loadConfiguration() → runCucumber() → load support code → makeRunt
 ```
 
 1. The CLI parses arguments and loads configuration (profiles, transpiler selection, decorator mode)
-1. `runCucumber()` optionally runs a parallel preload phase to warm transpiler caches
 1. Support code is loaded: transpilers are registered, step definition files are imported, and decorator side-effects populate the `BindingRegistry`
 1. `makeRuntime()` creates a `Coordinator` with either an in-process (serial) or child-process (parallel) adapter
 1. The coordinator assembles test cases from parsed Gherkin pickles and delegates execution to the adapter
@@ -39,7 +38,7 @@ The bindings system maps TypeScript decorators to CucumberJS step and hook defin
 
 - `binding-decorator.ts` — the `@binding()` class decorator; detects decorator mode and registers all collected bindings
 - `binding-registry.ts` — singleton registry (`BindingRegistry.instance`) stored on `global.__CUCUMBER_TSFLOW_BINDINGREGISTRY`
-- `step-binding.ts` — `StepBinding` interface and `SerializableBindingDescriptor` for cross-thread transfer
+- `step-binding.ts` — `StepBinding` interface
 - `step-decorators.ts` — `@given()`, `@when()`, `@then()` method decorators
 - `hook-decorators.ts` — `@before()`, `@after()`, `@beforeAll()`, `@afterAll()`, `@beforeStep()`, `@afterStep()` decorators
 - `binding-context.ts` — storage mechanisms for buffering bindings during decoration
@@ -153,25 +152,11 @@ Every decorator function checks `global.experimentalDecorators` to return the ap
 - The esbuild transpiler reads `global.experimentalDecorators` to configure `tsconfigRaw`
 - TC39 mode uses `lib: ['es2022', 'esnext.decorators']`; legacy mode uses `lib: ['es2022']`
 
-## Parallel Preload
-
-The parallel preload system warms transpiler on-disk caches before the main load phase or before child processes start.
-
-### Design
-
-1. `parallelPreload()` in the main process distributes support files across `worker_threads` (round-robin)
-1. Each loader worker sets `global.__LOADER_WORKER = true` to skip CucumberJS registration
-1. Workers load files (triggering transpilation) and return `SerializableBindingDescriptor[]` for validation
-1. Thread count auto-detects via `availableParallelism()` (capped at 4) or accepts an explicit count
-1. After preloading, the main thread performs the authoritative load — hitting warm caches
-
-The preload runs in the main process before any child processes are forked. Parallel child processes benefit from the warm on-disk cache without needing their own preload phase. The on-disk cache the workers warm is the [transpile cache](#transpile-cache); before it existed, the workers' transpilation output was thread-local and discarded with the thread.
-
 ## Diagnostics
 
 ### Startup progress
 
-`runCucumber()` prints one append-only line per startup phase to the environment's stdout through `StartupProgress` in `src/utils/startup-progress.ts`: `resolve` (plugins and support globs), `preload` (only when `parallelLoad` is on), `load` (transpile and load support files, then `updateSupportCodeLibrary`), `assemble` (formatters and Gherkin parsing) and `launch` (BeforeAll hooks in serial mode, child processes loading support code in parallel mode; ends on the first `testCaseStarted` envelope). On a TTY each line is `[ spinner ] title — detail counter`: a bracketed `| / - \` spinner in a fixed slot at column 0, the themed title, the plain-language detail, and a `(done/total)` counter at the end. The spinner's colour is independent of the theme and of progress: `spinnerSlot(frame)` picks the glyph from `frame mod 4` and colours each of the slot's three cells from a wheel of stops with linear RGB blends between them (`WHEEL_STOPS`, `STEPS_PER_STOP`), stepping every `FRAMES_PER_COLOUR` frames, a period deliberately not a multiple of four so the colour change drifts around the rotation; each cell lags the one to its left by `WIPE_LAG_FRAMES` so a new colour sweeps across the slot rather than switching at once. When the phase ends the slot becomes `[ ✓ ]` in the theme colour and the counter is replaced by a summary and the elapsed time. Nothing is fitted to the terminal width: the line is printed whole and wraps wherever the terminal wraps it, so a narrow window shows all of the text over several rows and a wide one shows it on one. To make that redrawable the cursor rests on the row after the block between writes (not on the block, where the terminal's caret would cover the spinner), and every frame is a single write of `CSI nA` + `CSI 1G` up to the block's first row, where `n` is the number of rows the block occupied when last drawn, then `CSI 0J` (erase to end of screen), the whole phase line, the message line beneath it when one has been opened, and a newline back to the resting row. Row counts are `ceil(visible length / columns)` per line at the current width, escape sequences excluded. The width is read for every redraw — in the worker through `tty.WriteStream#_refreshSize()`, since a worker gets no resize events — so a window resized mid-phase is still redrawn from the right row. Messages replace one another in place and clear themselves; when the phase ends the block is erased and the closing line written followed by a newline, so the next phase line starts directly beneath it.
+`runCucumber()` prints one append-only line per startup phase to the environment's stdout through `StartupProgress` in `src/utils/startup-progress.ts`: `resolve` (plugins and support globs), `load` (transpile and load support files, then `updateSupportCodeLibrary`), `assemble` (formatters and Gherkin parsing) and `launch` (BeforeAll hooks in serial mode, child processes loading support code in parallel mode; ends on the first `testCaseStarted` envelope). On a TTY each line is `[ spinner ] title — detail counter`: a bracketed `| / - \` spinner in a fixed slot at column 0, the themed title, the plain-language detail, and a `(done/total)` counter at the end. The spinner's colour is independent of the theme and of progress: `spinnerSlot(frame)` picks the glyph from `frame mod 4` and colours each of the slot's three cells from a wheel of stops with linear RGB blends between them (`WHEEL_STOPS`, `STEPS_PER_STOP`), stepping every `FRAMES_PER_COLOUR` frames, a period deliberately not a multiple of four so the colour change drifts around the rotation; each cell lags the one to its left by `WIPE_LAG_FRAMES` so a new colour sweeps across the slot rather than switching at once. When the phase ends the slot becomes `[ ✓ ]` in the theme colour and the counter is replaced by a summary and the elapsed time. Nothing is fitted to the terminal width: the line is printed whole and wraps wherever the terminal wraps it, so a narrow window shows all of the text over several rows and a wide one shows it on one. To make that redrawable the cursor rests on the row after the block between writes (not on the block, where the terminal's caret would cover the spinner), and every frame is a single write of `CSI nA` + `CSI 1G` up to the block's first row, where `n` is the number of rows the block occupied when last drawn, then `CSI 0J` (erase to end of screen), the whole phase line, the message line beneath it when one has been opened, and a newline back to the resting row. Row counts are `ceil(visible length / columns)` per line at the current width, escape sequences excluded. The width is read for every redraw — in the worker through `tty.WriteStream#_refreshSize()`, since a worker gets no resize events — so a window resized mid-phase is still redrawn from the right row. Messages replace one another in place and clear themselves; when the phase ends the block is erased and the closing line written followed by a newline, so the next phase line starts directly beneath it.
 
 Everything after the opening line is drawn by `PhaseRenderer`, a synchronous class with no timers of its own: `start()` redraws at once, `pump()` advances the frame every 130 ms, shows a heartbeat quip after 30 s without a message (a `waiting` variant while nothing has completed yet) and clears a message 8 s after it appeared, `tick()` bumps the counter and shows a relief message when the gap since the previous tick was 30 s or more, `end()` writes the closing line. In `plain` mode (non-TTY) nothing is redrawn and messages and the closing text are appended. Where it runs depends on the stream:
 
@@ -182,7 +167,6 @@ Units of work are fed by callbacks rather than globals so the API entry points (
 
 | Phase      | Unit-of-work source                                                                                                                               |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `preload`  | `parallelPreload({ onFileLoaded })`; each preload worker posts a `PROGRESS` message per file, which `runWorker` forwards without settling |
 | `load`     | `getSupportCodeLibrary({ onFileLoaded })`, called after each `require` / `import`                                                         |
 | `assemble` | `gherkinDocument` envelopes on the event broadcaster                                                                                      |
 | `launch`   | `makeRuntime({ onWorkerReady })` → `ChildProcessAdapter`, fired on each child's `READY`                                                   |
@@ -204,10 +188,9 @@ Every execution context records into its own store on `globalThis.__TSFLOW_TIMIN
 | --- | --- | --- |
 | Main process | `main` | — |
 | ESM loader hooks thread (`module.register()`: the ts-node loaders, third-party loaders, or `TSFLOW_ESM_HOOKS=async`) | `esm-hooks` | `MessageChannel` port passed as `register()` `data`; the loader's `initialize` export stores it and answers snapshot requests |
-| Preload worker thread | `preload:<n>` | `timing` field on the `LOADED` response |
 | Parallel child process | `worker:<id>` | `TIMING` IPC message sent before `READY` |
 
-Loaders attached in-thread with `module.registerHooks()` (the esbuild loaders, see [ESM loader registration](#esm-loader-registration)) share the registering thread's store, so their `esm:hooks-init`, `esm:resolve` and `esm:load` phases appear directly under `main`, `preload:<n>` or `worker:<id>` and no `esm-hooks` section is produced for them. Nested contexts compose as `preload:<n>/esm-hooks`. Per-file records have four kinds: `transpile` (esbuild `transformSync` / `compileVueSFC` only — ts-node's TypeScript transpile is not observable), `load` (ESM `load` hook wall time), and `require` / `import` (top-level support-file load including dependencies). The same file appearing under `main`, `preload:*` and `worker:*` is the N+1 transpile multiplication made visible.
+Loaders attached in-thread with `module.registerHooks()` (the esbuild loaders, see [ESM loader registration](#esm-loader-registration)) share the registering thread's store, so their `esm:hooks-init`, `esm:resolve` and `esm:load` phases appear directly under `main` or `worker:<id>` and no `esm-hooks` section is produced for them. Nested contexts compose as `worker:<id>/esm-hooks`. Per-file records have four kinds: `transpile` (esbuild `transformSync` / `compileVueSFC` only — ts-node's TypeScript transpile is not observable), `load` (ESM `load` hook wall time), and `require` / `import` (top-level support-file load including dependencies). The same file appearing under `main` and `worker:*` is the N+1 transpile multiplication made visible.
 
 ## Transpilers
 
@@ -239,7 +222,7 @@ ESM loaders live under `src/transpilers/esm/` (authored `.mjs`, copied verbatim 
 
 ### ESM loader registration
 
-`src/api/register-loaders.ts` (`registerLoader()`) is the single place the three registering contexts — `getSupportCodeLibrary` in the main process, the preload worker and the parallel child — attach a loader, and it chooses between two mechanisms:
+`src/api/register-loaders.ts` (`registerLoader()`) is the single place the two registering contexts — `getSupportCodeLibrary` in the main process and the parallel child — attach a loader, and it chooses between two mechanisms:
 
 - **Synchronous, in-thread** (`module.registerHooks()`, Node 22.15 / 23.5 or later): used for tsflow's own esbuild loaders. The `.mjs` module is `import()`ed into the registering thread by path and its `resolve`/`load` are passed to `registerHooks()`. Nothing crosses a thread boundary: no `postMessage` per resolve, no structured clone of each transformed source. Registration is deduplicated per thread, since hooks stack.
 - **Asynchronous, hooks thread** (`module.register()`): used for the ts-node loaders (their hooks await ts-node's asynchronous hooks), for any third-party loader in the `loader` list, on Node versions without `registerHooks`, and when `TSFLOW_ESM_HOOKS=async` is set.
@@ -259,9 +242,9 @@ The tsconfig `paths` rewrite regexes used by `esbuild.mjs` and `tsnode-loader.mj
 
 `src/transpilers/transpile-cache.ts` is a content-addressed on-disk cache wrapped around the three transpile entry points: `transpileCode` in `esbuild.ts` (the CJS esbuild path, reached through ts-node's `Transpiler` plugin), `transpileCode` in `esm/esbuild.mjs` (the esbuild ESM `load` hook, which loads the CJS build through `createRequire` so all three share one module instance and one set of counters per thread) and `compileVueSFC` in `vue-sfc-compiler.ts` (every Vue transpiler, CJS and ESM; the ESM `loadVue` still runs its cheap `transformImports` regex pass over the cached output). `withTranspileCache(kind, filename, source, configuration, produce)` keys an entry on a SHA-256 of the entry format, the library version, `kind`, the caller's serialised configuration, the file name and the source. The configuration carries everything else that shapes the output: the full esbuild transform options (with `tsconfigRaw`, hence the decorator mode) and the esbuild version; for the ESM path also the tsconfig `absoluteBaseUrl` and `paths`, because `rewritePathMappings` bakes them into the output as `file://` URLs, so entries are not portable across checkouts and must not be; for Vue the style flag, output format, decorator mode and the consumer's `vue` version. Nothing is keyed on path or mtime alone, so a stale entry cannot be served: a changed input is a different key.
 
-Entries are JSON files named by the key, written to a temp file and renamed into place, so the N+1 contexts of a `parallel` run (coordinator, children, `parallelLoad` preload threads) racing to populate an empty cache never see a partial entry, and the last writer of an identical result wins. Writes are best-effort and a failed or unparseable read is a miss and is deleted, so the cache can change whether a transpile runs but never what it returns. The directory is `TSFLOW_TRANSPILE_CACHE_DIR`, else `.cache/cucumber-tsflow/transpile` under the nearest `node_modules` at or above the working directory (else under the nearest `package.json`, else the OS temp directory). `TSFLOW_TRANSPILE_CACHE=false` disables reads and writes; `loadConfiguration` sets that variable from the `transpileCache` option (`--transpile-cache` / `--no-transpile-cache`, default true, an existing environment value acting as the default), which is how the setting reaches every thread and process, including the ESM hooks thread under `module.register()`.
+Entries are JSON files named by the key, written to a temp file and renamed into place, so the N+1 contexts of a `parallel` run (coordinator and children) racing to populate an empty cache never see a partial entry, and the last writer of an identical result wins. Writes are best-effort and a failed or unparseable read is a miss and is deleted, so the cache can change whether a transpile runs but never what it returns. The directory is `TSFLOW_TRANSPILE_CACHE_DIR`, else `.cache/cucumber-tsflow/transpile` under the nearest `node_modules` at or above the working directory (else under the nearest `package.json`, else the OS temp directory). `TSFLOW_TRANSPILE_CACHE=false` disables reads and writes; `loadConfiguration` sets that variable from the `transpileCache` option (`--transpile-cache` / `--no-transpile-cache`, default true, an existing environment value acting as the default), which is how the setting reaches every thread and process, including the ESM hooks thread under `module.register()`.
 
-`runCucumber` appends the main process's `N of M transpiles from the cache` to the load-phase summary and then calls `pruneTranspileCache()`, which only when this process wrote entries lists the directory and deletes the least recently written files until it fits in 512 MB (a content-addressed store's garbage is exactly the entries no current source produces any more, and those are the oldest). In the `TSFLOW_TIMING` report, hits and misses are the `transpile-cache:hit` / `transpile-cache:miss` phases (the `calls` column is the count; a hit also records a `transpile` file entry for the lookup time so per-context file counts stay comparable between cold and warm runs), and `transpile-cache:prune` is the sweep. This is also what gives the parallel preload a durable effect: the entries its worker threads write are what the main thread and the parallel children read.
+`runCucumber` appends the main process's `N of M transpiles from the cache` to the load-phase summary and then calls `pruneTranspileCache()`, which only when this process wrote entries lists the directory and deletes the least recently written files until it fits in 512 MB (a content-addressed store's garbage is exactly the entries no current source produces any more, and those are the oldest). In the `TSFLOW_TIMING` report, hits and misses are the `transpile-cache:hit` / `transpile-cache:miss` phases (the `calls` column is the count; a hit also records a `transpile` file entry for the lookup time so per-context file counts stay comparable between cold and warm runs), and `transpile-cache:prune` is the sweep.
 
 ## Formatters
 
@@ -302,7 +285,7 @@ After parsing, the CLI calls `loadConfiguration()` then `runCucumber()`.
 The public programmatic API (`@lynxwall/cucumber-tsflow/api`) exposes:
 
 - `loadConfiguration()` — locates config file, merges profiles, configures transpiler selection, handles `--debug-file` feature matching, and sets up format aliases
-- `loadSupport()` — loads support code with optional parallel preload; also provides `reloadSupport()` for delta-aware module eviction
+- `loadSupport()` — loads support code; also provides `reloadSupport()` for delta-aware module eviction
 - `runCucumber()` — the main execution entry point that orchestrates the full test run
 - `getSupportCodeLibrary()` — resets and builds the CucumberJS support code library from loaded step definitions
 

@@ -689,14 +689,17 @@ attribution script (`research/scripts/attribute-cpuprofile.js`) are described un
 `dim` and the full suite, so no runtime phase follows; the full suite's warm startup is 9.1 s, of which 2.8 s is
 transpile work and 5.5 s Node's module loader. See [Phase 7 hand-off](#phase-7-hand-off) below.
 
-**Phase 8: item 16 — COMPLETE (2026-09-17); 17 and 15 still gated on the `parallelLoad` decision.** The
+**Phase 8: item 16 — COMPLETE (2026-09-17); `parallelLoad` removed, items 15 and 17 dropped (2026-09-17).** The
 content-addressed on-disk transpile cache landed behind `--no-transpile-cache`, covering esbuild (CJS and ESM)
 and the Vue SFC compile, keyed on source, path, options, tool versions and the tsflow version. Measured on the
 UIS full suite in a same-build A/B: `esm:load` 3.05 s → 0.9–1.1 s and `support:import` 6.7 s → 5.1–5.5 s warm,
 with all 974 transpiles served from disk in 0.25–0.31 s; on `dim`, 0.6–0.7 s of a 3 s startup. The
 `parallelLoad` preload threads now populate the cache the main thread reads, which delivers most of item 17's
-payoff and re-rates it down. The decision on `origin/Dev-Prebuild` was not taken this phase and remains the
-owner's; it now gates only items 15 and 17. Item 22 is dropped. See [Phase 8 hand-off](#phase-8-hand-off).
+payoff and re-rates it down. The `parallelLoad` decision was then measured in the same session — the preload
+phase costs 5–6 s on every run and saves at most 1.8 s, cold only — and the owner chose removal: the feature is
+gone, the option is accepted and ignored with a loud deprecation notice, and items 15 and 17 are dropped with
+it. Item 22 is dropped. See [Phase 8 hand-off](#phase-8-hand-off) and
+[`parallelLoad` removal](#parallelload-removal-2026-09-17).
 
 **Phase 9: items 19, 24.** The filtered-run pair, unchanged in shape: 19 only as the precondition for 24,
 24 behind a flag with a full-load fallback, evaluated against the `default` profile's measured startup.
@@ -1650,9 +1653,10 @@ Node's own resolve, read and compile of the module graph is about 5.5 s; on `dim
 ## Phase 8 hand-off
 
 Written at the end of the Phase 8 session (2026-09-17) so that Phase 9 can start cold. Phase 8 landed item
-16, the content-addressed on-disk transpile cache, behind `--no-transpile-cache`. Items 15 and 17 are still
-gated on the `parallelLoad` / `origin/Dev-Prebuild` decision, which the owner has not yet taken; nothing
-here forecloses either outcome (see the re-rating below).
+16, the content-addressed on-disk transpile cache, behind `--no-transpile-cache`. Items 15 and 17 were
+gated on the `parallelLoad` / `origin/Dev-Prebuild` decision when this was first written; the decision was
+measured and taken later the same day — see [`parallelLoad` A/B on `dim`](#parallelload-ab-on-dim-2026-09-17-after-phase-8)
+and [`parallelLoad` removal](#parallelload-removal-2026-09-17) below — and both items are dropped.
 
 ### State of the tree
 
@@ -1816,13 +1820,100 @@ Conclusions:
    whose scenarios passed in all nine `dim` runs with the same cache entries and in `default` runs 3–6; they
    were the machine.
 
+### `parallelLoad` A/B on `dim` (2026-09-17, after Phase 8)
+
+The owner leaned towards removing `parallelLoad` (the `origin/Dev-Prebuild` outcome) but asked for the
+measurement first. Same build, same machine, same session as the Phase 8 series, `dim` profile, serial,
+`TSFLOW_TIMING=true`, `TSFLOW_THEME=off`, the cache pointed at a scratch directory through
+`TSFLOW_TRANSPILE_CACHE_DIR` so the consumer's own cache was untouched; **cold** rows start from an empty
+directory, **warm** rows reuse the previous run's 200 entries. `--parallel-load` on the command line gives
+four preload threads (`min(availableParallelism(), 4)` on a 14-core machine). A discarded warm-up run
+absorbed the first-run-after-`yarn build` compile-cache rebuild; 45 s pause between runs. Logs in
+`research/profiles/p8b-preload-ab/` (gitignored). `startup` is the report header's "ms since process start"
+less `runtime:run`, so it includes bootstrap, preload, load, assemble and launch.
+
+| Run | Preload | Cache | `preload` ms | main `esm:load` ms | main transpile-cache | main `support:import` ms | startup ms | Note |
+| --- | ------- | ----- | ------------ | ------------------ | -------------------- | ------------------------ | ---------- | ---- |
+| 1 | off | cold | — | 1671 | 200 miss | 4283 | **5624** | |
+| 2 | off | warm | — | 294 | 200 hit | 2436 | **3580** | |
+| 3 | on | cold | 5841 | 298 | 200 hit | 2463 | **9686** | |
+| 4 | on | warm | 5919 | 266 | 200 hit | 2451 | **10007** | |
+| 5 | off | cold | — | 33555 | 200 miss | 114509 | — | `bootstrap` 31 s; disturbed throughout, discarded |
+| 6 | on | cold | 6024 | 272 | 200 hit | 2343 | **9553** | |
+| 7 | off | warm | — | 331 | 200 hit | 2595 | **3795** | |
+| 8 | on | warm | 5132 | 275 | 200 hit | 2378 | **8710** | |
+
+Inside the preload phase (four threads, per-thread figures are wall time on that thread, running
+concurrently): each worker's `support:import` was 4.4–5.5 s, of which `esm:resolve` 1.2–1.3 s over about
+2270 calls per thread and `esm:load` 0.4–1.3 s; the workers' transpile total across all four was
+2.6–2.7 s cold (about 200 misses plus about 250 hits on entries a sibling thread had just written) and
+0.2 s warm. The rest, some 3 s per thread, is module evaluation: every worker imports jsdom through
+`vue-jsdom-setup.mjs` and evaluates its share of the 200 files with their dependency graphs, work that
+is discarded with the thread. Runtime figures are omitted: the UIS checkout had been fast-forwarded that
+morning and its `node_modules` held both `vue@3.5.17` and `vue@3.5.18`, so 202 of 334 scenarios failed
+in every run, preload on or off, with `Cannot read properties of null (reading 'ce')` in `renderSlot`
+across the two runtime-core copies. That was the consumer's state, not this build's, and it did not touch startup,
+which completes before the first scenario. Cause: the pull had moved the workspace from pnpm 10 to pnpm 11, and the
+first install under pnpm 11 re-pointed the hidden hoist link `node_modules/.pnpm/node_modules/vue` at 3.5.18, which
+is what `@vue/test-utils`, `@uis/testing-bdd` and `primevue` resolve `vue` through (they have no peer link of their
+own) while the components link to 3.5.17. A clean reinstall (`npkill` then `pnpm install`) resolved it and the full
+UIS suite passed again on this build.
+
+Conclusions:
+
+1. **Preload makes every run slower, cold and warm.** Cold: 9.6–9.7 s startup with preload against 5.6 s
+   without. Warm: 8.7–10.0 s against 3.6–3.8 s. The phase costs 5.1–6.0 s and the most it can save is
+   the cold main-thread transpile, 1.8 s here (`support:import` 4.28 s cold against 2.46 s behind a
+   preload-warmed cache). It never comes close to paying for itself.
+1. **The cost is module evaluation, not transpilation, and evaluation cannot be moved off the main
+   thread.** Even on a warm cache each worker spends 4.4–4.9 s evaluating a module graph the main thread
+   then evaluates again. Item 17's transpile-only workers would remove that, but the whole transpile
+   saving on offer is 1.8 s cold and nothing warm, against thread startup, a ts-node service, an esbuild
+   service and a Go child per thread.
+1. **The data supports removal** (position 1 in the session discussion: delete the preload, keep the
+   cache). Items 15 and 17 lose their subject with it, and the `preload` progress phase, the `PROGRESS`
+   message, the `SerializableBindingDescriptor` transfer, the `__LOADER_WORKER` decorator branch and the
+   `window` shim in `loader-worker.ts` go with them. `origin/Dev-Prebuild`'s removal commit (`be86c28`,
+   717 deletions across 20 files) is the shape of the change, but it is two commits off an April master
+   and `loader-worker.ts` has changed underneath it, so the deletion is redone on this branch rather than
+   merged. Every spec profile sets `parallelLoad: true`, so the option needs a documented fate for
+   existing consumers (ignored with a deprecation notice, or removed from the option table and rejected).
+
+### `parallelLoad` removal (2026-09-17)
+
+Taken on the A/B above, in the same session. The owner chose position 1 — delete the preload, keep the cache — and
+asked that existing configurations keep working, so:
+
+- Deleted `src/api/loader-worker.ts` (with its 160-line browser `window` shim) and `src/api/parallel-loader.ts`; the
+  preload block in `run-cucumber.ts` and `load-support.ts`; the `__LOADER_WORKER` branch in `binding-decorator.ts` and
+  the global declaration; `SerializableBindingDescriptor` / `serializeBinding` and `BindingRegistry.toDescriptors()` /
+  `getDescriptorSourceFiles()`; the `preload` phase in `StartupPhaseId` and both themes (`Making the brine`, `Stoking
+  the forges of Isengard`); and the `preload:<n>` section and family-table row of the `TSFLOW_TIMING` report.
+  `mergeTimingSnapshot` stays for the parallel children. The compiled `lib/api/loader-worker.*` and
+  `parallel-loader.*` had to be deleted by hand: `tsc --build` does not remove outputs of deleted sources.
+- `parallelLoad` remains in every public type as an optional `@deprecated` field (`ITsflowConfiguration`,
+  `IConfigurationExt`, `ITsFlowRunOptionsRuntime`, `TsFlowRuntimeOptions`, `ITsFlowLoadSupportOptions`) and
+  `--parallel-load [THREADS]` is still parsed, as a hidden commander `Option` whose parser returns `true`. Nothing
+  reads the value except `loadConfiguration`, which, when it is truthy, prints the notice below to stdout through the
+  same `Console` as `Loading configuration from …`: a blank line, ten stars, a blank line, then
+  `DEPRECATION NOTICE:` (bold) and three sentences ending in what to remove — `"parallelLoad" from "<config file>"`
+  when it came from the file, `the --parallel-load flag from the command line` when `options.provided` carried it.
+  An explicit `parallelLoad: false` is silently ignored. Verified for both sources and for the silent case from a
+  scratch directory; `--help` no longer lists the flag.
+- All eight spec profiles lost their `parallelLoad` keys (the matrix printed no notice). README (both copies),
+  Architecture, CLAUDE.md and the changelog (`Deprecated` and `Removed` entries under Unreleased) updated; the
+  historical 7.7.0 release notes in the README were left as written.
+- Versioning: the branch stays a **minor** release. The option is accepted and ignored, the flag still parses, every
+  programmatic type still compiles, and the changelog says the field goes in the next major — the
+  deprecate-in-minor, remove-in-major pattern. `yarn build` clean, no stray `.js` under `src/`, `yarn test:all` green
+  on all sixteen variants.
 ### Re-rating after Phase 8
 
 | #   | Change | I/C after Phase 7 | I/C now | Why |
 | --- | --- | --- | --- | --- |
 | 16  | Content-addressed on-disk transpile cache | 4 / 7 | done | Landed and measured; see above. |
-| 15  | Preload thread count from `availableParallelism()` | 3 / 3 | 2 / 3 | Still gated on the `parallelLoad` decision. With the cache in place a preload thread's output is durable, so raising the cap no longer scales discarded work — but on a warm cache there is nothing for the threads to do, and the cold case is one run per source change. |
-| 17  | Reshape `parallelPreload` to transpile into the cache | 6 / 7 | 3 / 6 | The cache half of its payoff arrived with item 16: preload threads already write the entries the main thread reads. What remains is a cold-run-only saving of the workers' module evaluation and the `window` shim hazard. Gated on the same decision. |
+| 15  | Preload thread count from `availableParallelism()` | 3 / 3 | dropped | The preload was removed after the A/B below; there is no thread count to derive. |
+| 17  | Reshape `parallelPreload` to transpile into the cache | 6 / 7 | dropped | The A/B below showed the whole saving on offer was 1.8 s, cold only, against a 5–6 s phase; the owner removed the preload rather than rebuild it. The cache delivers the durable half of what 17 promised. |
 | 23  | `reloadSupport()` as a CLI watch mode | 5 / 7 | 5 / 6 | The cache is process- and thread-independent and keyed on content, so a watch mode's re-transpile of an edited file is a miss for that file and hits for everything else with no eviction design needed; the ESM module-graph eviction question is unchanged. |
 | 24  | Persisted `pattern → source file` index | 7 / 9 | 6 / 9 | Now priced against the warm cached startup, in which transpile work is a few hundred milliseconds and nearly everything left is Node's own resolve/read/compile/evaluate of the module graph. Loading fewer files is still the only lever on that, but the absolute number it can recover on a warm run is about 5 s rather than 9 s. |
 | 25  | esbuild `build()` bundling | 6 / 10 | 6 / 10 | Unchanged: it attacks the module-graph cost the cache does not touch. |
@@ -1833,10 +1924,10 @@ Conclusions:
   Phase 7 9.1 s: with the cache, `support:import` on the full suite is about 5.5 s and almost none of it is
   transpilation, so what 24 recovers is module loading and evaluation of the files a filtered run does not
   need.
-- The `parallelLoad` / `origin/Dev-Prebuild` decision is still open and still the owner's. It now gates
-  less: items 15 and 17 are the only remaining worklist items that depend on it, both re-rated down above.
-  If parallel load is removed, delete the `preload` progress phase and the `PROGRESS` message with it, and
-  note that the spec profiles all set `parallelLoad: true`.
+- The `parallelLoad` / `origin/Dev-Prebuild` decision is closed: measured, then removed (see
+  [`parallelLoad` removal](#parallelload-removal-2026-09-17)). Items 15 and 17 are dropped and `origin/Dev-Prebuild`
+  has nothing left to contribute; its first commit, an ahead-of-time esbuild build into `.tsflow-build`, is prior
+  art for item 25 and nothing else.
 - When measuring startup on this machine, three of seven full-suite runs in this session and two of nine
   `dim` runs had disturbed startup rows (`bootstrap` 0.9–22 s against 0.43 s, or every startup row doubled
   with a normal `runtime:run`); all five were in the profiled first series, the pattern matched each run's

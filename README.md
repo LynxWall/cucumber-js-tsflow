@@ -125,8 +125,6 @@ This fork of cucumber-tsflow provides the following features that extend the ori
 
 - Support for Parallel execution of tests.
 
-- Parallel preload of transpiler caches via the `parallelLoad` configuration option, reducing startup time for large projects.
-
 - A behave-json-formatter that fixes json so it can be used with Behave Pro.
 
 - A junit-bamboo formatter that generates xml compatible with the Bamboo JUnit plugin.
@@ -452,13 +450,12 @@ Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output
 
 ```text
 [ ✓ ] Prepping the cucumbers — resolving support-code globs and plugins 312 support files, 84 feature files, 41ms
-[ ✓ ] Making the brine — pre-warming transpiler caches for 312 support files in worker threads 1874 bindings found, 9.2s
-[ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm from the warm cache 41/312
+[ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm 41/312
 ```
 
 The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms, and its colour walks a twelve-colour wheel (blue, green, yellow, orange, red, purple, with a blend between each pair) one step every five frames. A new colour enters at the left bracket and sweeps across the glyph and the right bracket over three frames, and because five is not a multiple of the four frames in a rotation the sweep starts one glyph later each time, drifting around the turn like an offbeat and coming back into step every twenty frames. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
 
-`Making the brine` only appears when `parallelLoad` is enabled. The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over.
+The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over.
 
 Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears; while nothing has completed yet it explains why (the first support file pulls in its whole import graph before it counts). When work resumes after a stall that long, a relief message takes the slot instead:
 
@@ -485,7 +482,7 @@ Before any of that, the `cucumber-tsflow` command prints a plain line as its ver
 
 ### Startup timing diagnostics
 
-Set `TSFLOW_TIMING=true` to find out where startup time goes. When the run completes, cucumber-tsflow prints a report to stderr with the wall-clock time of each startup phase (configuration, parallel preload, support-code require/import, registration, gherkin parsing, test execution), the same phases for every preload worker thread and parallel child process, per-context file totals, and a table of the 25 slowest files by transpile, ESM load, and top-level require/import time.
+Set `TSFLOW_TIMING=true` to find out where startup time goes. When the run completes, cucumber-tsflow prints a report to stderr with the wall-clock time of each startup phase (configuration, support-code require/import, registration, gherkin parsing, test execution), the same phases for every parallel child process, per-context file totals, and a table of the 25 slowest files by transpile, ESM load, and top-level require/import time.
 
 ```bash
 TSFLOW_TIMING=true npx cucumber-tsflow -p default
@@ -519,7 +516,7 @@ In addition to cucumber configuration options the following two options have bee
 | `debugFile`              | `string`           | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
 | `enableVueStyle`         | `boolean`          | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 | `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
-| `parallelLoad`           | `boolean \| number` | No         |                             | Pre-warm transpiler caches in parallel worker threads before loading support code. `true` = auto thread count, number = explicit count. | false   |
+| `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the [transpile cache](#transpile-cache) replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
 | `transpileCache`         | `boolean`          | No         | `--transpile-cache` / `--no-transpile-cache` | Cache esbuild and Vue SFC transpiler output on disk between runs (see [Transpile cache](#transpile-cache)). | true    |
 
 ### Transpiler and Vue3 supported

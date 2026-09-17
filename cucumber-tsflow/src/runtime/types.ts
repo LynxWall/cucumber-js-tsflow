@@ -19,7 +19,8 @@ export interface IMessageData {
 
 export interface ITsFlowRunOptionsRuntime extends IRunOptionsRuntime {
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
+	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
+	parallelLoad?: boolean | number;
 }
 export interface ITsFlowRunConfiguration extends IRunConfiguration {
 	runtime: ITsFlowRunOptionsRuntime;
@@ -27,7 +28,8 @@ export interface ITsFlowRunConfiguration extends IRunConfiguration {
 
 export interface TsFlowRuntimeOptions extends RuntimeOptions {
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
+	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
+	parallelLoad?: boolean | number;
 }
 
 export interface InitializeTsflowCommand extends InitializeCommand {

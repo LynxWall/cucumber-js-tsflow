@@ -5,7 +5,7 @@
  * function of the file's source, the transpiler and its options, and the versions of the tools involved.
  * This module stores each result under a SHA-256 of exactly those inputs, so a later run with unchanged
  * sources reads the output back instead of transpiling, and the N+1 contexts of a `parallel` run (the
- * coordinator, every child process, every preload thread) share one cold transpile between them.
+ * coordinator and every child process) share one cold transpile between them.
  *
  * Correctness rests on the key alone. A wrong key would not crash, it would run stale code, so the key
  * covers: the source text, the absolute file name (esbuild's source map names it and the Vue compiler
@@ -81,7 +81,7 @@ export function isTranspileCacheEnabled(): boolean {
 	return process.env.TSFLOW_TRANSPILE_CACHE !== 'false';
 }
 
-/** Counters for this thread; parallel children and preload threads keep their own. */
+/** Counters for this thread; parallel children keep their own. */
 export function getTranspileCacheStats(): TranspileCacheStats {
 	return { enabled: isTranspileCacheEnabled(), directory, ...stats };
 }

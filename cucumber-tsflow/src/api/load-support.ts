@@ -6,17 +6,16 @@ import type { ISupportCodeCoordinates } from '@cucumber/cucumber/lib/support_cod
 import { getSupportCodeLibrary } from './support';
 import { initializeForLoadSupport } from '@cucumber/cucumber/lib/api/plugins';
 import { BindingRegistry } from '../bindings/binding-registry';
-import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
 import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 const logger = createLogger('load-support');
 
 /**
- * Options extending the standard load-support options with parallelLoad control.
+ * Options extending the standard load-support options with the decorator mode.
  */
 export interface ITsFlowLoadSupportOptions extends ILoadSupportOptions {
-	/** Pre-warm transpiler caches in parallel worker threads. true = auto threads, number = explicit count. */
+	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
 	parallelLoad?: boolean | number;
 	/** Whether experimental decorators are enabled */
 	experimentalDecorators?: boolean;
@@ -49,30 +48,6 @@ export async function loadSupport(
 	const resolvedPaths = await resolvePaths(cucumberLogger, cwd, options.sources, supportCoordinates);
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { requirePaths, importPaths } = resolvedPaths;
-
-	// Parallel preload phase: warm transpiler caches in worker threads
-	if (options.parallelLoad) {
-		logger.checkpoint('Running parallel preload phase');
-		const preloadStart = startTimer();
-		try {
-			const result = await parallelPreload({
-				requirePaths,
-				importPaths,
-				requireModules: supportCoordinates.requireModules,
-				loaders: supportCoordinates.loaders,
-				experimentalDecorators: options.experimentalDecorators ?? false,
-				threadCount: options.parallelLoad
-			});
-			logger.checkpoint('Parallel preload completed', {
-				descriptors: result.descriptors.length,
-				files: result.loadedFiles.length,
-				durationMs: result.durationMs
-			});
-		} catch (err: any) {
-			logger.error('Parallel preload failed, falling back to serial load', err);
-		}
-		recordPhase('preload', preloadStart);
-	}
 
 	let supportCodeLibrary = await getSupportCodeLibrary({
 		logger: cucumberLogger,

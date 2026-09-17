@@ -25,12 +25,13 @@
  * - `off`: no startup progress output at all
  */
 import ansis from 'ansis';
+import { formatDuration } from './helpers';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
-/** The startup phases in the order `runCucumber` executes them. `preload` only runs when `parallelLoad` is on. */
-export type StartupPhaseId = 'resolve' | 'preload' | 'load' | 'assemble' | 'launch';
+/** The startup phases in the order `runCucumber` executes them. */
+export type StartupPhaseId = 'resolve' | 'load' | 'assemble' | 'launch';
 
 interface PhaseText {
 	/** Themed label printed at the start of the phase */
@@ -134,15 +135,6 @@ const PICKLE_THEME: StartupTheme = {
 	],
 	phases: {
 		resolve: { title: 'Prepping the cucumbers' },
-		preload: {
-			title: 'Making the brine',
-			waiting: 'waiting for the brine to come to a boil — the worker threads are still starting up',
-			quips: [
-				'brine is simmering: {done} of {total} files warmed',
-				'stirring... {done} of {total}. The brine takes as long as the brine takes',
-				'{done} warmed, {left} to go. Nobody rushes a good brine'
-			]
-		},
 		load: {
 			title: 'Packing the jars',
 			waiting: 'still packing the first jar — the first file pulls in its whole import graph, the rest go much faster',
@@ -182,15 +174,6 @@ const LOTR_THEME: StartupTheme = {
 	phases: {
 		// The nine walkers: Gandalf, Aragorn, Boromir (and his horn), Legolas, Gimli, Frodo, Sam (po-ta-toes), Merry and Pippin
 		resolve: { title: 'Assembling the Fellowship 🧙👑📯🧝🪓💍🥔🍄🍄' },
-		preload: {
-			title: 'Stoking the forges of Isengard 🔨🔥🔨',
-			waiting: 'the forges are still cold 🔦 the worker threads are starting up',
-			quips: [
-				'"The trees are strong, my lord. Their roots go deep." 🌳 {done} of {total} files warmed',
-				'"Rip them all down." 🪓 {done} warmed, {left} to go',
-				'the orcs are working through the night 🔥 {done} of {total}. Work never stopped at Isengard'
-			]
-		},
 		load: {
 			title: 'Lighting the beacons of Gondor 🔥🔥🔥',
 			waiting:
@@ -744,14 +727,6 @@ function detectColorLevel(): number {
 	if (sample.includes('38;5;')) return 2;
 	if (sample.includes('\x1b[')) return 1;
 	return 0;
-}
-
-function formatDuration(ms: number): string {
-	if (ms < 1000) return `${Math.round(ms)}ms`;
-	if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-	const minutes = Math.floor(ms / 60000);
-	const seconds = Math.round((ms % 60000) / 1000);
-	return `${minutes}m ${seconds}s`;
 }
 
 const TRANSPILER_NAMES: Array<[RegExp, string]> = [

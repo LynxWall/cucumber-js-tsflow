@@ -144,15 +144,19 @@ export const loadConfiguration = async (
 
 	logger.checkpoint('Experimental decorators configured', { experimentalDecorators });
 
-	// Configure parallel loading
-	if (original.parallelLoad === undefined) {
-		original.parallelLoad = false;
+	// parallelLoad is accepted for compatibility and ignored: the preload phase it enabled was removed.
+	if (original.parallelLoad) {
+		const setBy =
+			(options.provided as Partial<ITsflowConfiguration> | undefined)?.parallelLoad !== undefined
+				? 'the --parallel-load flag from the command line'
+				: `"parallelLoad" from ${configFile ? `"${configFile}"` : 'the cucumber configuration file'}`;
+		consoleLogger.log(parallelLoadDeprecationNotice(setBy));
+		logger.checkpoint('parallelLoad is set but ignored', { parallelLoad: original.parallelLoad });
 	}
-	logger.checkpoint('Parallel load configured', { parallelLoad: original.parallelLoad });
 
 	// Configure the on-disk transpile cache. The environment variable is how the setting reaches the
-	// transpilers, the ESM loader hooks (in-thread or on the hooks thread), preload threads and parallel
-	// children; an environment value already present acts as the default when the option is not set.
+	// transpilers, the ESM loader hooks (in-thread or on the hooks thread) and parallel children; an
+	// environment value already present acts as the default when the option is not set.
 	if (original.transpileCache === undefined) {
 		original.transpileCache = process.env.TSFLOW_TRANSPILE_CACHE !== 'false';
 	}
@@ -334,3 +338,20 @@ export const loadConfiguration = async (
 		runConfiguration: runnable
 	};
 };
+
+/**
+ * The notice printed when a configuration still sets `parallelLoad`. Deliberately loud — a blank line, a row
+ * of stars, a blank line, then the notice — so it is not lost among the startup lines.
+ */
+function parallelLoadDeprecationNotice(setBy: string): string {
+	return [
+		'',
+		'**********',
+		'',
+		`${ansis.bold('DEPRECATION NOTICE:')} the parallelLoad option is no longer used and has no effect. ` +
+			'Parallel preloading of support files was removed because it made every run slower; the on-disk ' +
+			'transpile cache now does the work it was meant to do, with nothing to configure. ' +
+			`Remove ${setBy} to clear this notice.`,
+		''
+	].join('\n');
+}

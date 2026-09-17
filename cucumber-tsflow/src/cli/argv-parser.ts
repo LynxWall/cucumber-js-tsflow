@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import merge from 'lodash.merge';
 import path from 'path';
 import { dialects } from '@cucumber/gherkin';
@@ -18,7 +18,8 @@ export interface ITsflowConfiguration extends IConfiguration {
 	transpiler: string;
 	enableVueStyle: boolean;
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
+	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
+	parallelLoad?: boolean | number;
 	transpileCache: boolean;
 }
 
@@ -154,14 +155,11 @@ const ArgvParser = {
 				'only execute the features or scenarios with tags matching the expression (repeatable)',
 				ArgvParser.mergeTags
 			)
-			.option(
-				'--parallel-load [THREADS]',
-				'Pre-warm transpiler caches in parallel worker threads before loading support code. ' +
-					'Pass a number to control thread count, or omit for auto-detect.',
-				val => {
-					if (val === undefined || val === '') return true;
-					return ArgvParser.validateCountOption(val, '--parallel-load');
-				}
+			// Deprecated and ignored; still accepted so existing scripts keep working, and hidden from --help.
+			.addOption(
+				new Option('--parallel-load [THREADS]', 'Deprecated and ignored: parallel preloading was removed.')
+					.argParser(() => true)
+					.hideHelp()
 			)
 			.option(
 				'--transpile-cache',

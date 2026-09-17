@@ -125,8 +125,6 @@ This fork of cucumber-tsflow provides the following features that extend the ori
 
 - Support for Parallel execution of tests.
 
-- Parallel preload of transpiler caches via the `parallelLoad` configuration option, reducing startup time for large projects.
-
 - A behave-json-formatter that fixes json so it can be used with Behave Pro.
 
 - A junit-bamboo formatter that generates xml compatible with the Bamboo JUnit plugin.
@@ -458,7 +456,7 @@ In addition to cucumber configuration options the following two options have bee
 | `debugFile`              | `string`           | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
 | `enableVueStyle`         | `boolean`          | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 | `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
-| `parallelLoad`           | `boolean \| number` | No         |                             | Pre-warm transpiler caches in parallel worker threads before loading support code. `true` = auto thread count, number = explicit count. | false   |
+| `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the on-disk transpile cache replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
 
 ### Transpiler and Vue3 supported
 

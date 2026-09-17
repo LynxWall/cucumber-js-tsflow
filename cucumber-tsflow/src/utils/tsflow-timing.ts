@@ -3,7 +3,7 @@
  *
  * Enable with: TSFLOW_TIMING=true
  *
- * Records wall-clock time per startup phase (configuration, preload, support-code
+ * Records wall-clock time per startup phase (configuration, support-code
  * require/import, registration, gherkin parsing, runtime) and per file (transpile,
  * ESM load hook, top-level require/import), then prints a report with a
  * slowest-files table when the run completes.
@@ -15,8 +15,6 @@
  *   reports back over a `MessageChannel` handed to the loader's `initialize` hook; loaders
  *   attached in-thread with `module.registerHooks()` record straight into the registering
  *   context's store instead (see api/register-loaders.ts)
- * - each parallel preload `worker_threads` worker (scope `preload:<n>`), which returns its
- *   snapshot in the `LOADED` response
  * - each parallel child process (scope `worker:<id>`), which sends a `TIMING` IPC message
  *   before `READY`
  *
@@ -235,7 +233,6 @@ export function printTimingReport(stream: TimingOutputStream = process.stderr): 
 	const lines: string[] = [];
 	const main: TimingSection = { scope: 'main', phases: Array.from(store.phases.values()), files: store.files };
 	const hooks = store.remote.filter(s => s.scope === 'esm-hooks');
-	const preload = store.remote.filter(s => s.scope.startsWith('preload:'));
 	const workers = store.remote.filter(s => s.scope.startsWith('worker:'));
 
 	lines.push('');
@@ -243,15 +240,11 @@ export function printTimingReport(stream: TimingOutputStream = process.stderr): 
 	lines.push('');
 	pushPhaseTable(lines, 'Main process', [main]);
 	if (hooks.length > 0) pushPhaseTable(lines, 'Main process ESM loader hooks', hooks);
-	if (preload.length > 0) {
-		pushPhaseTable(lines, `Preload worker threads (${countRoots(preload)})`, preload);
-	}
 	if (workers.length > 0) {
 		pushPhaseTable(lines, `Parallel worker processes (${countRoots(workers)})`, workers);
 	}
 	pushFamilyTable(lines, [
 		['main', [main, ...hooks]],
-		['preload', preload],
 		['workers', workers]
 	]);
 	pushSlowestFiles(lines, [main, ...store.remote]);

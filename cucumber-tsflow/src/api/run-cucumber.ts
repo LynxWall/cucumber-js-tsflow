@@ -19,7 +19,6 @@ import { BindingRegistry } from '../bindings/binding-registry';
 import { ITsFlowRunOptionsRuntime } from '../runtime/types';
 import { Console } from 'console';
 import ansis from 'ansis';
-import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
 import { startTimer, recordPhase, collectLoaderTimings, printTimingReport } from '../utils/tsflow-timing';
 import { StartupProgress, describeTranspiler, plural, resolveStartupTheme } from '../utils/startup-progress';
@@ -118,44 +117,11 @@ Running from: ${__dirname}
 			'originalCoordinates' in options.support
 				? (options.support as SupportCodeLibrary)
 				: await (async () => {
-						// Parallel preload phase: warm transpiler caches in worker threads
-						if (options.runtime.parallelLoad) {
-							runLogger.checkpoint('Running parallel preload phase');
-							progress.begin(
-								'preload',
-								`pre-warming transpiler caches for ${plural(supportFileCount, 'support file')} in worker threads`,
-								supportFileCount
-							);
-							const preloadStart = startTimer();
-							try {
-								const result = await parallelPreload({
-									requirePaths,
-									importPaths,
-									requireModules: supportCoordinates.requireModules,
-									loaders: supportCoordinates.loaders,
-									experimentalDecorators: options.runtime.experimentalDecorators,
-									threadCount: options.runtime.parallelLoad,
-									onFileLoaded: () => progress.tick()
-								});
-								runLogger.checkpoint('Parallel preload completed', {
-									descriptors: result.descriptors.length,
-									files: result.loadedFiles.length,
-									durationMs: result.durationMs
-								});
-								progress.end(`${plural(result.descriptors.length, 'binding')} found`);
-							} catch (err: any) {
-								progress.end('failed, loading everything on the main thread instead');
-								runLogger.error('Parallel preload failed, falling back to serial load', err);
-							}
-							recordPhase('preload', preloadStart);
-						}
-
 						const transpiler = describeTranspiler(supportCoordinates.requireModules, supportCoordinates.loaders);
 						progress.begin(
 							'load',
 							`transpiling and loading ${plural(supportFileCount, 'support file')}` +
-								(transpiler ? ` with ${transpiler}` : '') +
-								(options.runtime.parallelLoad ? ' from the warm cache' : ''),
+								(transpiler ? ` with ${transpiler}` : ''),
 							supportFileCount
 						);
 						return getSupportCodeLibrary({

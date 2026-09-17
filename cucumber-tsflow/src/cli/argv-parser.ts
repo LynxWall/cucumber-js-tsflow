@@ -19,6 +19,7 @@ export interface ITsflowConfiguration extends IConfiguration {
 	enableVueStyle: boolean;
 	experimentalDecorators: boolean;
 	parallelLoad: boolean | number;
+	transpileCache: boolean;
 }
 
 export interface IParsedArgv {
@@ -161,6 +162,14 @@ const ArgvParser = {
 					if (val === undefined || val === '') return true;
 					return ArgvParser.validateCountOption(val, '--parallel-load');
 				}
+			)
+			.option(
+				'--transpile-cache',
+				'Cache esbuild and Vue SFC transpiler output on disk between runs (node_modules/.cache/cucumber-tsflow). Defaults to true.'
+			)
+			.option(
+				'--no-transpile-cache',
+				'Transpile every support file from source on this run, neither reading nor writing the on-disk cache.'
 			)
 			.option(
 				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|TS-VUE-ESM|ES-NODE-ESM|ES-VUE-ESM>',

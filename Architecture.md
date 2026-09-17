@@ -165,7 +165,7 @@ The parallel preload system warms transpiler on-disk caches before the main load
 1. Thread count auto-detects via `availableParallelism()` (capped at 4) or accepts an explicit count
 1. After preloading, the main thread performs the authoritative load — hitting warm caches
 
-The preload runs in the main process before any child processes are forked. Parallel child processes benefit from the warm on-disk cache without needing their own preload phase.
+The preload runs in the main process before any child processes are forked. Parallel child processes benefit from the warm on-disk cache without needing their own preload phase. The on-disk cache the workers warm is the [transpile cache](#transpile-cache); before it existed, the workers' transpilation output was thread-local and discarded with the thread.
 
 ## Diagnostics
 
@@ -233,6 +233,7 @@ Transpilers are loaded as CJS `requireModule` entries or ESM `loader` entries ba
 - `esbuild.ts` — wraps `esbuild.transformSync()`, maps file extensions to loaders, supports both decorator modes
 - `esbuild-transpiler.ts` — implements `ts-node-maintained`'s `Transpiler` interface using the esbuild wrapper
 - `vue-sfc-compiler.ts` — compiles `.vue` SFCs using `vue/compiler-sfc` (`parse`, `compileScript`, `compileTemplate`, `compileStyle`) then transpiles the output via esbuild
+- `transpile-cache.ts` — content-addressed on-disk cache wrapped around `transpileCode` (CJS and ESM) and `compileVueSFC`; see [Transpile cache](#transpile-cache)
 
 ESM loaders live under `src/transpilers/esm/` (authored `.mjs`, copied verbatim to `lib/`) and act as Node.js module customization hooks. `esnode-loader.mjs` and `esvue-loader.mjs` are built by `createEsbuildLoader()` in `loader-utils.mjs` and transpile `.ts`/`.tsx` with `esbuild.transformSync` directly (`esbuild.mjs`, `sourcemap: 'both'`: the map is inlined for Node and kept on `globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS` by module URL for callsite resolution) and `.vue` with the shared SFC compiler; they do not use ts-node. `tsnode-loader.mjs` (`ts-node-esm`) creates a `ts-node-maintained` service and delegates to its ESM hooks; `vue-loader.mjs` (`ts-vue-esm`) delegates TypeScript to `ts-node-maintained/esm`.
 
@@ -253,6 +254,14 @@ The esbuild loaders' hooks are written to work under both mechanisms: every help
 - `extensionResolutionCache` — absolute extensionless path → resolved file URL (or `null`), shared by every importer of the same module and by aliased and relative spellings of it
 
 The tsconfig `paths` rewrite regexes used by `esbuild.mjs` and `tsnode-loader.mjs` are compiled once per process, and the `ts-node` service `tsnode-loader.mjs` creates passes `files: false` because with `transpileOnly: true` the tsconfig `include` walk feeds nothing.
+
+### Transpile cache
+
+`src/transpilers/transpile-cache.ts` is a content-addressed on-disk cache wrapped around the three transpile entry points: `transpileCode` in `esbuild.ts` (the CJS esbuild path, reached through ts-node's `Transpiler` plugin), `transpileCode` in `esm/esbuild.mjs` (the esbuild ESM `load` hook, which loads the CJS build through `createRequire` so all three share one module instance and one set of counters per thread) and `compileVueSFC` in `vue-sfc-compiler.ts` (every Vue transpiler, CJS and ESM; the ESM `loadVue` still runs its cheap `transformImports` regex pass over the cached output). `withTranspileCache(kind, filename, source, configuration, produce)` keys an entry on a SHA-256 of the entry format, the library version, `kind`, the caller's serialised configuration, the file name and the source. The configuration carries everything else that shapes the output: the full esbuild transform options (with `tsconfigRaw`, hence the decorator mode) and the esbuild version; for the ESM path also the tsconfig `absoluteBaseUrl` and `paths`, because `rewritePathMappings` bakes them into the output as `file://` URLs, so entries are not portable across checkouts and must not be; for Vue the style flag, output format, decorator mode and the consumer's `vue` version. Nothing is keyed on path or mtime alone, so a stale entry cannot be served: a changed input is a different key.
+
+Entries are JSON files named by the key, written to a temp file and renamed into place, so the N+1 contexts of a `parallel` run (coordinator, children, `parallelLoad` preload threads) racing to populate an empty cache never see a partial entry, and the last writer of an identical result wins. Writes are best-effort and a failed or unparseable read is a miss and is deleted, so the cache can change whether a transpile runs but never what it returns. The directory is `TSFLOW_TRANSPILE_CACHE_DIR`, else `.cache/cucumber-tsflow/transpile` under the nearest `node_modules` at or above the working directory (else under the nearest `package.json`, else the OS temp directory). `TSFLOW_TRANSPILE_CACHE=false` disables reads and writes; `loadConfiguration` sets that variable from the `transpileCache` option (`--transpile-cache` / `--no-transpile-cache`, default true, an existing environment value acting as the default), which is how the setting reaches every thread and process, including the ESM hooks thread under `module.register()`.
+
+`runCucumber` appends the main process's `N of M transpiles from the cache` to the load-phase summary and then calls `pruneTranspileCache()`, which only when this process wrote entries lists the directory and deletes the least recently written files until it fits in 512 MB (a content-addressed store's garbage is exactly the entries no current source produces any more, and those are the oldest). In the `TSFLOW_TIMING` report, hits and misses are the `transpile-cache:hit` / `transpile-cache:miss` phases (the `calls` column is the count; a hit also records a `transpile` file entry for the lookup time so per-context file counts stay comparable between cold and warm runs), and `transpile-cache:prune` is the sweep. This is also what gives the parallel preload a durable effect: the entries its worker threads write are what the main thread and the parallel children read.
 
 ## Formatters
 
@@ -277,7 +286,7 @@ Format aliases in configuration: `behave:path` maps to `@lynxwall/cucumber-tsflo
 
 ## CLI
 
-The CLI entry point is `bin/cucumber-tsflow.js`. Before requiring anything else it enables Node's module compile cache (`module.enableCompileCache()`, Node 22.8 or later) and exports the cache directory as `NODE_COMPILE_CACHE`, so that the library, its dependencies and the transpiled support code are served from cached V8 bytecode in this process and in every forked child and worker thread. It then delegates to the `Cli` class.
+The CLI entry point is `bin/cucumber-tsflow.js`. Before requiring anything else it enables Node's module compile cache (`module.enableCompileCache()`, Node 22.8 or later) and exports the cache directory as `NODE_COMPILE_CACHE`, so that the library, its dependencies and the transpiled support code are served from cached V8 bytecode in this process and in every forked child and worker thread. Next it prints a one-line bootstrap notice to stdout in `ansis.dim`, the phase-detail grey (`ansis` is required by the bin on its own for this; the library loads it moments later regardless), and sets `globalThis.__CUCUMBER_TSFLOW_BOOTSTRAP_ANNOUNCED`, which `lib/cli/run.ts` reads to print `cucumber-tsflow loaded in N ms.` on entry (`performance.now()`, the same figure as the `bootstrap` timing phase) before configuration loads; both lines are skipped for the informational switches (`--version`, `--help`, `--i18n-languages`, `--i18n-keywords`) and under `TSFLOW_THEME=off`, and neither appears for programmatic callers, who never go through the bin. It then delegates to the `Cli` class.
 
 `Cli` parses arguments via `ArgvParser` (built on `commander`) and adds custom options beyond CucumberJS:
 

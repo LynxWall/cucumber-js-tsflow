@@ -23,8 +23,16 @@ import { parallelPreload } from './parallel-loader';
 import { createLogger } from '../utils/tsflow-logger';
 import { startTimer, recordPhase, collectLoaderTimings, printTimingReport } from '../utils/tsflow-timing';
 import { StartupProgress, describeTranspiler, plural, resolveStartupTheme } from '../utils/startup-progress';
+import { getTranspileCacheStats, pruneTranspileCache } from '../transpilers/transpile-cache';
 
 const runLogger = createLogger('run-cucumber');
+
+/** `, N of M transpiles from the cache` for the load-phase summary, or '' when nothing went through the cache. */
+function describeTranspileCache(): string {
+	const { hits, misses } = getTranspileCacheStats();
+	const total = hits + misses;
+	return total === 0 ? '' : `, ${hits} of ${plural(total, 'transpile')} from the cache`;
+}
 
 export interface ITsFlowRunOptions extends IRunOptions {
 	runtime: ITsFlowRunOptionsRuntime;
@@ -182,7 +190,12 @@ Running from: ${__dirname}
 		supportCodeLibrary.afterTestStepHookDefinitions.length +
 		supportCodeLibrary.beforeTestRunHookDefinitions.length +
 		supportCodeLibrary.afterTestRunHookDefinitions.length;
-	progress.end(`${plural(supportCodeLibrary.stepDefinitions.length, 'step definition')}, ${plural(hookCount, 'hook')}`);
+	progress.end(
+		`${plural(supportCodeLibrary.stepDefinitions.length, 'step definition')}, ${plural(hookCount, 'hook')}` +
+			describeTranspileCache()
+	);
+	// Bound the on-disk transpile cache by size; a no-op unless this run wrote new entries to it
+	pruneTranspileCache();
 
 	// Gather ESM loader hook timings and print the TSFLOW_TIMING report (no-op when disabled)
 	const finishTiming = async (): Promise<void> => {

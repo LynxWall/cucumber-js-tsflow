@@ -1,9 +1,15 @@
-import { transformSync } from 'esbuild';
+import { transformSync, version as esbuildVersion } from 'esbuild';
 import path from 'path';
+import { createRequire } from 'node:module';
 import { loadConfig } from 'tsconfig-paths';
 import { pathToFileURL } from 'url';
 import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordFile } from '../../utils/tsflow-timing.mjs';
+
+// The on-disk transpile cache is the CJS build one directory up (lib/transpilers/transpile-cache.js),
+// shared with the CJS transpilers and the Vue SFC compiler so all three keep one set of counters per thread.
+const require = createRequire(import.meta.url);
+const { withTranspileCache } = require('../transpile-cache.js');
 
 const logger = createLogger('esbuild');
 
@@ -166,41 +172,52 @@ export const transpileCode = (code, filename, ext, _options) => {
 	const loadersMap = getLoaders(options);
 	const loaderExt = ext != undefined ? ext : path.extname(filename);
 
-	if (verbose) logger.checkpoint('Rewriting path mappings', { filename });
-	let processedCode = rewritePathMappings(code, filename);
+	const transformOptions = {
+		...commonOptions,
+		...(options.esbuild || {}),
+		loader: loadersMap[loaderExt],
+		sourcefile: filename
+	};
 
-	if (verbose) {
-		logger.checkpoint('Calling esbuild transformSync', {
-			filename,
-			loader: loadersMap[loaderExt],
-			processedCodeLength: processedCode?.length
-		});
-	}
+	// Cached on the original source. The key must also carry what rewritePathMappings bakes into the
+	// output (absolute file:// URLs built from the tsconfig baseUrl and paths), the full transform options
+	// (including `tsconfigRaw` with the decorator mode) and the esbuild version.
+	const { absoluteBaseUrl, paths } = loadTsConfigPaths();
+	const configuration =
+		`esbuild@${esbuildVersion}` + JSON.stringify(transformOptions) + JSON.stringify({ absoluteBaseUrl, paths });
 
-	try {
-		const start = startTimer();
-		const ret = transformSync(processedCode, {
-			...commonOptions,
-			...(options.esbuild || {}),
-			loader: loadersMap[loaderExt],
-			sourcefile: filename
-		});
-		recordFile('transpile', filename, start);
+	return withTranspileCache('esbuild-esm', filename, code, configuration, () => {
+		if (verbose) logger.checkpoint('Rewriting path mappings', { filename });
+		const processedCode = rewritePathMappings(code, filename);
 
 		if (verbose) {
-			logger.checkpoint('esbuild transformSync success', {
+			logger.checkpoint('Calling esbuild transformSync', {
 				filename,
-				outputLength: ret.code?.length
+				loader: loadersMap[loaderExt],
+				processedCodeLength: processedCode?.length
 			});
 		}
 
-		return { output: ret.code, sourceMap: ret.map };
-	} catch (error) {
-		logger.error('esbuild transformSync failed', error, {
-			filename,
-			loader: loadersMap[loaderExt],
-			codePreview: processedCode?.substring(0, 200)
-		});
-		throw error;
-	}
+		try {
+			const start = startTimer();
+			const ret = transformSync(processedCode, transformOptions);
+			recordFile('transpile', filename, start);
+
+			if (verbose) {
+				logger.checkpoint('esbuild transformSync success', {
+					filename,
+					outputLength: ret.code?.length
+				});
+			}
+
+			return { output: ret.code, sourceMap: ret.map };
+		} catch (error) {
+			logger.error('esbuild transformSync failed', error, {
+				filename,
+				loader: loadersMap[loaderExt],
+				codePreview: processedCode?.substring(0, 200)
+			});
+			throw error;
+		}
+	});
 };

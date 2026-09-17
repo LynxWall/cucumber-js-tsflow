@@ -150,6 +150,15 @@ export const loadConfiguration = async (
 	}
 	logger.checkpoint('Parallel load configured', { parallelLoad: original.parallelLoad });
 
+	// Configure the on-disk transpile cache. The environment variable is how the setting reaches the
+	// transpilers, the ESM loader hooks (in-thread or on the hooks thread), preload threads and parallel
+	// children; an environment value already present acts as the default when the option is not set.
+	if (original.transpileCache === undefined) {
+		original.transpileCache = process.env.TSFLOW_TRANSPILE_CACHE !== 'false';
+	}
+	process.env.TSFLOW_TRANSPILE_CACHE = String(original.transpileCache);
+	logger.checkpoint('Transpile cache configured', { transpileCache: original.transpileCache });
+
 	/**
 	 * Ensures JSDOM environment is initialized before any test files are loaded.
 	 */

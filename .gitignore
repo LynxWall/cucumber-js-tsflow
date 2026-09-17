@@ -16,3 +16,6 @@ cucumber-tsflow-specs/reports/*
 #!/.yarn/cache
 /.pnp.*
 .DS_Store
+
+# CPU profiles captured for the performance work (read with research/scripts/attribute-cpuprofile.js)
+research/profiles/

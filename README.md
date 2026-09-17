@@ -481,6 +481,8 @@ TSFLOW_THEME=lotr npx cucumber-tsflow -p default
 
 The spinner, counter and message line are only drawn when stdout is an interactive terminal. In CI logs and when stdout is redirected to a file the output is append-only: the phase line, any messages, and the summary. Anything your support code writes to stdout while a phase is open (for example a `console.log` in a `BeforeAll` hook) lands inside that line and can displace the spinner, exactly as it would land among the formatter's own progress dots.
 
+Before any of that, the `cucumber-tsflow` command prints a plain line as its very first action, `Bootstrapping cucumber-tsflow 7.7.2 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431 ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed grey as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
+
 ### Startup timing diagnostics
 
 Set `TSFLOW_TIMING=true` to find out where startup time goes. When the run completes, cucumber-tsflow prints a report to stderr with the wall-clock time of each startup phase (configuration, parallel preload, support-code require/import, registration, gherkin parsing, test execution), the same phases for every preload worker thread and parallel child process, per-context file totals, and a table of the 25 slowest files by transpile, ESM load, and top-level require/import time.
@@ -494,6 +496,12 @@ The report is diagnostic output only and does not change how tests run. Without 
 ### Compile cache
 
 On Node 22.8 or later the `cucumber-tsflow` command enables Node's module compile cache, so the V8 bytecode for the library, its dependencies and your transpiled support code is reused across runs, and parallel child processes and preload threads share the same cache directory. Set `NODE_DISABLE_COMPILE_CACHE=1` to turn it off, or `NODE_COMPILE_CACHE=<dir>` to choose where it lives (Node's default is a `node-compile-cache` directory under the OS temp directory).
+
+### Transpile cache
+
+The esbuild transpilers (`es-node`, `es-vue`, `es-node-esm`, `es-vue-esm`) and the Vue SFC compiler behind every Vue transpiler store their output on disk, so a run whose sources have not changed reads the transpiled code back instead of transpiling it, and the coordinator, its parallel child processes and any `parallelLoad` preload threads share one cold transpile of each file instead of each doing their own. Entries are content-addressed: the key is a hash of the file's source and path, the transpiler options (including the decorator mode and the Vue `<style>` flag), the tsconfig `paths` the ESM loaders bake into their output, the esbuild and Vue compiler versions, and the cucumber-tsflow version, so any change to the source or the tooling is a new key and a stale entry is never served. The cache lives in `node_modules/.cache/cucumber-tsflow/transpile` under the nearest `node_modules` directory at or above the working directory (or under the OS temp directory when there is none) and is bounded to 512 MB, oldest entries evicted first. The load-phase progress line reports how many transpiles were served from it, and the `TSFLOW_TIMING` report has `transpile-cache:hit` and `transpile-cache:miss` rows whose `calls` column is the count.
+
+`--no-transpile-cache` (or `transpileCache: false` in a profile, or `TSFLOW_TRANSPILE_CACHE=false` in the environment) transpiles everything from source and neither reads nor writes the cache; `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` chooses where it lives. The TypeScript output of the `ts-node` and `ts-vue` transpilers comes from ts-node's TypeScript compiler and is not cached; their `.vue` compilation is.
 
 ### ESM loader hooks
 
@@ -512,6 +520,7 @@ In addition to cucumber configuration options the following two options have bee
 | `enableVueStyle`         | `boolean`          | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 | `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
 | `parallelLoad`           | `boolean \| number` | No         |                             | Pre-warm transpiler caches in parallel worker threads before loading support code. `true` = auto thread count, number = explicit count. | false   |
+| `transpileCache`         | `boolean`          | No         | `--transpile-cache` / `--no-transpile-cache` | Cache esbuild and Vue SFC transpiler output on disk between runs (see [Transpile cache](#transpile-cache)). | true    |
 
 ### Transpiler and Vue3 supported
 

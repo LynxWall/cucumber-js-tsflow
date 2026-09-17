@@ -1,12 +1,23 @@
 import { parse, compileScript, compileTemplate, compileStyle } from 'vue/compiler-sfc';
 import hash from 'hash-sum';
-import { transformSync } from 'esbuild';
+import { transformSync, version as esbuildVersion } from 'esbuild';
 import { createLogger, isVerbose } from '../utils/tsflow-logger';
 import { startTimer, recordFile } from '../utils/tsflow-timing';
+import { withTranspileCache } from './transpile-cache';
 
 const logger = createLogger('vue-sfc');
 // Per-file checkpoints are guarded so the detail objects are not built when verbose logging is off
 const verbose = isVerbose();
+
+// The Vue compiler is the consumer's `vue` (resolved from wherever this module was loaded); its version is
+// part of the transpile cache key so an upgrade invalidates every cached component.
+const vueVersion: string = (() => {
+	try {
+		return String(require('vue/package.json').version);
+	} catch {
+		return 'unknown';
+	}
+})();
 
 export type VueSFCFormat = 'cjs' | 'esm';
 
@@ -32,12 +43,32 @@ export type VueSFCOptions = {
  */
 export function compileVueSFC(source: string, filename: string, options: VueSFCOptions = {}): { code: string } {
 	const { enableStyle = false, format = 'cjs' } = options;
-	const compileStart = startTimer();
-
-	if (verbose) logger.checkpoint('compileVueSFC started', { filename, format, enableStyle });
+	// Read experimentalDecorators from global (set by load-configuration before transpilers run)
+	const experimentalDecorators = !!(global as any).experimentalDecorators;
 
 	if (!source) throw new Error(`Invalid source for ${filename}: source is ${typeof source}`);
 	if (!filename) throw new Error('Filename is required for Vue SFC compilation');
+
+	// Cached on the source plus every other input to the output: the style and format options, the
+	// decorator mode, and the Vue compiler and esbuild versions. The file name is in the key already (the
+	// component id is derived from it).
+	const configuration =
+		`vue@${vueVersion};esbuild@${esbuildVersion};` + JSON.stringify({ enableStyle, format, experimentalDecorators });
+	return withTranspileCache('vue-sfc', filename, source, configuration, () =>
+		compile(source, filename, enableStyle, format, experimentalDecorators)
+	);
+}
+
+function compile(
+	source: string,
+	filename: string,
+	enableStyle: boolean,
+	format: VueSFCFormat,
+	experimentalDecorators: boolean
+): { code: string } {
+	const compileStart = startTimer();
+
+	if (verbose) logger.checkpoint('compileVueSFC started', { filename, format, enableStyle });
 
 	// Parse the SFC
 	const { descriptor, errors: parseErrors } = parse(source, { filename, sourceMap: true });
@@ -63,8 +94,6 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 
 	const isTS = descriptor.script?.lang === 'ts' || descriptor.scriptSetup?.lang === 'ts';
 
-	// Read experimentalDecorators from global (set by load-configuration before transpilers run)
-	const experimentalDecorators = !!(global as any).experimentalDecorators;
 	const tsconfigRaw = {
 		compilerOptions: {
 			experimentalDecorators,

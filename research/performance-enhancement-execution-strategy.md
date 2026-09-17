@@ -670,22 +670,33 @@ Phase 6 builds the cache into the `load` hook it reshapes. The four ESM workspac
 favour of synchronous in-thread hooks (`module.registerHooks()`), with item 18's ts-node bypass landed and its
 async `transform()` half dropped; see [Phase 5 hand-off](#phase-5-hand-off) below.
 
-**Phase 6: items 26, 28 — developer experience.** Open-ended. The fixed part is startup feedback: a
+**Phase 6: items 26, 28 — COMPLETE (2026-09-16).** Developer experience, open-ended by design. The fixed part is startup feedback: a
 TTY-only progress line during support loading (and preload, while it exists) driven from the per-file loops
 that already exist in `support.ts` and `loader-worker.ts`, a one-line startup summary, and nothing at all
 when stderr is not a TTY or `--quiet`/CI is in effect, so formatter output and report files are untouched.
 Item 28 (ESM callsite lines) rides along once the source-map dependency is approved, because it is the
 other thing a developer sees first on an ESM suite. Further candidates are listed under item 26 and are
-picked as the phase goes.
+picked as the phase goes. See [Phase 6 hand-off](#phase-6-hand-off) below for what landed, what was left, and the
+Phase 7 measurement recipe.
 
-**Phase 7: item 27 — attribute `runtime:run`.** One measurement session, not a code change: CPU-profile
-the UIS `dim` run and split the 37 s between tsflow, CucumberJS, jsdom/Vue and consumer steps. Its outcome
-decides whether a further runtime phase exists and re-orders everything below.
+**Phase 7: item 27 plus the `default` profile baseline — COMPLETE (2026-09-17).** One measurement session,
+not a code change: CPU-profile the UIS `dim` run and split the 37 s between tsflow, CucumberJS, jsdom/Vue and
+consumer steps. Its outcome decides whether a further runtime phase exists and re-orders everything below. In
+the same session, take the first `TSFLOW_TIMING` measurement of the `default` profile's startup (about 1380
+scenarios, 208 step files), which items 16 and 24 are both priced against and which has never been done. The capture recipe and the
+attribution script (`research/scripts/attribute-cpuprofile.js`) are described under
+[Notes specific to Phase 7](#notes-specific-to-phase-7). Outcome: tsflow is 0.4% of `runtime:run` on both the
+`dim` and the full suite, so no runtime phase follows; the full suite's warm startup is 9.1 s, of which 2.8 s is
+transpile work and 5.5 s Node's module loader. See [Phase 7 hand-off](#phase-7-hand-off) below.
 
-**Phase 8: items 16, then 17 and 15 only if `parallelLoad` survives.** The cache, now rated 4, behind
-`--no-transpile-cache`. Before starting: measure the `default` profile's startup (never done), and get a
-decision on `origin/Dev-Prebuild` — if parallel load is being removed, 15 and 17 are deleted from the list
-and the preload worker goes with them. Item 22 is dropped.
+**Phase 8: item 16 — COMPLETE (2026-09-17); 17 and 15 still gated on the `parallelLoad` decision.** The
+content-addressed on-disk transpile cache landed behind `--no-transpile-cache`, covering esbuild (CJS and ESM)
+and the Vue SFC compile, keyed on source, path, options, tool versions and the tsflow version. Measured on the
+UIS full suite in a same-build A/B: `esm:load` 3.05 s → 0.9–1.1 s and `support:import` 6.7 s → 5.1–5.5 s warm,
+with all 974 transpiles served from disk in 0.25–0.31 s; on `dim`, 0.6–0.7 s of a 3 s startup. The
+`parallelLoad` preload threads now populate the cache the main thread reads, which delivers most of item 17's
+payoff and re-rates it down. The decision on `origin/Dev-Prebuild` was not taken this phase and remains the
+owner's; it now gates only items 15 and 17. Item 22 is dropped. See [Phase 8 hand-off](#phase-8-hand-off).
 
 **Phase 9: items 19, 24.** The filtered-run pair, unchanged in shape: 19 only as the precondition for 24,
 24 behind a flag with a full-load fallback, evaluated against the `default` profile's measured startup.
@@ -1317,3 +1328,520 @@ Conclusions:
   heredocs produce LF, so run `prettier --write` on touched files before judging the diff.
 - Build with `yarn build`, never bare `tsc`; run `yarn test:all` before calling the phase done; take at
   least three runs per build on the UIS profile and discard run one.
+
+## Phase 6 hand-off
+
+Written at the start of the Phase 7 session, the morning after Phase 6 closed, so that Phase 7 can start
+cold. Phase 6 was a developer-experience phase, not a performance one; nothing in it was measured on the
+large suite and nothing in it was expected to move the Phase 5 numbers.
+
+### State of the tree
+
+- Still on branch `2026-09-performance-enhancements`. Phase 6 is five commits: `3a03d4e` ("Startup
+  progress: themed phase lines with a worker-thread spinner, wrapping naturally"), `78ca080` ("Startup
+  spinner: colour wheel with a three-cell wipe; park the cursor below the block"), `37a596e` ("LOTR startup
+  theme: emoji on every line, beacons moved to the load phase"), `5500456` ("ESM callsites map to TypeScript
+  lines; startup counter in parentheses") and `ed5bbbf` ("Track the performance research notes and workspace
+  settings"). The Phase 5 removals that were uncommitted at the end of that session (`esbuild-transpiler.mjs`,
+  `build-esm-transpiler-cjs.js`, the `exports` entry, the `research/` directory) went in with `3a03d4e` and
+  `ed5bbbf`. The working tree was clean at the start of the Phase 7 session.
+- `yarn build` clean, no stray `.js` under `src/`, `lib/` newer than every source file. `yarn test:all`
+  green on all sixteen variants on the tree that became `5500456` (the spec reports under
+  `cucumber-tsflow-specs/reports/` are from that run, 2026-09-16 15:42–15:44). Terminal output was checked
+  on a real console window with the `verify-console-output` skill added in this phase, not in the captured
+  shell.
+- Files changed (source): new `src/utils/startup-progress.ts` and `src/utils/startup-progress-worker.ts`;
+  `src/api/run-cucumber.ts` (phase lines and callbacks), `src/api/support.ts`, `src/api/loader-worker.ts`,
+  `src/api/parallel-loader.ts` (`onFileLoaded` and the `PROGRESS` message), `src/runtime/make-runtime.ts`
+  and `src/runtime/parallel/adapter.ts` (`onWorkerReady`); `src/transpilers/esm/loader-utils.mjs`
+  (`sourcemap: 'both'`, the per-URL source-map store), `src/utils/our-callsite.ts` (trace-mapping lookup),
+  `src/types/global.d.ts`; `package.json` (`@jridgewell/trace-mapping` as a direct dependency) and
+  `yarn.lock`. Docs: `CHANGELOG.md`, `Architecture.md` ("Startup progress" section, callsite paragraph),
+  `README.md` ("Startup progress"), `CLAUDE.md` (the console-verification rule), the `pnpm-link-consumer`
+  skill, and the new `.claude/skills/verify-console-output/`.
+- The UIS Tools VueApp link (`pnpm-link-consumer` skill) is in place and points at the current build
+  (`7.7.2` on both sides). The UIS `package.json` and `pnpm-lock.yaml` carry that local-only change and
+  must not be committed there.
+- Added at the start of the Phase 7 session, uncommitted at the time of writing: this hand-off,
+  `research/scripts/attribute-cpuprofile.js`, a "Profiling a run" section in
+  `research/local-consumer-testing.md`, and a `.gitignore` rule for `research/profiles/`.
+
+### What Phase 6 landed
+
+- **Item 26, the fixed part.** `runCucumber()` prints one line per startup phase — `resolve`, `preload`
+  (only with `parallelLoad`), `load`, `assemble`, `launch` — between `Running Cucumber-TsFlow …` and the
+  first formatter output. On a TTY each line has a bracketed spinner in a fixed slot, a themed title, a
+  plain-language detail and a `(done/total)` counter, and ends with a check mark, a summary and the elapsed
+  time; a message line beneath carries heartbeat quips after 30 s of silence and a relief message when work
+  resumes after a stall. The spinner is drawn by a `worker_threads` worker writing through its own
+  `tty.WriteStream` on the same file descriptor, because the main thread is blocked for most of a phase
+  (the first support file's `import()` runs its whole graph through the in-thread hooks) and a main-thread
+  timer cannot fire; the main thread waits on an `Atomics` signal for the closing line so the two threads'
+  writes stay ordered. Nothing is fitted to the console width: lines are written whole and wrap, and the
+  block is redrawn from its first row using a row count derived from the current width, re-read every frame.
+  The spinner colour walks a twelve-colour wheel independent of theme and progress. `TSFLOW_THEME` selects
+  `pickle` (default), `lotr` or `off`. On a non-TTY stream (CI, a captured shell, a file) the lines are
+  append-only and no worker starts, so formatter output and report files are untouched.
+- **Item 26, the harness.** `.claude/skills/verify-console-output/` runs built code in a fresh console
+  window at several widths and reads the screen buffer back. It exists because a captured shell has
+  `isTTY === false` and cannot show redraws, colours or glyph widths; two console facts it uncovered are in
+  `Architecture.md` (the TTY stream rather than raw `fs.writeSync`, `CSI 1G` rather than `\r`).
+- **Item 26, not done.** None of the optional candidates were taken up: `TSFLOW_TIMING` is still an
+  environment variable and not a `--timing` flag, `--verbose` does not report the hooks mode or Node
+  version, and transpile errors still surface as a stack rather than a code frame. They remain candidates.
+- **Item 28.** Under `es-node-esm` / `es-vue-esm`, step definitions now report their TypeScript line and a
+  working-directory-relative `uri`. `loadTypeScript()` transpiles with `sourcemap: 'both'` and keeps each
+  module's map on `globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS`, keyed by URL, on the thread that later
+  resolves callsites; `Callsite.resolve()` traces `file:` frames through it with
+  `@jridgewell/trace-mapping` (new direct dependency, one decoded `TraceMap` per module) and falls back to
+  `source-map-support` for anything not recorded — the ts-node loaders, and the esbuild loaders under
+  `TSFLOW_ESM_HOOKS=async`, still report raw positions. Verified with the message formatter on the
+  `node-esm` and `vue-esm` specs; CJS unchanged.
+
+### Measured effect on the large suite
+
+None taken. In the captured shell used for the UIS timing runs stdout is not a TTY, so the progress
+worker never starts and the Phase 5 `dim` figures stand as the current baseline. The cost of the spinner
+worker on a real console (one extra thread, a write every 130 ms during startup) has not been measured and
+is not expected to be visible against the 37–47 s of `runtime:run`; it is off entirely with
+`TSFLOW_THEME=off`.
+
+### Notes specific to Phase 7
+
+Phase 7 is item 27: one measurement session, no library change. The question is how much of the 37–47 s
+`runtime:run` on the UIS `dim` profile is tsflow's own code, and the answer decides whether a runtime
+phase exists at all.
+
+- **Capture.** Run the CLI's bin file directly under `node --cpu-prof` from the UIS `test` directory. Do
+  not use `NODE_OPTIONS` through `corepack pnpm`: corepack and pnpm are Node processes too and would write
+  their own profiles into the same directory. Write the profiles into `research/profiles/<label>/` in this
+  repository (gitignored) rather than anywhere under the UIS checkout, whose `.gitignore` has no rule for
+  `.cpuprofile` files. The full recipe, with the environment variables, is under "Profiling a run" in
+  [local-consumer-testing.md](local-consumer-testing.md).
+- **Attribute.** `node research/scripts/attribute-cpuprofile.js <main-thread .cpuprofile>` prints self
+  and inclusive time by layer (tsflow, cucumber-js, jsdom, vue, esbuild, source maps, other dependencies by
+  package, node internals, V8 pseudo-frames, consumer files), tsflow's share by `lib/` directory, and hot
+  functions overall and within tsflow. By default it attributes only the `runtime:run` window, found as the
+  first sample with a `lib/runtime/` frame (`Coordinator.run`, the adapters' `run`, `runBeforeAllHooks`,
+  `runTestCase`, the `TestCaseRunner` methods) on the stack; `--all` covers the whole profile and
+  `--from-ms`/`--to-ms` set an explicit window. Builtins with no file (`readFileUtf8`, regex, sort, …) are
+  charged to the nearest caller that has one, so a builtin called from tsflow counts as tsflow; the hot
+  tables still name them. It was checked against a `vue-esm` spec profile (the marker lands 342 ms before
+  the end of a 36 s run, which is that suite's entire runtime) and against the UIS `utils` profile.
+- **What "tsflow" means in the split.** Frames under `…/cucumber-js-tsflow/cucumber-tsflow/lib/` (the
+  linked real path; Node resolves the symlink) or `…/@lynxwall/cucumber-tsflow/`. CucumberJS's own runtime
+  (`assembleTestCases`, `runTestRunHooks`, the formatters' envelope handling, `@cucumber/messages`) is
+  `cucumber-js`, not tsflow, even though tsflow calls it. The inclusive column answers "how much of the run
+  had tsflow anywhere on the stack"; on a serial run that will be nearly everything and is not the number
+  that matters. The number that matters is tsflow's **self** time plus the self time of builtins it called,
+  which is what the layer table's `self ms` for `tsflow` already is.
+- **Idle.** `(idle)` is the event loop with nothing to run — awaiting a timer, I/O or a child. On the
+  serial `dim` run, idle inside `runtime:run` is time no JavaScript was using, which points at waits in the
+  consumer's steps (`await nextTick`, timers, jsdom's async behaviour) rather than at any library. Report
+  it as its own row; it is likely to be a large one.
+- **Three runs, discard the first.** The Phase 5 rule holds: `runtime:run` varied 37–47 s across clean
+  runs of one build. Take at least three profiles and compare the layer percentages, which are far more
+  stable than the milliseconds. Keep `TSFLOW_TIMING=true` on so each profile has a timing report beside
+  it (the `runtime:run` row is the denominator the split should be checked against; the two agree to
+  within the cleanup tail after the runtime ends). `TSFLOW_THEME=off` keeps the spinner worker out of the
+  picture on a real console; in a captured shell it never starts anyway.
+- **One profile per thread.** `--cpu-prof` writes `CPU.<date>.<time>.<pid>.<tid>.<seq>.cpuprofile`; the
+  main thread is `tid` 0. The `dim` profile is serial with no `parallelLoad`, so one file is expected; a
+  second one means a worker thread ran (the spinner, or a preload worker on another profile).
+- **The `default` profile's startup is part of this phase.** It has never been measured, and items 16 and
+  24 are both priced against it. A `TSFLOW_TIMING=true` run of `corepack pnpm -F uis-tools-test test` (about
+  1380 scenarios, 208 step files, several minutes) — three runs, discard the first, same as `dim` — gives
+  the startup total and its `esm:load` / transpile share. Record it in the Phase 7 hand-off next to the
+  `dim` split. The `origin/Dev-Prebuild` decision (`parallelLoad` kept or removed, which settles items 15 and 17)
+  is also outstanding and belongs to the owner.
+- Build with `yarn build`, never bare `tsc`; nothing in this phase should need a build at all. If the
+  profile does turn up a tsflow hot spot worth fixing, that is a new phase with its own hand-off, not a
+  change to make inside this one.
+
+## Phase 7 hand-off
+
+Written at the end of the Phase 7 session (2026-09-17) so that Phase 8 can start cold. Phase 7 changed no
+library code. It answered item 27 — where does `runtime:run` go on a large consumer — and took the first
+measurement of the full UIS suite, which items 16 and 24 are priced against.
+
+### State of the tree
+
+- Still on branch `2026-09-performance-enhancements`; Phase 6 ended at `ed5bbbf` and nothing under
+  `cucumber-tsflow/src` changed in this phase. `lib/` is the Phase 6 build (`7.7.2`), which is what the UIS
+  link ran. At the time of writing the Phase 7 files were **uncommitted**: this hand-off and the Phase 6
+  hand-off above, `research/scripts/attribute-cpuprofile.js`, the "Profiling a run" section of
+  `research/local-consumer-testing.md`, and the `.gitignore` rule for `research/profiles/`.
+- The captured profiles, console logs (each with its `TSFLOW_TIMING` report) and attribution outputs are
+  under `research/profiles/dim-run{1..3}/` and `research/profiles/default-run{1..5}/`, gitignored. The
+  profiles are 40–130 MB each; regenerate rather than move them. `attribution.txt` / `.json` in each
+  directory is the runtime window; `attribution-startup.txt` (dim 2, dim 3, default 5) is the startup
+  window.
+- The UIS Tools VueApp link is unchanged and must not be committed there.
+
+### Method
+
+Every run is the recipe under "Profiling a run" in [local-consumer-testing.md](local-consumer-testing.md):
+the CLI's bin file run directly under `node --cpu-prof` from the UIS `test` directory, `TSFLOW_TIMING=true`,
+`TSFLOW_THEME=off`, stdout captured (so no spinner thread), one `.cpuprofile` per run. `dim` (334
+scenarios, 1396 steps, 200 files through the ESM hooks) was sampled at the default 1 ms; `default` — the
+full component test suite, **1571 scenarios, 6992 steps, 974 files loaded, 2578 `load` and 9632 `resolve`
+hook calls** — at 2 ms to keep the files near 100 MB. Attribution is `research/scripts/attribute-cpuprofile.js`
+over the `runtime:run` window (first sample with a `lib/runtime/` frame to the end of the profile, which
+includes the formatter and timing-report tail after the runtime returns); the window agreed with the
+timing report's `runtime:run` row to within 20 ms on `dim` and 1.4 s (0.6%) on `default`, the tail being
+the three report files. The startup split is the same script with `--to-ms=<window start>`.
+
+Three of the five full-suite runs had disturbed **startup** rows (`bootstrap` 11–15 s against 0.4 s, `esm:load`
+34–60 s against 3.6 s). Runs 2 and 3 overlapped with the `dim` attribution jobs I was running in this
+session, which parse 40 MB of JSON each; run 4 overlapped with nothing I know of. The runtime window of
+runs 3 and 4 was unaffected (the layer percentages match run 5 to within a point) and is used; their
+startup rows are not. **Do not run anything heavy while a measurement is in flight**, and treat a
+`bootstrap` over a second as a disturbed run.
+
+### Where `runtime:run` goes
+
+`dim`:
+
+| Run | Wall | `support:import` ms | `runtime:run` ms | window ms |
+| --- | ---- | ------------------- | ---------------- | --------- |
+| 1 (cold) | 64 s | 23030 | 37617 | — |
+| 2 | 40 s | 2991 | 33201 | 33218 |
+| 3 | 40 s | 2924 | 33866 | 33882 |
+
+`default`:
+
+| Run | Wall | `bootstrap` ms | `support:import` ms | `esm:load` ms | `runtime:run` ms | window ms | Note |
+| --- | ---- | -------------- | ------------------- | ------------- | ---------------- | --------- | ---- |
+| 1 (cold) | 273 s | 436 | 39599 | 22633 | 224208 | 225891 | first full run on this build |
+| 2 | 495 s | 15368 | 137619 | 60016 | 304344 | — | disturbed throughout; discarded |
+| 3 | 261 s | 11562 | 14125 | 4071 | 216615 | 216679 | startup disturbed; runtime used |
+| 4 | 314 s | 12389 | 79541 | 34063 | 196096 | 197584 | startup disturbed; runtime used |
+| 5 | 233 s | 409 | 7706 | 3608 | 219890 | 221267 | clean; the startup baseline |
+
+Self time by layer (self = the sampled frame's own file, with builtins charged to their JavaScript caller;
+inclusive = that layer anywhere on the stack). `dim` runs 2 and 3, `default` runs 3, 4 and 5:
+
+| Layer | dim 2 | dim 3 | default 3 | default 4 | default 5 | What it is |
+| --- | --- | --- | --- | --- | --- | --- |
+| jsdom (+ nwsapi, cssstyle, symbol-tree) | **55.1%** | 55.0% | **65.4%** | 64.2% | 65.1% | DOM tree walks, `querySelectorAll`, `getComputedStyle` |
+| vue (`@vue/*`) | **21.4%** | 21.3% | **11.8%** | 11.8% | 11.8% | reactivity, mount, render |
+| other dependencies | **12.8%** | 13.2% | **9.5%** | 9.2% | 9.3% | PrimeVue 6–8%, `regexp-match-indices` 1%, Testing Library, `expect` |
+| `(garbage collector)` | 3.7% | 3.7% | 6.7% | 7.8% | 7.3% | |
+| `(idle)` | 4.8% | 4.6% | 4.6% | 5.0% | 4.6% | event loop with nothing to run |
+| node internals | 0.7% | 0.8% | 0.5% | 0.6% | 0.5% | |
+| cucumber-js (`@cucumber/*`) | 0.3% | 0.4% | 0.5% | 0.4% | 0.5% | |
+| consumer (`test/`, `tools/src/`) | 0.5% | 0.5% | 0.4% | 0.4% | 0.4% | the step and fixture code itself |
+| **tsflow** | **0.4%** (123 ms) | 0.4% (124 ms) | **0.4%** (823 ms) | 0.4% (738 ms) | 0.4% (837 ms) | |
+| `(program)` | 0.3% | 0.2% | 0.2% | 0.2% | 0.2% | |
+
+tsflow's 0.8 s on the full suite splits `lib/runtime` 0.36 s, `lib/bindings` 0.26 s, `lib/formatter`
+0.18 s. Its hottest function is `stepFunction` in `binding-decorator.js` — the wrapper that resolves the
+scenario context and invokes the bound method — at 177–213 ms for 6992 steps, **25–30 µs a step**; then
+`getStepData` in the behave JSON formatter (79–95 ms), `storeTestStepResult` (68–70 ms), `runStep`,
+`aroundTestStep`. Nothing else in tsflow reaches 50 ms on a 220 s run. The inclusive 54% is not a cost: it
+is the share of samples taken while a tsflow frame was on the stack (every synchronous step body runs
+under `stepFunction`), and the rest are promise continuations with no tsflow caller.
+
+Where the jsdom time goes (`dim` run 2, self by file; the full suite has the same shape): `helpers/style-rules.js`
+2.1 s (`getComputedStyle` — walking every stylesheet rule for every element asked), `symbol-tree` 1.9 s (tree
+traversal), `generated/Element.js` 1.5 s (`getAttribute` wrappers), `nwsapi` 1.2 s of its own plus **1.6 s
+in a builtin `Resolver` called from `nwsapi match_assert`** — the compiled selector functions behind
+`querySelectorAll`, the single largest hot spot in the profile at 5% — `node.js` `query`/`filter` 1.2 s,
+`Node-impl.js` `textContent` 1.1 s, `cssstyle` 0.9 s.
+
+Inclusive time by package on the full suite (run 3; overlapping): jsdom 65.6%, `@cucumber/cucumber` 54.4%,
+`@testing-library/dom` 49.8%, `dom-accessibility-api` 44.0%, `nwsapi` 43.1%, `@vue/runtime-core` 32.7%,
+`@vue/reactivity` 27.2%, `@primevue/core` 17.7%, `@testing-library/vue` 16.6%, `@vue/test-utils` 16.5%.
+Inclusive by consumer file: `test/fixtures/uis-tools-render.ts` 32.0 s · 14.8% (the mount fixture),
+`shared/then-steps.ts` 12.3 s · 5.7%, `uis-agent/research/ticket-queue.ts` 10.9 s · 5.0%,
+`shared/when-steps.ts` 9.3 s · 4.3%, `uis-agent/chat/compaction-settings.ts` 8.9 s · 4.1%,
+`access-tools/my-request/my-requests.ts` 6.1 s · 2.8%.
+
+**One framework-side cost, upstream of tsflow.** `@cucumber/cucumber-expressions` 19.0.0 (`TreeRegexp.match`)
+runs every step match through the `regexp-match-indices` 1.0.2 polyfill. That package's `getPolyfill()`
+tests `new RegExp('a').exec('a').indices`, which is `undefined` on every engine because indices are only
+produced with the `d` flag, so it never selects the native path and always takes the `regexp-tree`
+rewrite. On the full suite that is `regexp-match-indices` 1.9–2.1 s self plus `regexp-tree` 0.5–0.6 s —
+**2.5–2.7 s, 1.2% of the run, about 0.4 ms a step** — consistent across all five runs and the largest
+single dependency cost outside the DOM stack. It is CucumberJS's dependency, not ours; the fix is upstream
+(pass `d` and use native `exec`, or fix the feature test in `regexp-match-indices`). Recorded as item 29
+below.
+
+### Where startup goes
+
+`dim` (runs 2 and 3, the first 4.1 / 4.0 s: `bootstrap` + `config` + `support:import` + `registry:update` +
+`formatters:init` + `gherkin` + `makeRuntime`) and `default` (run 5, the first 9.1 s):
+
+| Layer | dim 2 | dim 3 | default 5 | Hot spots (default 5) |
+| --- | --- | --- | --- | --- |
+| node internals | 3.09 s · **75.5%** | 2.97 s · 74.4% | 5.46 s · **59.9%** | `internalModuleStat` 1.0 s, `ModuleWrap` 0.5 s, `readFileUtf8` 0.49 s, `lstat` 0.31 s, `compileFunctionForCJSLoader` 0.30 s, `readPackageJSON` 0.25 s, `existsSync` 0.24 s |
+| esbuild | 0.33 s · 8.0% | 0.33 s · 8.4% | 1.54 s · **16.9%** | `runCallSync` — the `.ts`/`.vue` script transpiles |
+| other dependencies | 0.32 s · 7.7% | 0.32 s · 7.9% | 0.71 s · 7.7% | module evaluation of the consumer's dependency graph |
+| vue | 0.14 s · 3.4% | 0.15 s · 3.6% | 0.59 s · 6.5% | `@vue/compiler-sfc` 0.45 s / **1.25 s inclusive** — compiling the `.vue` files |
+| cucumber-js | 0.05 s | 0.06 s | 0.21 s · 2.3% | |
+| tsflow | 0.04 s · 1.0% | 0.04 s · 1.0% | 0.18 s · 2.0% | `tsconfig-paths` 0.24 s inclusive |
+| jsdom | 0.05 s | 0.05 s | 0.05 s | `jsdom-global` set-up 0.45 s inclusive |
+
+The timing report for `default` run 5 says the same thing in its own columns: `support:import` 7.7 s of which
+`esm:load` 3.6 s and `esm:resolve` 1.9 s; the per-file `transpile ms` total is 2.86 s (esbuild plus the SFC
+compiler), 974 files. So on the full suite the transpile work is about 2.8 s of a 9.1 s warm startup, and
+Node's own resolve, read and compile of the module graph is about 5.5 s; on `dim` the split is 0.8 s of
+4 s against 3 s. tsflow's own startup code is 40 ms on `dim` and 180 ms on the full suite.
+
+### Conclusions
+
+1. **There is no tsflow runtime phase.** tsflow's self time inside `runtime:run` is 0.4% on both suites,
+   stable across five runs, and its hottest function costs 25–30 µs a step. CucumberJS is another
+   0.4–0.5%. The runtime is jsdom (55% on `dim`, 65% on the full suite), Vue (21% / 12%) and the PrimeVue
+   component library (8% / 6%), driven by the consumer's `@testing-library` queries and assertions
+   (`querySelectorAll`, `getComputedStyle`, accessible-name computation). Item 27 is closed with "none
+   found"; the runtime items that Phase 2 removed were the last.
+1. **For the UIS suite's owners, the run time is in the tests' DOM queries, not the framework.** The two
+   largest single costs are `nwsapi` selector matching under `querySelectorAll` (5%) and jsdom's
+   `getComputedStyle` (6%), both reached through `@testing-library/dom` and `dom-accessibility-api` (role
+   and accessible-name queries walk the tree and compute styles per element; together they are on the
+   stack for 44–50% of the run). Narrower queries (`getByTestId`, scoping to a container), fewer
+   visibility assertions, and reusing mounts within a scenario (`uis-tools-render.ts` is on the stack for
+   15–23% of the run) would move the number; nothing in cucumber-tsflow will. This is outside the worklist
+   and is recorded here for the consumer, not as a phase.
+1. **Startup is mostly Node's module loader, with the transpilers a real second.** On the full suite,
+   Node resolving, reading and compiling 974 modules is 5.5 s of a 9.1 s warm startup; esbuild plus the Vue
+   SFC compiler are 2.8 s. That is the number Phase 8 is for: item 16's on-disk cache can recover up to
+   about 2.8 s (31%) on the full suite and 0.8 s on `dim` — provided it caches the `.vue` compile as well as
+   the esbuild output — and nothing of the 5.5 s. The items that attack the module graph itself, 24 (load
+   only the step files a filtered run needs) and 25 (one bundle instead of 974 module loads), are the only
+   ones that reach the larger share.
+1. **Idle is small and GC is not.** Idle is 4.6–5% of the run on both suites; the suite is CPU-bound in
+   jsdom, so there is no waiting to overlap and `parallel: N` (the consumer's configuration) is the only
+   lever that changes the wall clock without changing the tests. Garbage collection is 7–8% on the full
+   suite against 3.7% on `dim`, which points at the consumer's per-scenario DOM and component churn, not
+   at anything the library allocates.
+1. **The one framework-side cost found is upstream.** The `regexp-match-indices` polyfill in
+   `@cucumber/cucumber-expressions` costs 1.2% of the run through a broken feature test. Worth a report or
+   PR upstream; not worth a tsflow phase.
+
+### Re-rating after Phase 7
+
+| #   | Change | I/C after Phase 5 | I/C now | Why |
+| --- | --- | --- | --- | --- |
+| 16  | Content-addressed on-disk transpile cache | 4 / 7 | 4 / 7 | Confirmed by measurement: esbuild + SFC compile are 2.8 s of a 9.1 s warm startup on the full suite (0.8 s of 4 s on `dim`). Must cache `loadVue()` output too or it gets only the esbuild 1.5 s. |
+| 23  | `reloadSupport()` as a CLI watch mode | 5 / 7 | 5 / 7 | Unchanged: the only item that removes the 5.5 s of module loading from the inner loop. |
+| 24  | Persisted `pattern → source file` index | 7 / 9 | 7 / 9 | Now priced against a measured 9.1 s full-suite startup over 974 files; a filtered run loads a small fraction of them. |
+| 25  | esbuild `build()` bundling | 5 / 10 | 6 / 10 | Now aimed at the largest measured startup cost (Node's per-module resolve/read/compile, 5.5 s) rather than at hook overhead. Still last on complexity. |
+| 27  | Attribute `runtime:run` | ? / 2 | closed | Measured: tsflow 0.4%, cucumber-js 0.4–0.5%, on both suites. No runtime phase follows. |
+| 29  | **New: `regexp-match-indices` polyfill in cucumber-expressions** | — | 1 / 1 (upstream) | 1.2% of `runtime:run`, 0.4 ms a step, from a feature test that can never pass. Report or PR to `cucumber/cucumber-expressions` (or `regexp-match-indices`); nothing to do in tsflow. |
+
+### Notes specific to Phase 8
+
+- Phase 8 is item 16 first. Decide up front what the cache stores: esbuild output only (1.5 s on the full
+  suite) or the `.vue` SFC compile as well (`loadVue()` in `loader-utils.mjs`, another 1.25 s). The second
+  is where almost half of the recoverable time is, and it is the same `load` hook.
+- The cache saves nothing of Node's own resolve/read/compile of the module graph (5.5 s). Expect
+  `support:import` on the full suite to fall from 7.7 s towards 5 s on a warm cache, not further.
+- Measure it with the same recipe: profile the startup window (`attribute-cpuprofile.js --to-ms=<window
+  start>`) before and after and compare the `esbuild` and `vue` rows and the timing report's `transpile ms`
+  column; `default` run 5 in `research/profiles/` is the before. Three runs, discard the first, and nothing
+  else running on the machine — three of the five full-suite runs in this phase had disturbed startup rows.
+- The `parallelLoad` / `origin/Dev-Prebuild` decision is still the owner's and still gates items 15 and 17.
+  Nothing in Phase 7 bears on it except that preload's only remaining purpose would be to warm the cache
+  item 16 creates.
+- Build with `yarn build`, never bare `tsc`; run `yarn test:all` before calling the phase done.
+
+## Phase 8 hand-off
+
+Written at the end of the Phase 8 session (2026-09-17) so that Phase 9 can start cold. Phase 8 landed item
+16, the content-addressed on-disk transpile cache, behind `--no-transpile-cache`. Items 15 and 17 are still
+gated on the `parallelLoad` / `origin/Dev-Prebuild` decision, which the owner has not yet taken; nothing
+here forecloses either outcome (see the re-rating below).
+
+### State of the tree
+
+- Still on branch `2026-09-performance-enhancements`; Phase 7 ended at `ed5bbbf` with its own files
+  uncommitted, and at the time of writing everything from Phase 7 and Phase 8 was **uncommitted**: this
+  hand-off and the Phase 7 hand-off, `research/scripts/attribute-cpuprofile.js`, the "Profiling a run"
+  section of `research/local-consumer-testing.md`, the `.gitignore` rule for `research/profiles/`, and the
+  Phase 8 source and documentation changes listed below. Check `git status` before assuming.
+- `yarn build` clean, no stray `.js` under `src/`; `yarn test:all` green on all sixteen variants on the
+  Phase 8 build; ESLint and Prettier clean on every touched file. The cache was exercised by the matrix
+  itself: every spec profile has `parallelLoad: true`, so the preload threads populated it and the main
+  thread read it in every variant.
+- Files changed: new `src/transpilers/transpile-cache.ts`; `src/transpilers/esbuild.ts`,
+  `src/transpilers/esm/esbuild.mjs` and `src/transpilers/vue-sfc-compiler.ts` (each transpile entry point
+  wrapped in `withTranspileCache`); `src/cli/argv-parser.ts` (`transpileCache` option,
+  `--transpile-cache` / `--no-transpile-cache`); `src/api/load-configuration.ts` (default and the
+  `TSFLOW_TRANSPILE_CACHE` environment transport); `src/api/run-cucumber.ts` (load-phase summary and the
+  prune call). Docs: `README.md` (option table row, new "Transpile cache" section), `Architecture.md`
+  (Core Components entry, new "Transpile cache" subsection, a sentence under Parallel Preload),
+  `CHANGELOG.md` (one `Added` entry).
+- The UIS Tools VueApp link is unchanged and must not be committed there. Its cache is at
+  `Tools.Web/VueApp/test/node_modules/.cache/cucumber-tsflow/transpile` — the `test` directory is its own
+  pnpm workspace package with its own `node_modules`, which is the nearest one above the working directory —
+  974 entries, 16 MB, for the `default` profile. `research/profiles/p8-*` holds the Phase 8 console logs
+  (and, for the first series, CPU profiles), gitignored.
+
+### What Phase 8 landed
+
+- **Scope decision: the cache covers the Vue SFC compile as well as esbuild.** The Phase 7 notes priced the
+  two halves at 1.5 s and 1.25 s of the full suite's 2.8 s transpile total, so caching esbuild alone would
+  have left almost half on the table. `compileVueSFC` is wrapped at its own level, which covers every Vue
+  transpiler in one place: `es-vue` and `ts-vue`/`ts-vue-exp` (`require-extension-hooks`), and `es-vue-esm`
+  and `ts-vue-esm` (`loadVue` in `loader-utils.mjs`, which still runs its `transformImports` regex pass over
+  the cached output; that pass was never in the transpile figures). esbuild is wrapped in both
+  `transpileCode` functions: `esbuild.ts` (CJS, reached through ts-node's `Transpiler` plugin for `es-node`
+  and `es-vue`) and `esm/esbuild.mjs` (the in-thread `load` hook for `es-node-esm` and `es-vue-esm`). Not
+  covered, deliberately: ts-node's own TypeScript output for `ts-node`, `ts-vue`, `ts-node-esm` and
+  `ts-vue-esm`; it is produced inside ts-node's service, not by a tsflow call.
+- **One CJS module, three callers.** `esm/esbuild.mjs` loads `lib/transpilers/transpile-cache.js` through
+  `createRequire`, the pattern `esm/vue-sfc-compiler.mjs` already used, so within a thread all three entry
+  points share one module instance and one set of counters, and there is no `.mjs` twin to keep in step.
+- **The key** is a SHA-256 over: entry format version, tsflow version, caller `kind` (`esbuild-cjs`,
+  `esbuild-esm`, `vue-sfc`), the caller's serialised configuration, the absolute file name, and the source
+  text. The configuration carries the full esbuild `TransformOptions` (so `tsconfigRaw`, hence the decorator
+  mode, and `sourcemap`) and the esbuild version; for `esbuild-esm` additionally the tsconfig
+  `absoluteBaseUrl` and `paths` that `rewritePathMappings` bakes into the output as `file://` URLs — the
+  analysis-3 portability point, honoured by making entries non-portable rather than by trying to make the
+  output portable; for `vue-sfc` the style flag, output format, decorator mode and the consumer's `vue`
+  version (`require('vue/package.json')`, `'unknown'` if unresolvable). The file name is in the key because
+  esbuild names it in the source map and the Vue compiler derives the component id from it. Nothing is keyed
+  on path or mtime alone. One known gap: whether a `<style lang="scss">` block compiles or is skipped depends
+  on a preprocessor being installed, and that is not in the key; installing sass after a component was
+  cached keeps the skip until the source, the `vue` version or the tsflow version changes.
+- **Storage** is one JSON file per entry (`{ v, value }`, `value` being `{ output, sourceMap }` or
+  `{ code }`), named by the key, in `TSFLOW_TRANSPILE_CACHE_DIR` or `.cache/cucumber-tsflow/transpile` under
+  the nearest `node_modules` at or above the cwd (falling back to the nearest `package.json`'s directory,
+  then the OS temp dir). Reads are one `readFileSync` plus `JSON.parse`; ENOENT is the miss path. Writes go
+  to `<entry>.<pid>-<threadId>.tmp` then `renameSync`, so the N+1 contexts racing on an empty cache never
+  see a partial entry and the last identical writer wins; any write failure (read-only location, a
+  concurrent reader holding the target open on Windows) is swallowed and the transpile result still
+  returned. An unparseable entry is deleted and treated as a miss. The cache can change whether a
+  transpile runs, never what it returns.
+- **Eviction**: `pruneTranspileCache()` is called once by `runCucumber` after the load phase and does
+  nothing unless this process wrote entries, so a warm run never lists the directory. When it does run it
+  stats every file, and if the total exceeds 512 MB deletes least-recently-written first until it fits —
+  the garbage in a content-addressed store is exactly the entries no current source produces, and they
+  are the oldest. 15 ms on the 200-entry `dim` cache, 75 ms on 974 entries.
+- **Switch**: `transpileCache` (default true) in configuration, `--transpile-cache` /
+  `--no-transpile-cache` on the CLI (both forms declared, like `--strict`/`--no-strict`, so commander does
+  not inject a default that would override a profile). `loadConfiguration` writes the resolved value to
+  `TSFLOW_TRANSPILE_CACHE`, which is what the transpilers read — that is the only transport that reaches the
+  ESM hooks thread under `module.register()`, preload threads and parallel children alike, the same route
+  `CUCUMBER_EXPERIMENTAL_DECORATORS` takes. An environment value already present is honoured as the default
+  when the option is unset, so CI can disable it without touching configuration.
+- **Visibility**: the load-phase progress line ends with `N of M transpiles from the cache` (main-process
+  counters), and the timing report gains `transpile-cache:hit` / `transpile-cache:miss` phases whose
+  `calls` column is the count and whose `ms` is the lookup time (hit) or lookup plus transpile plus write
+  (miss), plus `transpile-cache:prune`. A hit still records a `transpile` file entry for its lookup time so
+  the `files` column and the slowest-files table keep the same population between cold and warm runs.
+- **Bootstrap notice (item 26, developer experience; owner's request after trying the build).** The first
+  run of the Phase 8 build on the owner's machine, while screen-recording, sat visibly long between the
+  `cucumber-tsflow -p default` command and `Loading configuration` — the `bootstrap` phase, Node loading the
+  library's several hundred modules, during which nothing of tsflow's has run and nothing was printed.
+  `bin/cucumber-tsflow.js` now prints one line before requiring the library (requiring `ansis` on its own
+  for the colour) and `lib/cli/run.ts` prints `cucumber-tsflow loaded in N ms.` on entry
+  (`performance.now()`, the `bootstrap` figure), gated by a `globalThis.__CUCUMBER_TSFLOW_BOOTSTRAP_ANNOUNCED`
+  flag so programmatic callers never see it. Both in `ansis.dim`, the phase-detail grey, at the owner's
+  request; no spinner and no theme, by the owner's choice: two lines that are superfluous at the usual 0.4 s and the point when
+  it is 29 s (the first run after a `yarn build`, when Node's compile cache is rebuilt for the changed
+  files — observed on the spec workspace today, 390–399 ms on the two runs after). Skipped for
+  `--version`, `--help`, `--i18n-*` and under `TSFLOW_THEME=off`, so the measurement recipe's output is
+  unchanged. Documented in README (Startup progress), Architecture (CLI) and the CHANGELOG.
+- **The preload phase now does what its documentation claimed.** With `parallelLoad: true` the worker
+  threads' misses write the entries the main thread then reads: on the `node` spec workspace's cold cache,
+  four preload threads recorded 80 misses and the main thread 19 hits of 19. That is most of item 17's
+  stated payoff without item 17's reshaping; what 17 would still buy is dropping module evaluation (and the
+  160-line `window` shim) from the workers.
+
+### Measured effect on the large suite
+
+UIS Tools VueApp, `es-vue-esm`, experimental decorators, serial, `TSFLOW_TIMING=true`, `TSFLOW_THEME=off`, one
+build (`7.7.2` plus Phase 8), one machine, one session, back to back. This is a true A/B on the build: **warm**
+rows run with the cache populated by an earlier run, **off** rows pass `--no-transpile-cache` (the pre-Phase 8
+code path: `withTranspileCache` returns `produce()` without touching the disk), **cold** is the first run with an
+empty cache. The first series (`dim` 1–5, `default` 1–4) ran under `node --cpu-prof` per the Phase 7 recipe; the
+second (`dim` 6–9, `default` 5–7) without profiling and with a 45 s pause before each run. `transpile ms` is the
+per-file total from the file-totals table (on a warm run it is the cache lookup time, since a hit records a
+`transpile` entry); `hits`/`misses` are the `transpile-cache:*` `calls`. The machine carried the owner's own
+load throughout (an editor, Teams, Zoom, Spotify at 40–60% CPU between runs), so disturbed runs are shown struck
+through by note rather than hidden and excluded from the conclusions: the criterion is `bootstrap` over a second
+or a startup row more than double its neighbours with a normal `runtime:run`.
+
+`dim` (334 scenarios, 200 files through the hooks):
+
+| Run | Cache | `bootstrap` ms | `esm:resolve` ms | `esm:load` ms | `transpile ms` | hits / misses | `support:import` ms | `runtime:run` ms | Note |
+| --- | ----- | -------------- | ---------------- | ------------- | -------------- | ------------- | ------------------- | ---------------- | ---- |
+| 1 | cold | 524 | 1388 | 2185 | 1220 | 0 / 200 | 5655 | 54 s | profiled; first run, discard |
+| 2 | warm | 422 | 627 | **270** | **44** | 200 / 0 | **2175** | 40 s | profiled |
+| 3 | off | 434 | 905 | 1296 | 987 | — | 3682 | 101 s | profiled; runtime disturbed, startup mildly |
+| 4 | warm | 22021 | 4651 | 25316 | 3476 | 200 / 0 | 88600 | — | disturbed throughout; discarded |
+| 5 | off | 913 | 2539 | 3812 | 3015 | — | 10641 | — | disturbed throughout; discarded |
+| 6 | warm | 452 | 621 | **259** | **42** | 200 / 0 | **2267** | 39.0 s | |
+| 7 | off | 398 | 631 | 929 | 702 | — | **2888** | 38.3 s | |
+| 8 | warm | 527 | 657 | **280** | **49** | 200 / 0 | **2497** | 37.9 s | |
+| 9 | off | 442 | 672 | 946 | 702 | — | **3004** | 38.3 s | |
+
+`default` (1571 scenarios, 974 files through the hooks, 2578 `load` and 9632 `resolve` calls):
+
+| Run | Cache | `bootstrap` ms | `esm:resolve` ms | `esm:load` ms | `transpile ms` | hits / misses | `support:import` ms | `runtime:run` ms | Note |
+| --- | ----- | -------------- | ---------------- | ------------- | -------------- | ------------- | ------------------- | ---------------- | ---- |
+| 1 | cold | 900 | 6514 | 44073 | 6118 | 200 / 774 | 76665 | 689 s | profiled; disturbed throughout (3× runtime, four 5 s step timeouts); discarded |
+| 2 | warm | 20339 | 7899 | 68045 | 17719 | 974 / 0 | 154026 | 492 s | profiled; disturbed throughout (same four timeouts); discarded |
+| 3 | off | 454 | 4764 | 7745 | 5996 | — | 17152 | 218 s | profiled; startup disturbed (every row 2× run 6), runtime normal; startup discarded |
+| 4 | warm | 432 | 2084 | **1106** | **311** | 974 / 0 | **5519** | 214 s | profiled; clean, all 1571 passed |
+| 5 | warm | 426 | 1748 | **927** | **254** | 974 / 0 | **5116** | 196 s | clean |
+| 6 | off | 435 | 1586 | 3054 | 2394 | — | **6692** | 188 s | clean |
+| 7 | off | 403 | 1717 | 3337 | 2531 | — | **7237** | 193 s | clean |
+
+Conclusions:
+
+1. **On the full suite the cache removes 2.1–2.4 s of `esm:load` and 1.2–2.1 s of `support:import` from a
+   warm startup.** Clean pairs: `esm:load` 3.05–3.34 s off against 0.93–1.11 s warm, `transpile ms` 2.39–2.53 s
+   against 0.25–0.31 s (974 lookups, 0.26–0.32 ms each, one `readFileSync` and a `JSON.parse` of a 16 KB
+   average entry), `support:import` 6.7–7.2 s against 5.1–5.5 s. The transpile saving is what Phase 7 predicted
+   (2.4–2.5 s measured here against the 2.86 s Phase 7 saw under the profiler); the wider `support:import`
+   spread is module evaluation's own run-to-run variance, 0.4–0.5 s between two runs of the same mode.
+1. **On `dim` it is 0.6–0.7 s of a 2.9–3.0 s startup, about 22%.** `esm:load` 0.93–0.95 s off against
+   0.26–0.28 s warm, `transpile ms` 0.70 s against 0.04–0.05 s, `support:import` 2.89–3.00 s against
+   2.27–2.50 s, over two interleaved pairs (6/7 and 8/9) whose `runtime:run` agreed to within 1.1 s.
+1. **What remains of startup is Node.** Warm, the full suite's `support:import` is 5.1–5.5 s of which the hooks
+   account for 2.7–3.2 s (`esm:resolve` 1.7–2.1 s over 9632 calls — the extension probing and tsconfig `paths`
+   lookups, cached per path since Phase 3 — plus `esm:load` 0.9–1.1 s, of which the transpile lookups are
+   0.25–0.31 s and the rest is reading 974 sources and returning them) and module evaluation the balance. That
+   is the number Phase 9's item 24 is priced against.
+1. **Cold runs are unchanged in kind and slightly dearer in degree:** the miss path is the old transpile plus a
+   `JSON.stringify` and two file operations, 1.7 s over 200 misses on the clean `dim` cold run against 1.0 s of
+   transpile — about 3.5 ms per entry written, paid once per source change.
+1. **Nothing changed in the runtime,** as expected: `runtime:run` 188–218 s across the clean full-suite runs and
+   37.9–39.0 s across the clean `dim` runs, warm and off interleaved, with every scenario passing in every
+   clean run. The four timeouts in `default` runs 1 and 2 were in `features/dim/suites/tests-in-suite.feature`,
+   whose scenarios passed in all nine `dim` runs with the same cache entries and in `default` runs 3–6; they
+   were the machine.
+
+### Re-rating after Phase 8
+
+| #   | Change | I/C after Phase 7 | I/C now | Why |
+| --- | --- | --- | --- | --- |
+| 16  | Content-addressed on-disk transpile cache | 4 / 7 | done | Landed and measured; see above. |
+| 15  | Preload thread count from `availableParallelism()` | 3 / 3 | 2 / 3 | Still gated on the `parallelLoad` decision. With the cache in place a preload thread's output is durable, so raising the cap no longer scales discarded work — but on a warm cache there is nothing for the threads to do, and the cold case is one run per source change. |
+| 17  | Reshape `parallelPreload` to transpile into the cache | 6 / 7 | 3 / 6 | The cache half of its payoff arrived with item 16: preload threads already write the entries the main thread reads. What remains is a cold-run-only saving of the workers' module evaluation and the `window` shim hazard. Gated on the same decision. |
+| 23  | `reloadSupport()` as a CLI watch mode | 5 / 7 | 5 / 6 | The cache is process- and thread-independent and keyed on content, so a watch mode's re-transpile of an edited file is a miss for that file and hits for everything else with no eviction design needed; the ESM module-graph eviction question is unchanged. |
+| 24  | Persisted `pattern → source file` index | 7 / 9 | 6 / 9 | Now priced against the warm cached startup, in which transpile work is a few hundred milliseconds and nearly everything left is Node's own resolve/read/compile/evaluate of the module graph. Loading fewer files is still the only lever on that, but the absolute number it can recover on a warm run is about 5 s rather than 9 s. |
+| 25  | esbuild `build()` bundling | 6 / 10 | 6 / 10 | Unchanged: it attacks the module-graph cost the cache does not touch. |
+
+### Notes specific to Phase 9
+
+- Phase 9 is items 19 and 24. Price 24 against the **warm cached** `default` startup measured here, not the
+  Phase 7 9.1 s: with the cache, `support:import` on the full suite is about 5.5 s and almost none of it is
+  transpilation, so what 24 recovers is module loading and evaluation of the files a filtered run does not
+  need.
+- The `parallelLoad` / `origin/Dev-Prebuild` decision is still open and still the owner's. It now gates
+  less: items 15 and 17 are the only remaining worklist items that depend on it, both re-rated down above.
+  If parallel load is removed, delete the `preload` progress phase and the `PROGRESS` message with it, and
+  note that the spec profiles all set `parallelLoad: true`.
+- When measuring startup on this machine, three of seven full-suite runs in this session and two of nine
+  `dim` runs had disturbed startup rows (`bootstrap` 0.9–22 s against 0.43 s, or every startup row doubled
+  with a normal `runtime:run`); all five were in the profiled first series, the pattern matched each run's
+  100 MB `.cpuprofile` being written at its end and scanned at the next run's start, and it stopped when
+  profiling was dropped and a 45 s pause added between runs — though the owner's own applications were
+  also loading the machine, so the attribution is a fit, not a proof. Measure
+  startup from the timing report alone unless a layer split is the question.
+- Build with `yarn build`, never bare `tsc`; run `yarn test:all` before calling the phase done.

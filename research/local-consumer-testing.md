@@ -13,7 +13,7 @@ one:
 
 | Property | Value |
 | --- | --- |
-| Feature files / scenarios | 207 / ~1380 |
+| Feature files / scenarios | 207 / 1571 (6992 steps, measured 2026-09-17; the earlier ~1380 estimate was low) |
 | Step-definition files | 208 under `test/steps/` |
 | Transpiler | `es-vue-esm` with `experimentalDecorators: true` |
 | Parallelism | none — no profile sets `parallel` or `parallelLoad` |
@@ -30,8 +30,8 @@ Profiles live in `test/cucumber.json`. Sizes, for picking an inner-loop target:
 | --- | --- | --- | --- |
 | `utils` | 3 | 49 | `test-setup.mjs`, `world-context.ts`, `steps/utils/**` |
 | `alerts` | 2 | 11 | `test-setup.mjs`, `world-context.ts`, `steps/alerts/*` |
-| `dim` | 32 | 314 | subset |
-| `default` | 207 | ~1380 | `test-setup.mjs`, `steps/**/*.ts` |
+| `dim` | 32 | 334 | subset (200 files through the ESM hooks) |
+| `default` | 207 | 1571 | `test-setup.mjs`, `steps/**/*.ts` — 974 files loaded, 2578 `load` / 9632 `resolve` hook calls |
 
 Because no profile is parallel, the N+1 process-multiplier costs in the analyses do not apply to this
 consumer. What does apply, at full scale, is every serial cost: item 2's whole-run `pickleMap` scan
@@ -96,8 +96,8 @@ yarn build
 
 # in C:\Git\Azure\uis-tools\Tools.Web\VueApp
 corepack pnpm -F uis-tools-test testUtils      # 49 scenarios, ~30 s — inner loop
-corepack pnpm -F uis-tools-test testDim        # 314 scenarios
-corepack pnpm -F uis-tools-test test           # full ~1380 — the real measurement
+corepack pnpm -F uis-tools-test testDim        # 334 scenarios, ~40 s warm
+corepack pnpm -F uis-tools-test test           # full 1571 scenarios, ~4 min warm — the real measurement
 ```
 
 Wall-clock is what matters, not the `executing steps` figure cucumber prints; on the `utils` profile the
@@ -129,7 +129,73 @@ performance worklist. Every change should be measured as a delta from an unmodif
 
 The `utils` profile is the inner loop, not the measurement: it loads `world-context.ts` and three files
 under `steps/utils/`, not the 208-file support tree. The `default` profile is what the analyses were
-written about and has not yet been timed.
+written about; it was first timed and profiled in Phase 7 (see the Phase 7 hand-off in the execution strategy):
+warm startup about 9.1 s, of which `support:import` 7.7 s, and `runtime:run` 196–224 s.
+
+## Profiling a run
+
+Item 27 of the [execution strategy](performance-enhancement-execution-strategy.md) asks where the time
+inside `runtime:run` goes. `TSFLOW_TIMING` cannot answer that — it brackets the whole runtime as one
+phase — so the tool is V8's sampling profiler, `node --cpu-prof`, and a script in this repository that
+splits the samples by layer.
+
+### Capture
+
+Run the CLI's bin file directly from the UIS `test` directory, where `cucumber.json` lives. Do not put
+`--cpu-prof` in `NODE_OPTIONS` and go through `corepack pnpm …`: corepack and pnpm are Node processes too
+and write their own profiles into the same directory. The bin does not respawn Node, so the process being
+profiled is the one that runs the steps.
+
+```sh
+# profiles are gitignored under research/profiles/ in this repository; never write them under the UIS checkout
+OUT=C:/Git/GitHub/cucumber-js-tsflow/research/profiles/dim-run1
+mkdir -p "$OUT"
+
+cd C:/Git/Azure/uis-tools/Tools.Web/VueApp/test
+TSFLOW_TIMING=true TSFLOW_THEME=off \
+  node --cpu-prof --cpu-prof-dir="$OUT" \
+  ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js --profile dim \
+  > "$OUT/console.log" 2>&1
+```
+
+- `TSFLOW_TIMING=true` puts the startup timing report in `console.log` next to the profile; its
+  `runtime:run` row is the denominator the split is checked against.
+- `TSFLOW_THEME=off` keeps the startup-progress spinner worker out of the capture on a real console. In a
+  captured shell stdout is not a TTY and the worker never starts anyway.
+- `--cpu-prof` writes one file per thread, `CPU.<date>.<time>.<pid>.<tid>.<seq>.cpuprofile`; the main
+  thread is `tid` 0. The `dim` profile is serial with no `parallelLoad`, so exactly one file is expected.
+  The default sampling interval is 1 ms; a 50 s run produces a 4–5 MB file.
+- Three runs, discard the first, as for every measurement here. `runtime:run` varied 37–47 s across clean
+  runs of one build in Phase 5, so compare the layer percentages, not the milliseconds.
+
+### Attribute
+
+```sh
+cd C:/Git/GitHub/cucumber-js-tsflow
+node research/scripts/attribute-cpuprofile.js research/profiles/dim-run1/CPU.*.0.*.cpuprofile
+```
+
+The script prints, for the `runtime:run` window, self and inclusive time by layer — `tsflow`
+(`…/cucumber-js-tsflow/cucumber-tsflow/lib/`, the linked real path), `cucumber-js` (`@cucumber/*`),
+`jsdom` and its helper packages, `vue` and its ecosystem, `esbuild`, `source maps`, `other dependencies`
+(with a per-package table), `node internals`, the V8 pseudo-frames `(idle)`, `(program)` and
+`(garbage collector)`, and `consumer` (any file outside `node_modules`, with a per-file table) — then
+tsflow's share by `lib/` directory and the hot functions overall and within tsflow. A builtin frame with no
+file (`readFileUtf8`, a regex exec, a sort) is charged to the nearest caller that has one, so a builtin
+called from tsflow counts as tsflow; the hot tables still name it.
+
+The window starts at the first sample with a `lib/runtime/` frame on the stack (`Coordinator.run`, an
+adapter's `run`, `runBeforeAllHooks`, `runTestCase` or a `TestCaseRunner` method) and runs to the end of
+the profile, so it includes the cleanup tail after the runtime (formatters flushing reports, the timing
+report itself). `--all` attributes the whole profile, `--from-ms`/`--to-ms` set an explicit window,
+`--start-marker=<regex>` changes the marker, `--top=N` sizes the tables and `--json` emits the same data
+as JSON. Run it with `--all` on a worker-thread profile; the marker never appears there.
+
+Checked on the `utils` profile (71 scenarios, `runtime:run` 154 ms in the timing report; 276 ms attributed
+including the tail) and on a `vue-esm` spec run, then used for the Phase 7 `dim` and `default` measurements,
+where the window matched the `runtime:run` row to within 20 ms and 1.4 s respectively. The full-suite profiles
+are 100–130 MB; give Node room with `--max-old-space-size=8192` when attributing them, and do not run the
+attribution while another measurement is in flight — it disturbed the startup rows of two runs in Phase 7.
 
 ## Undoing it
 

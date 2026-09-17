@@ -15,6 +15,12 @@ declare global {
 	 */
 	// eslint-disable-next-line no-var
 	var __CUCUMBER_TSFLOW_SOURCE_MAPS: Map<string, string> | undefined;
+	/**
+	 * Set by `bin/cucumber-tsflow.js` when it printed its bootstrap notice before requiring the library;
+	 * `cli/run.ts` then prints the matching "loaded in N ms" line. Unset for programmatic use of the CLI.
+	 */
+	// eslint-disable-next-line no-var
+	var __CUCUMBER_TSFLOW_BOOTSTRAP_ANNOUNCED: boolean | undefined;
 }
 
 export {};

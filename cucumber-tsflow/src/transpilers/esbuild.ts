@@ -1,6 +1,14 @@
-import { Loader, transformSync, CommonOptions, TransformOptions, BuildOptions } from 'esbuild';
+import {
+	Loader,
+	transformSync,
+	CommonOptions,
+	TransformOptions,
+	BuildOptions,
+	version as esbuildVersion
+} from 'esbuild';
 import path from 'path';
 import { startTimer, recordFile } from '../utils/tsflow-timing';
+import { withTranspileCache } from './transpile-cache';
 
 export type TranspileOptions = {
 	debug: boolean;
@@ -73,14 +81,25 @@ export const transpileCode = (
 	const loaders = getLoaders(options);
 	const loaderExt = ext != undefined ? ext : path.extname(filename);
 
-	const start = startTimer();
-	const ret = transformSync(code, {
+	const transformOptions: TransformOptions = {
 		...commonOptions,
 		...(options.esbuild as TransformOptions | undefined),
 		loader: loaders[loaderExt],
 		sourcefile: filename
-	});
-	recordFile('transpile', filename, start);
+	};
 
-	return { output: ret.code, sourceMap: ret.map };
+	// Cached on the source plus everything else that shapes the output: the full transform options
+	// (including `tsconfigRaw`, which carries the decorator mode) and the esbuild version.
+	return withTranspileCache(
+		'esbuild-cjs',
+		filename,
+		code,
+		`esbuild@${esbuildVersion}${JSON.stringify(transformOptions)}`,
+		() => {
+			const start = startTimer();
+			const ret = transformSync(code, transformOptions);
+			recordFile('transpile', filename, start);
+			return { output: ret.code, sourceMap: ret.map };
+		}
+	);
 };

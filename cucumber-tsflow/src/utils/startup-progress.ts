@@ -46,7 +46,10 @@ interface PhaseText {
 	 * remaining, `{total}` expected, `{elapsed}` time since the phase began. Falls back to the theme's.
 	 */
 	quips?: string[];
-	/** Shown when work resumes after a stall long enough to have produced a quip. Falls back to the theme's. */
+	/**
+	 * Shown once work has been quick again for a run of units after a stall long enough to have produced a quip.
+	 * Falls back to the theme's.
+	 */
 	relief?: string[];
 }
 
@@ -64,7 +67,7 @@ export interface StartupTheme {
 	waiting: string;
 	/** Heartbeat quips for phases without their own */
 	quips: string[];
-	/** Relief messages (work resumed after a long stall) for phases without their own */
+	/** Relief messages (work has been quick again for a run of units after a long stall) for phases without their own */
 	relief: string[];
 	phases: Record<StartupPhaseId, PhaseText>;
 }
@@ -109,8 +112,15 @@ const DONE_MARK = '✓';
 export const SPINNER_INTERVAL_MS = 130;
 /** How long a phase may go without a message before the heartbeat shows a quip */
 const HEARTBEAT_MS = 30_000;
-/** A gap between units of work at least this long counts as a stall; the next unit brings a relief message */
+/** A gap between units of work at least this long counts as a stall */
 const STALL_MS = 30_000;
+/** A unit of work that completes within this long of the previous one counts as quick */
+const QUICK_MS = 1_000;
+/**
+ * Quick units in a row, after a stall, before the relief message is shown. The unit that ends a stall is often
+ * followed by another slow one, so relief waits until work has actually been quick for a while.
+ */
+const RELIEF_STREAK = 5;
 /** How long a message stays on its line before it clears itself */
 const MESSAGE_VISIBLE_MS = 8_000;
 /** Terminal width assumed when the stream cannot report one; wide, so an unknown terminal is treated as not wrapping */
@@ -281,6 +291,10 @@ interface OpenPhase {
 	beats: number;
 	/** Relief messages shown so far (index into the rotation) */
 	reliefs: number;
+	/** A stall has ended and the relief message is waiting for work to be quick again */
+	reliefPending: boolean;
+	/** Consecutive units completed within `QUICK_MS` of the previous one since the stall ended */
+	quickStreak: number;
 	/** Whether the message line beneath the phase line has been created on screen */
 	messageLineOpen: boolean;
 	/** The message currently showing on the message line, if any */
@@ -370,6 +384,8 @@ export class PhaseRenderer {
 			lastMessage: now,
 			beats: 0,
 			reliefs: 0,
+			reliefPending: false,
+			quickStreak: 0,
 			messageLineOpen: false,
 			message: undefined,
 			messageClearAt: undefined
@@ -378,18 +394,29 @@ export class PhaseRenderer {
 	}
 
 	/**
-	 * Record one completed unit of work. The counter is redrawn, and if the unit ended a stall long enough
-	 * to have shown a quip, a relief message replaces it.
+	 * Record one completed unit of work. The counter is redrawn. A unit that ends a stall long enough to have
+	 * shown a quip arms the relief message, which is shown only once `RELIEF_STREAK` units in a row have each
+	 * completed within `QUICK_MS` of the one before; a slow unit in between starts the count again, and
+	 * another stall re-arms it.
 	 */
 	tick(): void {
 		if (!this.current) return;
 		const now = performance.now();
+		const gap = now - this.current.lastTick;
 		this.current.ticks++;
-		if (now - this.current.lastTick >= STALL_MS) {
-			const phase = this.theme.phases[this.current.id];
-			const relief = phase.relief ?? this.theme.relief;
-			this.showMessage(this.fill(relief[this.current.reliefs % relief.length], now), now);
-			this.current.reliefs++;
+		if (gap >= STALL_MS) {
+			this.current.reliefPending = true;
+			this.current.quickStreak = 0;
+		} else if (this.current.reliefPending) {
+			this.current.quickStreak = gap < QUICK_MS ? this.current.quickStreak + 1 : 0;
+			if (this.current.quickStreak >= RELIEF_STREAK) {
+				const phase = this.theme.phases[this.current.id];
+				const relief = phase.relief ?? this.theme.relief;
+				this.showMessage(this.fill(relief[this.current.reliefs % relief.length], now), now);
+				this.current.reliefs++;
+				this.current.reliefPending = false;
+				this.current.quickStreak = 0;
+			}
 		}
 		this.current.lastTick = now;
 		this.redraw();

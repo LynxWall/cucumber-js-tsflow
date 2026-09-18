@@ -1949,10 +1949,11 @@ Written at the end of the Phase 9 session (2026-09-17) so that Phase 10 can star
 
 ### State of the tree
 
-- Still on branch `2026-09-performance-enhancements`; Phase 8 ended at `e624b6f`. At the time of writing
-  everything from Phase 9 was **uncommitted**, along with two small leftovers from the end of the Phase 8
-  session (`formatDuration()` in `src/utils/helpers.ts`, used by the bootstrap notice in `src/cli/run.ts` so it
-  prints `28.9s` rather than `28912 ms`). Check `git status` before assuming.
+- Still on branch `2026-09-performance-enhancements`; Phase 8 ended at `e624b6f`. Phase 9 is committed as
+  `5dea130` ("Parse features before loading support; selective support loading behind selectiveLoad"), which also
+  carries two small leftovers from the end of the Phase 8 session (`formatDuration()` in `src/utils/helpers.ts`,
+  used by the bootstrap notice in `src/cli/run.ts` so it prints `28.9s` rather than `28912 ms`). The tree was
+  clean after it; Phase 10 starts from there.
 - `yarn build` clean, no stray `.js` under `src/`; ESLint and Prettier clean on every touched file; `yarn test:all`
   green on all sixteen variants (see below for what the matrix now exercises).
 - Files added: `src/api/selective-load.ts` (the session: index, plan, recorder) and `src/utils/module-graph.ts`

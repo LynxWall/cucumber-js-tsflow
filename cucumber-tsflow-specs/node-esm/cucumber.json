@@ -17,6 +17,7 @@
 		"import": ["./src/step_definitions/**/*.ts"],
 		"format": ["behave:../reports/esnode.json", "html:../reports/esnode.html", "junitbamboo:../reports/esnode.xml"],
 		"parallel": 0,
+		"selectiveLoad": true,
 		"tags": "@node-esm and not @reload"
 	}
 }

@@ -41,6 +41,7 @@ export class BindingRegistry {
 	private _stepBindings = new Map<StepPattern, Map<TagName, StepBinding[]>>();
 	private _classBindings = new Map<any, ClassBinding>();
 	private _cucumberKeyIndex = new Map<string, StepBinding>();
+	private _registrationListener: ((stepBinding: StepBinding) => void) | undefined;
 
 	/**
 	 * Gets the binding registry singleton.
@@ -164,6 +165,20 @@ export class BindingRegistry {
 
 		// Index by cucumberKey for O(1) lookup
 		this._cucumberKeyIndex.set(stepBinding.cucumberKey, stepBinding);
+
+		this._registrationListener?.(stepBinding);
+	}
+
+	/**
+	 * Observe every step binding as it is registered. Support code registers its bindings synchronously
+	 * while its module evaluates, so a listener set around a `require`/`import` sees exactly the bindings
+	 * that file (and the modules it pulled in for the first time) contributed. Selective loading records
+	 * the step patterns per support file this way. Pass undefined to stop observing.
+	 *
+	 * @param listener Called after each binding has been indexed, duplicates included.
+	 */
+	public setRegistrationListener(listener?: (stepBinding: StepBinding) => void): void {
+		this._registrationListener = listener;
 	}
 
 	/**

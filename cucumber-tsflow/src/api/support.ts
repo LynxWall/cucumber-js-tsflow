@@ -8,6 +8,19 @@ import { resetStepPatternRegistrations } from '../bindings/binding-decorator';
 import { startTimer, recordPhase, recordFile } from '../utils/tsflow-timing';
 import { registerLoader } from './register-loaders';
 
+/** How a support file is loaded: a `require` path or an `import` path. */
+export type SupportFileKind = 'require' | 'import';
+
+/**
+ * Observes each support file's load, from just before its `require`/`import` to just after it returns.
+ * Everything a file registers happens synchronously between the two calls, which is what selective
+ * loading relies on to attribute bindings to files.
+ */
+export interface SupportLoadRecorder {
+	beginFile(path: string, kind: SupportFileKind): void;
+	endFile(path: string, kind: SupportFileKind): void;
+}
+
 export async function getSupportCodeLibrary({
 	logger,
 	cwd,
@@ -16,7 +29,8 @@ export async function getSupportCodeLibrary({
 	requirePaths,
 	importPaths,
 	loaders,
-	onFileLoaded
+	onFileLoaded,
+	recorder
 }: {
 	logger: ILogger;
 	cwd: string;
@@ -27,6 +41,8 @@ export async function getSupportCodeLibrary({
 	loaders: string[];
 	/** Called after each support file (require or import path) has been loaded; used for startup progress */
 	onFileLoaded?: (path: string) => void;
+	/** Bracketed around each support file's load; used by selective loading to record what each file registers */
+	recorder?: SupportLoadRecorder;
 }): Promise<SupportCodeLibrary> {
 	// Clear the step pattern cache so decorators re-register with the fresh builder
 	resetStepPatternRegistrations();
@@ -56,7 +72,9 @@ export async function getSupportCodeLibrary({
 	requirePaths.map(path => {
 		logger.debug(`Attempting to require code from "${path}"`);
 		const fileStart = startTimer();
+		recorder?.beginFile(path, 'require');
 		tryRequire(path);
+		recorder?.endFile(path, 'require');
 		recordFile('require', path, fileStart);
 		onFileLoaded?.(path);
 	});
@@ -74,7 +92,9 @@ export async function getSupportCodeLibrary({
 	for (const path of importPaths) {
 		logger.debug(`Attempting to import code from "${path}"`);
 		const fileStart = startTimer();
+		recorder?.beginFile(path, 'import');
 		await import(pathToFileURL(path).toString());
+		recorder?.endFile(path, 'import');
 		recordFile('import', path, fileStart);
 		onFileLoaded?.(path);
 	}

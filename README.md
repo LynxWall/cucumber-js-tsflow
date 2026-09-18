@@ -446,10 +446,11 @@ echo $?
 
 ### Startup progress
 
-Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output, cucumber-tsflow prints one line per startup phase so a large suite never sits silent while it transpiles and loads support code. Each line starts with a spinner in a fixed slot, then a themed label and a plain-language note on what is actually happening, and ends with a running count (support files loaded, feature files parsed, parallel workers ready). The line is redrawn in place while the phase is open; when it completes the spinner becomes a check mark and the count is replaced by a summary and the elapsed time:
+Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output, cucumber-tsflow prints one line per startup phase so a large suite never sits silent while it transpiles and loads support code. The phases, in order: resolving the support-code globs and plugins, parsing the feature files into scenarios, transpiling and loading the support files, and launching (BeforeAll hooks, or the parallel workers). Each line starts with a spinner in a fixed slot, then a themed label and a plain-language note on what is actually happening, and ends with a running count (feature files parsed, support files loaded, parallel workers ready). The line is redrawn in place while the phase is open; when it completes the spinner becomes a check mark and the count is replaced by a summary and the elapsed time:
 
 ```text
 [ ✓ ] Prepping the cucumbers — resolving support-code globs and plugins 312 support files, 84 feature files, 41ms
+[ ✓ ] Making the brine — parsing 84 feature files into scenarios 6 scenarios to run, 212ms
 [ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm 41/312
 ```
 
@@ -500,6 +501,23 @@ The esbuild transpilers (`es-node`, `es-vue`, `es-node-esm`, `es-vue-esm`) and t
 
 `--no-transpile-cache` (or `transpileCache: false` in a profile, or `TSFLOW_TRANSPILE_CACHE=false` in the environment) transpiles everything from source and neither reads nor writes the cache; `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` chooses where it lives. The TypeScript output of the `ts-node` and `ts-vue` transpilers comes from ts-node's TypeScript compiler and is not cached; their `.vue` compilation is.
 
+### Selective loading
+
+Running one scenario in a large suite normally costs the same startup as running all of them: every support file is transpiled and evaluated before cucumber-tsflow finds out that the scenario needed three of them. With `selectiveLoad: true` (or `--selective-load`, or `TSFLOW_SELECTIVE_LOAD=true`), a run that selects a subset of scenarios — with `--name`, `--tags`, a feature file or a `file:line` on the command line, or a profile whose `paths` cover part of the suite — loads only the support files it needs. Feature files are parsed first, and the selected steps are matched against an index of step patterns that earlier runs wrote to `node_modules/.cache/cucumber-tsflow/selective-load` (beside the transpile cache, one file per configuration). The load-phase progress line says what happened: `transpiling and loading 14 of 214 support files with es-vue-esm (200 skipped: not used by the selected scenarios)`.
+
+What is loaded, and what is not:
+
+- A support file is loaded when any selected step's text matches one of the step patterns it registered, matched with the same Cucumber expression and regular expression classes CucumberJS uses and with the parameter types the support code defines. Every file with a matching pattern is loaded, so an ambiguity or a tag-scoped alternative in another file is present exactly as in a full run.
+- A support file is always loaded when it registered anything other than step definitions: a hook (`@before`, `@after`, `@beforeAll`, …, or the CucumberJS functions), a parameter type, a World constructor, a default timeout, a definition wrapper, or nothing at all. Set-up files, `World` files and context classes therefore always load.
+- A support file is loaded when it is new to the index, or when any module in its import graph — the file itself, the modules it imports, and theirs — has changed since the index recorded it (by modification time and size). The graph comes from Node's own module cache for `require` and from the ESM loader's resolve hook for `import`, so a pattern that lives in a shared helper is attributed to every file that imports it.
+- If any selected step matches no indexed pattern, every support file is loaded, so an undefined step is reported exactly as a full run would report it, and the progress line names the step.
+
+The first run with the option on loads everything and writes the index; every run refreshes the records of the files it loaded and keeps the validated records of the files it skipped, so the index tracks edits without ever being rebuilt from scratch. Parallel child processes load the same subset as the coordinator.
+
+The option is off by default because it rests on one assumption the tool cannot check: that a support file which only defines step definitions has no other effect on the run. A file that patches a global at module level, registers a Vue plugin, or otherwise sets something up as a side effect of being imported — and also defines steps — is skipped when its steps are not selected. Move such set-up into a file of its own (which, having no step definitions, always loads) or into a hook. Two smaller limits: step patterns that are not literals in the module graph (read from a file or the environment) are not tracked, and step definitions inside `node_modules` are not either. Selective loading is unavailable, and every file is loaded, with the `ts-node-esm` and `ts-vue-esm` transpilers, with any third-party `loader`, and under `TSFLOW_ESM_HOOKS=async`: those loaders run on Node's loader hooks thread, where the import graph cannot be observed; the progress line says so. Report formatters that list step definitions (`usage`, the message stream) see only the definitions that were loaded.
+
+Startup phases with `TSFLOW_TIMING=true`: `selective-load:plan` is the time to read the index and match the selected steps, `selective-load:index` the time to record the loaded files' import graphs and write it back.
+
 ### ESM loader hooks
 
 On Node 22.15 / 23.5 or later the `es-node-esm` and `es-vue-esm` transpilers attach their `resolve` and `load` hooks with `module.registerHooks()`, so they run synchronously on the thread that is importing your support code instead of on a separate loader thread with a message round trip per module. They also transpile TypeScript with esbuild directly rather than through a `ts-node` service. On older Node versions the same loaders fall back to `module.register()`; set `TSFLOW_ESM_HOOKS=async` to force that behaviour. `ts-node-esm` and `ts-vue-esm` always use `module.register()`, because ts-node's hooks are asynchronous.
@@ -518,6 +536,7 @@ In addition to cucumber configuration options the following two options have bee
 | `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
 | `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the [transpile cache](#transpile-cache) replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
 | `transpileCache`         | `boolean`          | No         | `--transpile-cache` / `--no-transpile-cache` | Cache esbuild and Vue SFC transpiler output on disk between runs (see [Transpile cache](#transpile-cache)). | true    |
+| `selectiveLoad`          | `boolean`          | No         | `--selective-load` / `--no-selective-load` | On a filtered run, load only the support files whose step definitions the selected scenarios use, plus every file that registers anything else (see [Selective loading](#selective-loading)). | false   |
 
 ### Transpiler and Vue3 supported
 

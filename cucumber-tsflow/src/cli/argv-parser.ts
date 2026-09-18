@@ -21,6 +21,7 @@ export interface ITsflowConfiguration extends IConfiguration {
 	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
 	parallelLoad?: boolean | number;
 	transpileCache: boolean;
+	selectiveLoad: boolean;
 }
 
 export interface IParsedArgv {
@@ -161,6 +162,11 @@ const ArgvParser = {
 					.argParser(() => true)
 					.hideHelp()
 			)
+			.option(
+				'--selective-load',
+				'Load only the support files whose step definitions the selected scenarios use, plus every file that registers hooks, parameter types or other support code, using an index written by earlier runs (node_modules/.cache/cucumber-tsflow/selective-load). Defaults to false.'
+			)
+			.option('--no-selective-load', 'Load every support file on this run.')
 			.option(
 				'--transpile-cache',
 				'Cache esbuild and Vue SFC transpiler output on disk between runs (node_modules/.cache/cucumber-tsflow). Defaults to true.'

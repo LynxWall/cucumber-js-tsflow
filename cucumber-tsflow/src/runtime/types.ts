@@ -21,6 +21,8 @@ export interface ITsFlowRunOptionsRuntime extends IRunOptionsRuntime {
 	experimentalDecorators: boolean;
 	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
 	parallelLoad?: boolean | number;
+	/** Load only the support files the selected scenarios need, from an index written by earlier runs. Default false. */
+	selectiveLoad?: boolean;
 }
 export interface ITsFlowRunConfiguration extends IRunConfiguration {
 	runtime: ITsFlowRunOptionsRuntime;

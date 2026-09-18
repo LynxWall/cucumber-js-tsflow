@@ -4,8 +4,14 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
+import { createRequire } from 'node:module';
 import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
+
+// The import-graph recorder is a CJS module shared with the main process (selective loading reads what
+// the in-thread resolve hook records here); loaded the way esbuild.mjs loads the transpile cache.
+const require = createRequire(import.meta.url);
+const { recordImportEdge } = require('../../utils/module-graph.js');
 
 // Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
 // `nextLoad`, so the same hook functions work under both registration mechanisms: `module.registerHooks()`
@@ -487,17 +493,21 @@ export function createEsbuildLoader(options = {}) {
 			const resolveStart = startTimer();
 
 			try {
-				const resolved = resolveSpecifier(specifier, context, { checkExtensions: true });
+				let result = resolveSpecifier(specifier, context, { checkExtensions: true });
 
-				if (resolved) {
-					if (verbose) loaderLogger.checkpoint('resolve success', { specifier, url: resolved.url });
-					return resolved;
+				if (result) {
+					if (verbose) loaderLogger.checkpoint('resolve success', { specifier, url: result.url });
+				} else {
+					// Everything else, including explicit `.ts`/`.tsx` specifiers, is resolved by Node; `load`
+					// decides what to do with the URL.
+					if (verbose) loaderLogger.checkpoint('resolve delegating to nextResolve', { specifier });
+					result = nextResolve(specifier, context);
 				}
 
-				// Everything else, including explicit `.ts`/`.tsx` specifiers, is resolved by Node; `load`
-				// decides what to do with the URL.
-				if (verbose) loaderLogger.checkpoint('resolve delegating to nextResolve', { specifier });
-				return nextResolve(specifier, context);
+				// In-thread, `result` is the resolution itself and the import edge can be recorded for selective
+				// loading; on the hooks thread it is a promise (no `url`) and nothing is recorded.
+				if (result && typeof result.url === 'string') recordImportEdge(context?.parentURL, result.url);
+				return result;
 			} catch (error) {
 				loaderLogger.error('resolve failed', error, { specifier });
 				throw new Error(`Failed to resolve ${specifier}: ${error.message}`, { cause: error });

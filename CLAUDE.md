@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `@lynxwall/cucumber-tsflow` is a detached fork of `cucumber-js-tsflow` that wraps and extends CucumberJS 12.7.x, replacing its functional step API with SpecFlow-like TypeScript decorator bindings (`@binding()`, `@given()`, `@when()`, `@then()`, `@before()`, …) plus scoped, constructor-injected context objects. It ships its own CLI (`cucumber-tsflow`), programmatic API, transpilers (esbuild / ts-node-maintained, CJS and ESM, with Vue SFC support), and formatters — so it fully replaces `@cucumber/cucumber` as a direct dependency rather than sitting beside it.
 
-Read [Architecture.md](Architecture.md) before making non-trivial changes. It documents the layer map, execution flow (`CLI → loadConfiguration → runCucumber → loadSupport → makeRuntime → Coordinator + Adapter → Worker → TestCaseRunner`), the `BindingRegistry` registration flow, DI/`ManagedScenarioContext`, dual decorator support, and the transpiler matrix. Don't duplicate that content here — update it when the architecture changes.
+Read [Architecture.md](Architecture.md) before making non-trivial changes. It documents the layer map, execution flow (`CLI → loadConfiguration → runCucumber → parse features → load support (selectively, when enabled) → makeRuntime → Coordinator + Adapter → Worker → TestCaseRunner`), the `BindingRegistry` registration flow, DI/`ManagedScenarioContext`, dual decorator support, and the transpiler matrix. Don't duplicate that content here — update it when the architecture changes.
 
 ## Repository layout
 

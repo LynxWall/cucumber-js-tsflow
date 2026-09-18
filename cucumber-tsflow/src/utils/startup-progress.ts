@@ -30,8 +30,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
-/** The startup phases in the order `runCucumber` executes them. */
-export type StartupPhaseId = 'resolve' | 'load' | 'assemble' | 'launch';
+/** The startup phases in the order `runCucumber` executes them: resolve globs, parse features, load support, launch. */
+export type StartupPhaseId = 'resolve' | 'assemble' | 'load' | 'launch';
 
 interface PhaseText {
 	/** Themed label printed at the start of the phase */
@@ -145,6 +145,10 @@ const PICKLE_THEME: StartupTheme = {
 	],
 	phases: {
 		resolve: { title: 'Prepping the cucumbers' },
+		assemble: {
+			title: 'Making the brine',
+			quips: ['{done} of {total} feature files stirred in. Mind the hot brine']
+		},
 		load: {
 			title: 'Packing the jars',
 			waiting: 'still packing the first jar — the first file pulls in its whole import graph, the rest go much faster',
@@ -154,10 +158,6 @@ const PICKLE_THEME: StartupTheme = {
 				'does anybody actually eat this many pickles? {done} of {total} jars',
 				'{done} down, {left} left. Grandma never said pickling took this long'
 			]
-		},
-		assemble: {
-			title: 'Pouring and sealing',
-			quips: ['{done} of {total} jars sealed. Mind the hot brine']
 		},
 		launch: {
 			title: 'Cooling and chilling',
@@ -184,6 +184,16 @@ const LOTR_THEME: StartupTheme = {
 	phases: {
 		// The nine walkers: Gandalf, Aragorn, Boromir (and his horn), Legolas, Gimli, Frodo, Sam (po-ta-toes), Merry and Pippin
 		resolve: { title: 'Assembling the Fellowship 🧙👑📯🧝🪓💍🥔🍄🍄' },
+		// The Ents march on Isengard before the beacons are lit, as the features are parsed before the support code loads
+		assemble: {
+			title: 'Gathering the Ents of Fangorn 🌳🌲🌳🌲🌳',
+			waiting: 'the Entmoot has not begun 🌳 nothing is hasty in Old Entish, {elapsed} so far',
+			quips: [
+				'"Hoom, hom. Do not be hasty." 🌳 {done} of {total} feature files, and the Ents are still saying good morning',
+				'"The trees have grown wild and dangerous." 🌲 {done} of {total} parsed',
+				'"Come, my friends. The Ents are going to war." 🌳🌲🌳 {done} of {total}'
+			]
+		},
 		load: {
 			title: 'Lighting the beacons of Gondor 🔥🔥🔥',
 			waiting:
@@ -195,15 +205,6 @@ const LOTR_THEME: StartupTheme = {
 				'"Hope is kindled." 🔥 {done} down, {left} to go. Po-ta-toes would help about now 🥔',
 				'"Is it secret? Is it safe?" 💍 {done} files in, {left} still unaccounted for',
 				'"I can not carry it for you, but I can carry you!" 🧗 {done} of {total}'
-			]
-		},
-		assemble: {
-			title: 'Gathering the Ents of Fangorn 🌳🌲🌳🌲🌳',
-			waiting: 'the Entmoot has not begun 🌳 nothing is hasty in Old Entish, {elapsed} so far',
-			quips: [
-				'"Hoom, hom. Do not be hasty." 🌳 {done} of {total} feature files, and the Ents are still saying good morning',
-				'"The trees have grown wild and dangerous." 🌲 {done} of {total} parsed',
-				'"Come, my friends. The Ents are going to war." 🌳🌲🌳 {done} of {total}'
 			]
 		},
 		launch: {

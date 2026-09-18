@@ -21,11 +21,12 @@ All source code lives under `cucumber-tsflow/src/`.
 ## Execution Flow
 
 ```
-CLI → loadConfiguration() → runCucumber() → load support code → makeRuntime() → Coordinator + Adapter → Worker → TestCaseRunner
+CLI → loadConfiguration() → runCucumber() → parse features → load support code → makeRuntime() → Coordinator + Adapter → Worker → TestCaseRunner
 ```
 
 1. The CLI parses arguments and loads configuration (profiles, transpiler selection, decorator mode)
-1. Support code is loaded: transpilers are registered, step definition files are imported, and decorator side-effects populate the `BindingRegistry`
+1. Feature files are parsed and the pickles filtered (`--name`, `--tags`, paths) before any support code loads; their Gherkin envelopes are buffered and replayed to the formatters once those exist, so the message order is unchanged
+1. Support code is loaded: transpilers are registered, step definition files are imported, and decorator side-effects populate the `BindingRegistry`. With `selectiveLoad` on, only the files the selected pickles need are loaded, decided by `SelectiveLoadSession` (see [Selective loading](#selective-loading))
 1. `makeRuntime()` creates a `Coordinator` with either an in-process (serial) or child-process (parallel) adapter
 1. The coordinator assembles test cases from parsed Gherkin pickles and delegates execution to the adapter
 1. Each test case runs through `TestCaseRunner`, which resolves bindings and manages scenario context
@@ -246,6 +247,16 @@ Entries are JSON files named by the key, written to a temp file and renamed into
 
 `runCucumber` appends the main process's `N of M transpiles from the cache` to the load-phase summary and then calls `pruneTranspileCache()`, which only when this process wrote entries lists the directory and deletes the least recently written files until it fits in 512 MB (a content-addressed store's garbage is exactly the entries no current source produces any more, and those are the oldest). In the `TSFLOW_TIMING` report, hits and misses are the `transpile-cache:hit` / `transpile-cache:miss` phases (the `calls` column is the count; a hit also records a `transpile` file entry for the lookup time so per-context file counts stay comparable between cold and warm runs), and `transpile-cache:prune` is the sweep.
 
+### Selective loading
+
+`src/api/selective-load.ts` implements the `selectiveLoad` option: on a filtered run, load only the support files the selected pickles need. It depends on `runCucumber` parsing the feature files before the support code loads (which it now always does, buffering the Gherkin envelopes until the formatters exist) and on three observation points:
+
+- **What a file registers.** `SelectiveLoadSession` is the `SupportLoadRecorder` that `getSupportCodeLibrary` brackets around each `require`/`import`. Between `beginFile` and `endFile` it collects the step patterns from two sources — `BindingRegistry.setRegistrationListener()` (every tsflow binding as it is indexed, duplicates and tag-scoped alternatives included) and the new `stepDefinitionConfigs` on the CucumberJS builder (steps registered without a decorator) — and compares a fingerprint of the builder before and after (hook config counts, parameter type count, `World`, `defaultTimeout`, `parallelCanAssign`, `definitionFunctionWrapper`). A file that changed anything but the step definitions, or registered no steps at all, is marked `always`.
+- **What a file depends on.** `src/utils/module-graph.ts`. For `require` paths it walks `require.cache` from the entry (Node adds a cached module to every parent's `children`, so the graph is complete); for `import` paths the esbuild ESM loaders' `resolve` hook calls `recordImportEdge(parentURL, url)` with whatever it returns, in-thread under `module.registerHooks()`, and `importedProjectModules()` walks the recorded edges. Modules under `node_modules` and inside this package are excluded. Loaders on `module.register()` (ts-node ESM, third-party, `TSFLOW_ESM_HOOKS=async`) run on another thread where nothing is recorded, so `SelectiveLoadSession.unsupportedReason()` turns the option off for them.
+- **What the run needs.** `plan(pickles)` reads the index, marks every new, `always` or stale entry (any dependency's mtime or size differs from the recorded stamp) as must-load, compiles every indexed pattern with `ExpressionFactory` from `@cucumber/cucumber-expressions` — reached through `createRequire(require.resolve('@cucumber/cucumber'))` so it is the same copy CucumberJS uses — over a `ParameterTypeRegistry` rebuilt from the parameter types the index recorded, and matches each distinct selected step text against them. Every entry with a match is loaded; a text with no match returns a full plan (`"…" matches no step definition in the index`), so undefined steps are reported as in a full run. The matching is kept cheap on a full run (about 0.2 s for 3500 texts against 2100 patterns): each distinct pattern is compiled once, carries the literal text a match must start with (`literalPrefix()`) and is bucketed by that text's first word, so a step text is compared only with its bucket and the few patterns without a usable prefix; the test is `regexp.test()` on the expression's compiled `RegExp`, since `Expression.match()` also builds argument objects for every hit. Matching stops early once no entry is left to skip.
+
+The index is one JSON file per configuration under `<cache root>/selective-load/`, keyed on the entry format, library version, working directory, decorator mode and the support-code coordinates; `getCacheRootDirectory()` in `transpile-cache.ts` is the shared location. It holds a file table with stamps, per-entry dependency indexes, patterns (`[source, flags]` for a `RegExp`, `[expression, null]` for a Cucumber expression) and the `always` flag, plus the non-built-in parameter types. `finish(library)` rewrites the records of the files this run loaded (their graphs read now), keeps the validated records of the files it skipped, and writes atomically (temp file plus rename); `abort()` on a failed load writes nothing. The loaded path lists are what `runCucumber` passes to `makeRuntime` as `resolvedSupportPaths`, so parallel children load the same subset and CucumberJS's positional definition ids line up. `TSFLOW_TIMING` phases: `selective-load:plan`, `selective-load:index`.
+
 ## Formatters
 
 ### Behave JSON Formatter
@@ -286,8 +297,8 @@ The public programmatic API (`@lynxwall/cucumber-tsflow/api`) exposes:
 
 - `loadConfiguration()` — locates config file, merges profiles, configures transpiler selection, handles `--debug-file` feature matching, and sets up format aliases
 - `loadSupport()` — loads support code; also provides `reloadSupport()` for delta-aware module eviction
-- `runCucumber()` — the main execution entry point that orchestrates the full test run
-- `getSupportCodeLibrary()` — resets and builds the CucumberJS support code library from loaded step definitions
+- `runCucumber()` — the main execution entry point that orchestrates the full test run: parses features, plans and loads support code (selectively when `selectiveLoad` is on), then runs
+- `getSupportCodeLibrary()` — resets and builds the CucumberJS support code library from loaded step definitions; accepts an `onFileLoaded` progress callback and a `SupportLoadRecorder` bracketed around each file
 
 ## Package Exports
 

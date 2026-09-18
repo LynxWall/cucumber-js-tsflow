@@ -163,6 +163,12 @@ export const loadConfiguration = async (
 	process.env.TSFLOW_TRANSPILE_CACHE = String(original.transpileCache);
 	logger.checkpoint('Transpile cache configured', { transpileCache: original.transpileCache });
 
+	// Selective support loading is opt-in; `TSFLOW_SELECTIVE_LOAD=true` is the default when the option is unset.
+	if (original.selectiveLoad === undefined) {
+		original.selectiveLoad = process.env.TSFLOW_SELECTIVE_LOAD === 'true';
+	}
+	logger.checkpoint('Selective load configured', { selectiveLoad: original.selectiveLoad });
+
 	/**
 	 * Ensures JSDOM environment is initialized before any test files are loaded.
 	 */

@@ -132,6 +132,25 @@ under `steps/utils/`, not the 208-file support tree. The `default` profile is wh
 written about; it was first timed and profiled in Phase 7 (see the Phase 7 hand-off in the execution strategy):
 warm startup about 9.1 s, of which `support:import` 7.7 s, and `runtime:run` 196–224 s.
 
+## Selective loading on this suite
+
+The `selectiveLoad` option (Phase 9) keeps its index at
+`test/node_modules/.cache/cucumber-tsflow/selective-load/<sha256>.json`, next to the transpile cache, one file
+per configuration (the key covers the working directory, the support-code coordinates, the decorator mode and the
+library version, so each profile has its own). Delete that directory to start cold. On this suite 12 of the 216
+support files always load — `test-setup.mjs`, `steps/world-context.ts` and the 10 step files that also declare
+hooks — and the rest are candidates to skip. To measure a filtered run with and without it:
+
+```sh
+cd C:/Git/Azure/uis-tools/Tools.Web/VueApp/test
+TSFLOW_TIMING=true TSFLOW_THEME=off node ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js \
+  -p default --name "Loading indicator displays while reviews are loading"                   # baseline
+TSFLOW_TIMING=true TSFLOW_THEME=off node ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js \
+  -p default --selective-load --name "Loading indicator displays while reviews are loading"  # first run writes the index
+```
+
+The Phase 9 hand-off in the execution strategy has the numbers.
+
 ## Profiling a run
 
 Item 27 of the [execution strategy](performance-enhancement-execution-strategy.md) asks where the time

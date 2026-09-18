@@ -23,6 +23,7 @@ import { createLogger } from '../utils/tsflow-logger';
 import { startTimer, recordPhase, collectLoaderTimings, printTimingReport } from '../utils/tsflow-timing';
 import { StartupProgress, describeTranspiler, plural, resolveStartupTheme } from '../utils/startup-progress';
 import { getTranspileCacheStats, pruneTranspileCache } from '../transpilers/transpile-cache';
+import { SelectiveLoadSession } from './selective-load';
 
 const runLogger = createLogger('run-cucumber');
 
@@ -106,33 +107,109 @@ Running from: ${__dirname}
 	progress.end(`${plural(supportFileCount, 'support file')}, ${plural(sourcePaths.length, 'feature file')}`);
 
 	/**
+	 * Feature files are parsed before the support code loads, so that a filtered run knows which scenarios
+	 * it will execute before paying for the support tree (selective loading decides what to load from
+	 * them). Formatters do not exist yet, so the Gherkin envelopes are buffered and emitted once they do,
+	 * in the same order as before: meta, then source / gherkinDocument / pickle, then the support code.
+	 */
+	const gherkinEnvelopes: Envelope[] = [];
+	let filteredPickles: ReadonlyArray<IFilterablePickle> = [];
+	let parseErrors: ParseError[] = [];
+	progress.begin(
+		'assemble',
+		`parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`,
+		sourcePaths.length
+	);
+	let phaseStart = startTimer();
+	if (sourcePaths.length > 0) {
+		const gherkinResult = await getPicklesAndErrors({
+			newId,
+			cwd,
+			sourcePaths,
+			coordinates: options.sources,
+			onEnvelope: envelope => {
+				gherkinEnvelopes.push(envelope);
+				// One progress mark per parsed feature file
+				if (envelope.gherkinDocument) progress.tick();
+			}
+		});
+		filteredPickles = await pluginManager.transform('pickles:filter', gherkinResult.filterablePickles);
+		filteredPickles = await pluginManager.transform('pickles:order', filteredPickles);
+		parseErrors = gherkinResult.parseErrors;
+	}
+	recordPhase('gherkin', phaseStart);
+	progress.end(
+		parseErrors.length > 0
+			? plural(parseErrors.length, 'parse error')
+			: `${plural(filteredPickles.length, 'scenario')} to run`
+	);
+
+	/**
 	 * The support code library contains all of the hook and step definitions.
 	 * These are loaded into the library when calling getSupportCodeLibrary,
 	 * which loads all of the step definitions using require or import.
+	 *
+	 * With `selectiveLoad`, only the support files the selected scenarios need are loaded (plus every file
+	 * that registers anything other than step definitions), decided from an index that earlier runs wrote.
+	 * The loaded lists are also what parallel children load, so definition ids line up.
 	 */
+	let loadRequirePaths = requirePaths;
+	let loadImportPaths = importPaths;
+	let selectiveLoad: SelectiveLoadSession | undefined;
+	let loadNote = '';
+	if (options.runtime.selectiveLoad && !('originalCoordinates' in options.support)) {
+		const unsupported = SelectiveLoadSession.unsupportedReason(supportCoordinates);
+		if (unsupported) {
+			loadNote = ` (selective load unavailable: ${unsupported})`;
+			runLogger.checkpoint('Selective load unavailable', { reason: unsupported });
+		} else {
+			selectiveLoad = new SelectiveLoadSession(
+				cwd,
+				supportCoordinates,
+				options.runtime.experimentalDecorators,
+				requirePaths,
+				importPaths
+			);
+			const plan =
+				parseErrors.length > 0
+					? selectiveLoad.fullPlan('feature files have parse errors')
+					: selectiveLoad.plan(filteredPickles.map(filterable => filterable.pickle));
+			loadRequirePaths = plan.requirePaths;
+			loadImportPaths = plan.importPaths;
+			loadNote = plan.reason
+				? ` (selective load: ${plan.reason})`
+				: ` (${plan.skipped} skipped: not used by the selected scenarios)`;
+			runLogger.checkpoint('Selective load plan', { skipped: plan.skipped, reason: plan.reason });
+		}
+	}
+	const loadCount = loadRequirePaths.length + loadImportPaths.length;
+
 	let supportCodeLibrary: SupportCodeLibrary;
-	let phaseStart: number;
 	try {
 		supportCodeLibrary =
 			'originalCoordinates' in options.support
 				? (options.support as SupportCodeLibrary)
 				: await (async () => {
 						const transpiler = describeTranspiler(supportCoordinates.requireModules, supportCoordinates.loaders);
+						const files =
+							loadCount < supportFileCount
+								? `${loadCount} of ${plural(supportFileCount, 'support file')}`
+								: plural(supportFileCount, 'support file');
 						progress.begin(
 							'load',
-							`transpiling and loading ${plural(supportFileCount, 'support file')}` +
-								(transpiler ? ` with ${transpiler}` : ''),
-							supportFileCount
+							`transpiling and loading ${files}` + (transpiler ? ` with ${transpiler}` : '') + loadNote,
+							loadCount
 						);
 						return getSupportCodeLibrary({
 							logger,
 							cwd,
 							newId,
-							requirePaths,
+							requirePaths: loadRequirePaths,
 							requireModules: supportCoordinates.requireModules,
-							importPaths,
+							importPaths: loadImportPaths,
 							loaders: supportCoordinates.loaders,
-							onFileLoaded: () => progress.tick()
+							onFileLoaded: () => progress.tick(),
+							recorder: selectiveLoad
 						});
 					})();
 
@@ -144,7 +221,9 @@ Running from: ${__dirname}
 		supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
 		options.support = supportCodeLibrary;
 		recordPhase('registry:update', phaseStart);
+		selectiveLoad?.finish(supportCodeLibrary);
 	} catch (err) {
+		selectiveLoad?.abort();
 		// Close the open progress line so the error that follows starts on its own line
 		progress.end('failed');
 		throw err;
@@ -184,15 +263,6 @@ Running from: ${__dirname}
 	const eventDataCollector = global.messageCollector as unknown as EventDataCollector;
 
 	let formatterStreamError = false;
-	progress.begin(
-		'assemble',
-		`initializing formatters and parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`,
-		sourcePaths.length
-	);
-	// One progress mark per parsed feature file
-	eventBroadcaster.on('envelope', (envelope: Envelope) => {
-		if (envelope.gherkinDocument) progress.tick();
-	});
 	phaseStart = startTimer();
 	const cleanupFormatters = await initializeFormatters({
 		env,
@@ -210,22 +280,10 @@ Running from: ${__dirname}
 	await emitMetaMessage(eventBroadcaster, env);
 	recordPhase('formatters:init', phaseStart);
 
-	let filteredPickles: ReadonlyArray<IFilterablePickle> = [];
-	let parseErrors: ParseError[] = [];
-	phaseStart = startTimer();
-	if (sourcePaths.length > 0) {
-		const gherkinResult = await getPicklesAndErrors({
-			newId,
-			cwd,
-			sourcePaths,
-			coordinates: options.sources,
-			onEnvelope: envelope => eventBroadcaster.emit('envelope', envelope)
-		});
-		filteredPickles = await pluginManager.transform('pickles:filter', gherkinResult.filterablePickles);
-		filteredPickles = await pluginManager.transform('pickles:order', filteredPickles);
-		parseErrors = gherkinResult.parseErrors;
+	// Replay the parsed feature files to the formatters and plugins, in the order they were produced
+	for (const envelope of gherkinEnvelopes) {
+		eventBroadcaster.emit('envelope', envelope);
 	}
-	recordPhase('gherkin', phaseStart);
 	if (parseErrors.length) {
 		progress.finish();
 		parseErrors.forEach(parseError => {
@@ -239,8 +297,6 @@ Running from: ${__dirname}
 			support: supportCodeLibrary
 		};
 	}
-
-	progress.end(`${plural(filteredPickles.length, 'scenario')} to run`);
 
 	emitSupportCodeMessages({
 		eventBroadcaster,
@@ -273,7 +329,7 @@ Running from: ${__dirname}
 		supportCodeLibrary,
 		options: options.runtime,
 		coordinates: options.sources,
-		resolvedSupportPaths: { requirePaths, importPaths },
+		resolvedSupportPaths: { requirePaths: loadRequirePaths, importPaths: loadImportPaths },
 		onWorkerReady: () => progress.tick()
 	});
 	const success = await runtime.run();

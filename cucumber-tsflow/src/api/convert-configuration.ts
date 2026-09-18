@@ -10,6 +10,8 @@ export interface IConfigurationExt extends IConfiguration {
 	experimentalDecorators: boolean;
 	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
 	parallelLoad?: boolean | number;
+	/** Load only the support files the selected scenarios need (see `selective-load.ts`) */
+	selectiveLoad?: boolean;
 }
 
 export async function convertConfiguration(
@@ -55,6 +57,7 @@ export async function convertConfiguration(
 			parallel: flatConfiguration.parallel,
 			retry: flatConfiguration.retry,
 			retryTagFilter: flatConfiguration.retryTagFilter,
+			selectiveLoad: flatConfiguration.selectiveLoad ?? false,
 			strict: flatConfiguration.strict,
 			worldParameters: flatConfiguration.worldParameters
 		};

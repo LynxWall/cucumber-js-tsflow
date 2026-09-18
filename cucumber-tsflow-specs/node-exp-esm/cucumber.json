@@ -23,6 +23,7 @@
 		],
 		"parallel": 0,
 		"experimentalDecorators": true,
+		"selectiveLoad": true,
 		"tags": "@node-exp and not @reload"
 	}
 }

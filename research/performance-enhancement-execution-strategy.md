@@ -2173,8 +2173,11 @@ Written at the end of the Phase 10 session (2026-09-18) so that Phase 11 can sta
 
 ### State of the tree
 
-- Still on branch `2026-09-performance-enhancements`; Phase 9 ended at `9d7565d`. Phase 10 was left uncommitted at
-  the time of writing (the owner commits); everything below is in the working tree.
+- Branch `2026-09-speed-enhancements` (earlier hand-offs call it `2026-09-performance-enhancements`); Phase 9 ended
+  at `9d7565d`. Phase 10 is committed as `66bec31` ("Watch mode: one resident process that reruns on file changes or
+  Enter"), after the owner's code review on 2026-09-22 and a fresh green `yarn test:all` on all sixteen variants. That
+  commit also carries the Phase 11 notes and the new [Phase 12 scope](#phase-12-scope). The tree was clean after it;
+  Phase 11 starts from there.
 - `yarn build` clean, no stray `.js` under `src/`; ESLint and Prettier clean on every touched source file (the
   Markdown files were not Prettier-clean before this phase and were not reformatted). `yarn test:all` green on all
   sixteen variants on the final build (the `node` workspace now runs 20 scenarios: the new `watch-mode-test.feature`

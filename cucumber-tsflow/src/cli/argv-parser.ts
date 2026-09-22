@@ -22,6 +22,8 @@ export interface ITsflowConfiguration extends IConfiguration {
 	parallelLoad?: boolean | number;
 	transpileCache: boolean;
 	selectiveLoad: boolean;
+	/** Stay running after the run and rerun on changes; a CLI concern, not part of the run configuration */
+	watch?: boolean;
 }
 
 export interface IParsedArgv {
@@ -175,6 +177,11 @@ const ArgvParser = {
 				'--no-transpile-cache',
 				'Transpile every support file from source on this run, neither reading nor writing the on-disk cache.'
 			)
+			.option(
+				'-w, --watch',
+				'Stay running after the run and rerun whenever a feature file, support file or module it loaded changes, keeping the support code loaded between runs. Enter reruns, q quits. Defaults to false.'
+			)
+			.option('--no-watch', 'Run once and exit, overriding a profile that sets watch.')
 			.option(
 				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|TS-VUE-ESM|ES-NODE-ESM|ES-VUE-ESM>',
 				`built-in transpiler to use. ESxxx transpilers use esbuild and TSxxx transpilers use typescript.\n

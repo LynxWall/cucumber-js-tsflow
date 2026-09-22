@@ -6,6 +6,7 @@ import tryRequire from '@cucumber/cucumber/lib/try_require';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
 import { resetStepPatternRegistrations } from '../bindings/binding-decorator';
 import { startTimer, recordPhase, recordFile } from '../utils/tsflow-timing';
+import { versionedUrl } from '../utils/module-graph';
 import { registerLoader } from './register-loaders';
 
 /** How a support file is loaded: a `require` path or an `import` path. */
@@ -19,6 +20,19 @@ export type SupportFileKind = 'require' | 'import';
 export interface SupportLoadRecorder {
 	beginFile(path: string, kind: SupportFileKind): void;
 	endFile(path: string, kind: SupportFileKind): void;
+}
+
+/** One recorder that forwards to every given one, in order; undefined when none is given. */
+export function composeRecorders(
+	...recorders: Array<SupportLoadRecorder | undefined>
+): SupportLoadRecorder | undefined {
+	const present = recorders.filter((recorder): recorder is SupportLoadRecorder => recorder !== undefined);
+	if (present.length === 0) return undefined;
+	if (present.length === 1) return present[0];
+	return {
+		beginFile: (path, kind) => present.forEach(recorder => recorder.beginFile(path, kind)),
+		endFile: (path, kind) => present.forEach(recorder => recorder.endFile(path, kind))
+	};
 }
 
 export async function getSupportCodeLibrary({
@@ -93,7 +107,8 @@ export async function getSupportCodeLibrary({
 		logger.debug(`Attempting to import code from "${path}"`);
 		const fileStart = startTimer();
 		recorder?.beginFile(path, 'import');
-		await import(pathToFileURL(path).toString());
+		// In a resident process (watch mode) a file to evaluate again carries a version query; see module-graph.ts
+		await import(versionedUrl(pathToFileURL(path).toString()));
 		recorder?.endFile(path, 'import');
 		recordFile('import', path, fileStart);
 		onFileLoaded?.(path);

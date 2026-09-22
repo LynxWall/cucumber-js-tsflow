@@ -38,7 +38,6 @@ import type {
 	ISupportCodeCoordinates,
 	SupportCodeLibrary
 } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import type { CucumberExpression, RegularExpression } from '@cucumber/cucumber-expressions';
 import { version as tsflowVersion } from '../version';
 import { BindingRegistry } from '../bindings/binding-registry';
@@ -49,6 +48,7 @@ import { startTimer, recordPhase } from '../utils/tsflow-timing';
 import { createLogger } from '../utils/tsflow-logger';
 import { loaderHooksMode } from './register-loaders';
 import type { SupportFileKind, SupportLoadRecorder } from './support';
+import { BuilderFingerprint, builderFingerprint, builderInternals, registeredBeyondSteps } from './builder-fingerprint';
 
 const logger = createLogger('selective-load');
 
@@ -127,53 +127,6 @@ export interface SelectiveLoadPlan {
 	reason?: string;
 }
 
-/** The parts of the support-code library builder's state that tell whether a file did more than define steps. */
-interface BuilderInternals {
-	stepDefinitionConfigs: Array<{ pattern: string | RegExp }>;
-	beforeTestCaseHookDefinitionConfigs: unknown[];
-	afterTestCaseHookDefinitionConfigs: unknown[];
-	beforeTestRunHookDefinitionConfigs: unknown[];
-	afterTestRunHookDefinitionConfigs: unknown[];
-	beforeTestStepHookDefinitionConfigs: unknown[];
-	afterTestStepHookDefinitionConfigs: unknown[];
-	parameterTypeRegistry: { parameterTypes: Iterable<unknown> };
-	World: unknown;
-	defaultTimeout: number;
-	parallelCanAssign: unknown;
-	definitionFunctionWrapper: unknown;
-}
-
-interface BuilderFingerprint {
-	steps: number;
-	hooks: number;
-	parameterTypes: number;
-	World: unknown;
-	defaultTimeout: number;
-	parallelCanAssign: unknown;
-	definitionFunctionWrapper: unknown;
-}
-
-function builderFingerprint(): BuilderFingerprint {
-	const builder = supportCodeLibraryBuilder as unknown as BuilderInternals;
-	let parameterTypes = 0;
-	for (const _ of builder.parameterTypeRegistry.parameterTypes) parameterTypes++;
-	return {
-		steps: builder.stepDefinitionConfigs.length,
-		hooks:
-			builder.beforeTestCaseHookDefinitionConfigs.length +
-			builder.afterTestCaseHookDefinitionConfigs.length +
-			builder.beforeTestRunHookDefinitionConfigs.length +
-			builder.afterTestRunHookDefinitionConfigs.length +
-			builder.beforeTestStepHookDefinitionConfigs.length +
-			builder.afterTestStepHookDefinitionConfigs.length,
-		parameterTypes,
-		World: builder.World,
-		defaultTimeout: builder.defaultTimeout,
-		parallelCanAssign: builder.parallelCanAssign,
-		definitionFunctionWrapper: builder.definitionFunctionWrapper
-	};
-}
-
 function storedPattern(pattern: string | RegExp): StoredPattern {
 	return typeof pattern === 'string' ? [pattern, null] : [pattern.source, pattern.flags];
 }
@@ -232,6 +185,7 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 	private readonly records = new Map<string, FileRecord>();
 	private readonly stamps = new Map<string, Stamp>();
 	private readonly all: Array<{ path: string; key: string; kind: SupportFileKind }>;
+	private readonly removeListener: () => void;
 
 	/**
 	 * @param cwd - Working directory of the run, part of the index key
@@ -256,7 +210,9 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 			...requirePaths.map(p => ({ path: p, key: canonicalPath(p), kind: 'require' as const })),
 			...importPaths.map(p => ({ path: p, key: canonicalPath(p), kind: 'import' as const }))
 		];
-		BindingRegistry.instance.setRegistrationListener(binding => this.onBindingRegistered(binding));
+		this.removeListener = BindingRegistry.instance.addRegistrationListener(binding =>
+			this.onBindingRegistered(binding)
+		);
 	}
 
 	/**
@@ -410,19 +366,11 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 		const before = record.before;
 		const after = builderFingerprint();
 		// Steps registered straight with CucumberJS (no decorator) are only visible on the builder
-		const builder = supportCodeLibraryBuilder as unknown as BuilderInternals;
-		for (const config of builder.stepDefinitionConfigs.slice(before.steps)) {
+		for (const config of builderInternals().stepDefinitionConfigs.slice(before.steps)) {
 			const pattern = storedPattern(config.pattern);
 			record.steps.set(patternKey(pattern), pattern);
 		}
-		record.always ||=
-			after.hooks !== before.hooks ||
-			after.parameterTypes !== before.parameterTypes ||
-			after.World !== before.World ||
-			after.defaultTimeout !== before.defaultTimeout ||
-			after.parallelCanAssign !== before.parallelCanAssign ||
-			after.definitionFunctionWrapper !== before.definitionFunctionWrapper ||
-			record.steps.size === 0;
+		record.always ||= registeredBeyondSteps(before, after) || record.steps.size === 0;
 	}
 
 	private onBindingRegistered(binding: StepBinding): void {
@@ -438,7 +386,7 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 
 	/** Stop recording without writing: the load failed. */
 	abort(): void {
-		BindingRegistry.instance.setRegistrationListener(undefined);
+		this.removeListener();
 		this.current = undefined;
 	}
 
@@ -447,7 +395,7 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 	 * validated previous records for the files it skipped, and the parameter types of the finished library.
 	 */
 	finish(library: SupportCodeLibrary): void {
-		BindingRegistry.instance.setRegistrationListener(undefined);
+		this.removeListener();
 		const start = startTimer();
 		try {
 			const files: string[] = [];

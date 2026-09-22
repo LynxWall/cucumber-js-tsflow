@@ -15,5 +15,13 @@
 		"parallel": 0,
 		"selectiveLoad": true,
 		"tags": "@node"
+	},
+	"watch": {
+		"transpiler": "es-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node"
 	}
 }

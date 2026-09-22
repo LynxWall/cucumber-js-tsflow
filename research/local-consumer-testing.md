@@ -151,6 +151,28 @@ TSFLOW_TIMING=true TSFLOW_THEME=off node ../node_modules/@lynxwall/cucumber-tsfl
 
 The Phase 9 hand-off in the execution strategy has the numbers.
 
+## Watch mode on this suite
+
+`--watch` (Phase 10) keeps one process alive and reruns on Enter or on a file change, keeping every module
+loaded except the support files that registered something, the changed files and their dependents. The
+measurement of interest is the startup of a rerun against the startup of a fresh process, with the run itself
+unchanged. Because the captured shell is not a TTY, drive the process through piped stdin: the scratch script
+used in Phase 10 spawns the CLI with `--watch`, waits for the `Run took` status line after each run, writes `\n`
+for a rerun and `q` to quit, and can edit a file between runs. Its essentials, for a one-scenario inner loop:
+
+```sh
+cd C:/Git/Azure/uis-tools/Tools.Web/VueApp/test
+# stdin is a pipe: each "\n" is a rerun, "q" quits; TSFLOW_THEME left on so the rerun note appears on the load line
+printf '\n\nq' | TSFLOW_TIMING=true node ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js \
+  -p default --watch --name "Loading indicator displays while reviews are loading"
+```
+
+`printf` delivers all three keys at once; the loop queues one rerun while a run is in progress and quits after
+the current run, so this gives two runs, not three — a script that waits for each `Run took` line before
+writing the next key gets the exact count. Read each run's `TSFLOW_TIMING` report (the timing store is reset
+per run, so every report covers one run) and the load-phase line's `(rerun N: A evaluated again, B kept
+loaded, C other modules)` note. The Phase 10 hand-off in the execution strategy has the numbers.
+
 ## Profiling a run
 
 Item 27 of the [execution strategy](performance-enhancement-execution-strategy.md) asks where the time

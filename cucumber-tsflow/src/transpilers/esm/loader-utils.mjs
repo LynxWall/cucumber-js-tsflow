@@ -9,9 +9,10 @@ import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
 
 // The import-graph recorder is a CJS module shared with the main process (selective loading reads what
-// the in-thread resolve hook records here); loaded the way esbuild.mjs loads the transpile cache.
+// the in-thread resolve hook records here, and watch mode's module versions are applied to every URL the
+// hook resolves); loaded the way esbuild.mjs loads the transpile cache.
 const require = createRequire(import.meta.url);
-const { recordImportEdge } = require('../../utils/module-graph.js');
+const { recordImportEdge, versionedUrl, withoutQuery, addReloadListener } = require('../../utils/module-graph.js');
 
 // Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
 // `nextLoad`, so the same hook functions work under both registration mechanisms: `module.registerHooks()`
@@ -158,12 +159,13 @@ export function resolveWithExtensions(specifier, parentURL, extensions = CODE_EX
 
 const pathResolutionCache = new Map();
 
-// Drops every cached resolution result. Not called by the one-shot CLI; intended for a long-lived
-// process (e.g. a future watch mode) whose source tree changes between resolutions.
+// Drops every cached resolution result. Never needed by a one-shot run; watch mode calls it (through the
+// reload listener below) before each rerun, since files may have been added, removed or moved.
 export function clearResolutionCaches() {
 	extensionResolutionCache.clear();
 	pathResolutionCache.clear();
 }
+addReloadListener(clearResolutionCaches);
 
 export function resolveTsconfigPaths(specifier) {
 	// Fast path: skip what we know won't match
@@ -504,9 +506,14 @@ export function createEsbuildLoader(options = {}) {
 					result = nextResolve(specifier, context);
 				}
 
-				// In-thread, `result` is the resolution itself and the import edge can be recorded for selective
-				// loading; on the hooks thread it is a promise (no `url`) and nothing is recorded.
-				if (result && typeof result.url === 'string') recordImportEdge(context?.parentURL, result.url);
+				// In-thread, `result` is the resolution itself: a module watch mode has decided to evaluate again
+				// gets its version query here, and the import edge is recorded for selective loading. On the hooks
+				// thread it is a promise (no `url`) and neither happens.
+				if (result && typeof result.url === 'string') {
+					const url = versionedUrl(result.url);
+					if (url !== result.url) result = { ...result, url };
+					recordImportEdge(context?.parentURL, url);
+				}
 				return result;
 			} catch (error) {
 				loaderLogger.error('resolve failed', error, { specifier });
@@ -522,20 +529,24 @@ export function createEsbuildLoader(options = {}) {
 			if (verbose) loaderLogger.checkpoint('load', { url });
 			const loadStart = startTimer();
 
+			// The extension is judged without any query: in watch mode a module being evaluated again has a
+			// `?tsflow=<n>` version appended. The full `url` is what the module is loaded and mapped under.
+			const file = withoutQuery(url);
+
 			try {
 				// Check common file types first
-				const commonResult = handleCommonFileTypes(url);
+				const commonResult = handleCommonFileTypes(file);
 				if (commonResult) {
 					if (verbose) loaderLogger.checkpoint('load handled as common file type', { url });
 					return commonResult;
 				}
 
 				// Handle Vue files if enabled
-				if (handleVue && url.endsWith('.vue')) {
+				if (handleVue && file.endsWith('.vue')) {
 					if (verbose) loaderLogger.checkpoint('load handling Vue file', { url });
 					try {
 						const result = loadVue(url);
-						recordFile('load', url, loadStart);
+						recordFile('load', file, loadStart);
 						if (verbose) loaderLogger.checkpoint('Vue file loaded successfully', { url });
 						return result;
 					} catch (error) {
@@ -545,11 +556,11 @@ export function createEsbuildLoader(options = {}) {
 				}
 
 				// Handle TypeScript files
-				if (url.endsWith('.ts') || url.endsWith('.tsx')) {
+				if (file.endsWith('.ts') || file.endsWith('.tsx')) {
 					if (verbose) loaderLogger.checkpoint('load handling TypeScript file', { url });
 					try {
 						const result = loadTypeScript(url);
-						recordFile('load', url, loadStart);
+						recordFile('load', file, loadStart);
 						if (verbose) loaderLogger.checkpoint('TypeScript file loaded successfully', { url });
 						return result;
 					} catch (error) {

@@ -28,10 +28,13 @@ const registerHooks = (nodeModule as unknown as { registerHooks?: (hooks: SyncHo
 const SYNC_CAPABLE_LOADERS = new Set(['esnode-loader', 'esvue-loader']);
 
 /**
- * Loader files already attached to this thread with `registerHooks()`. Hooks stack, so registering the
- * same loader twice (a `loadSupport` / `reloadSupport` cycle) would only add a redundant layer.
+ * Loader files already attached to this thread with `registerHooks()`, and loader specifiers already
+ * attached to the process with `register()`. Hooks stack, so registering the same loader twice (a
+ * `loadSupport` / `reloadSupport` cycle, or a second run in watch mode) would add a redundant layer that
+ * every later resolve and load would pass through.
  */
 const registeredSync = new Set<string>();
+const registeredAsync = new Set<string>();
 
 function syncLoaderFile(specifier: string): string | undefined {
 	const match = /\/transpilers\/esm\/([^/]+?)(\.mjs)?$/.exec(specifier.replace(/\\/g, '/'));
@@ -60,7 +63,10 @@ export function loaderHooksMode(specifier: string): LoaderHooksMode {
 export async function registerLoader(specifier: string): Promise<LoaderHooksMode> {
 	const file = loaderHooksMode(specifier) === 'sync' ? syncLoaderFile(specifier) : undefined;
 	if (!file || !registerHooks) {
-		nodeModule.register(specifier, pathToFileURL('./'), timingRegisterOptions());
+		if (!registeredAsync.has(specifier)) {
+			nodeModule.register(specifier, pathToFileURL('./'), timingRegisterOptions());
+			registeredAsync.add(specifier);
+		}
 		return 'async';
 	}
 

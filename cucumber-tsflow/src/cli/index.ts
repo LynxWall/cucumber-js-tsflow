@@ -5,6 +5,7 @@ import { loadConfiguration } from '../api/load-configuration';
 import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
 import ArgvParser from './argv-parser';
+import { watchCucumber } from './watch';
 import debug from 'debug';
 import { createLogger } from '../utils/tsflow-logger';
 import { startTimer, recordPhase } from '../utils/tsflow-timing';
@@ -124,6 +125,13 @@ export default class Cli {
 		} catch (error: any) {
 			logger.error('Configuration loading failed', error);
 			throw new Error(`Failed to load configuration: ${error.message}`, { cause: error });
+		}
+
+		// Watch mode: run, then stay resident and rerun on changes until the user quits
+		if (configuration.watch) {
+			logger.checkpoint('Running cucumber in watch mode');
+			const success = await watchCucumber(runConfiguration, environment, { argv: this.argv });
+			return { shouldExitImmediately: false, success };
 		}
 
 		// Run cucumber

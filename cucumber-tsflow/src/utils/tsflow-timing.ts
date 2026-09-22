@@ -86,6 +86,18 @@ function getStore(): TimingStore {
 }
 
 /**
+ * Forget every phase and file timing recorded so far in this context (and merged from others), keeping the
+ * enabled flag and the loader-hook ports. Watch mode calls this before each run so its report covers that
+ * run alone.
+ */
+export function resetTimings(): void {
+	const store = getStore();
+	store.phases.clear();
+	store.files.length = 0;
+	store.remote.length = 0;
+}
+
+/**
  * Check if timing instrumentation is enabled
  */
 export function isTimingEnabled(): boolean {

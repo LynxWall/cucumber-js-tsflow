@@ -100,6 +100,15 @@ export class Callsite {
 	}
 
 	/**
+	 * The file of the callsite as V8 named it, before source mapping: a `file:` URL (possibly with a
+	 * `?tsflow=<n>` version query in watch mode) for an ES module, a path for a CommonJS module, or
+	 * undefined when no frame was captured.
+	 */
+	public get rawFile(): string | undefined {
+		return this.frame?.getFileName() ?? undefined;
+	}
+
+	/**
 	 * The position of the callsite in the code V8 executed, before source mapping. Distinct decorator
 	 * expressions always have distinct raw positions and reading it costs nothing, so the registry uses it
 	 * as a binding's identity.

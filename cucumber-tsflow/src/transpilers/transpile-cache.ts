@@ -86,6 +86,13 @@ export function getTranspileCacheStats(): TranspileCacheStats {
 	return { enabled: isTranspileCacheEnabled(), directory, ...stats };
 }
 
+/** Zero this thread's counters. Watch mode calls it before each run so the load-phase summary is per run. */
+export function resetTranspileCacheStats(): void {
+	stats.hits = 0;
+	stats.misses = 0;
+	stats.writes = 0;
+}
+
 let cacheRoot: string | undefined;
 
 /**

@@ -41,7 +41,7 @@ export class BindingRegistry {
 	private _stepBindings = new Map<StepPattern, Map<TagName, StepBinding[]>>();
 	private _classBindings = new Map<any, ClassBinding>();
 	private _cucumberKeyIndex = new Map<string, StepBinding>();
-	private _registrationListener: ((stepBinding: StepBinding) => void) | undefined;
+	private readonly _registrationListeners = new Set<(stepBinding: StepBinding) => void>();
 
 	/**
 	 * Gets the binding registry singleton.
@@ -166,19 +166,46 @@ export class BindingRegistry {
 		// Index by cucumberKey for O(1) lookup
 		this._cucumberKeyIndex.set(stepBinding.cucumberKey, stepBinding);
 
-		this._registrationListener?.(stepBinding);
+		for (const listener of this._registrationListeners) listener(stepBinding);
 	}
 
 	/**
 	 * Observe every step binding as it is registered. Support code registers its bindings synchronously
-	 * while its module evaluates, so a listener set around a `require`/`import` sees exactly the bindings
+	 * while its module evaluates, so a listener added around a `require`/`import` sees exactly the bindings
 	 * that file (and the modules it pulled in for the first time) contributed. Selective loading records
-	 * the step patterns per support file this way. Pass undefined to stop observing.
+	 * the step patterns per support file this way, and watch mode learns which files register anything.
 	 *
 	 * @param listener Called after each binding has been indexed, duplicates included.
+	 * @returns A function that removes the listener.
 	 */
-	public setRegistrationListener(listener?: (stepBinding: StepBinding) => void): void {
-		this._registrationListener = listener;
+	public addRegistrationListener(listener: (stepBinding: StepBinding) => void): () => void {
+		this._registrationListeners.add(listener);
+		return () => this._registrationListeners.delete(listener);
+	}
+
+	/**
+	 * Forget every registered binding and context type, keeping the registration listeners. A resident
+	 * process (watch mode) calls this before it evaluates the support code again, so that bindings from the
+	 * previous run cannot shadow or duplicate the ones about to be registered.
+	 */
+	public clear(): void {
+		this._stepBindings.clear();
+		this._classBindings.clear();
+		this._cucumberKeyIndex.clear();
+	}
+
+	/**
+	 * The file of every registered binding's callsite as V8 reported it (a `file:` URL for an ES module, a
+	 * path otherwise), without source-map resolution. Watch mode uses it to find modules that apply
+	 * decorators without being support files themselves, which must be evaluated again on every run.
+	 */
+	public getBindingSourceFiles(): Set<string> {
+		const files = new Set<string>();
+		for (const binding of this._cucumberKeyIndex.values()) {
+			const file = binding.callsite.rawFile;
+			if (file) files.add(file);
+		}
+		return files;
 	}
 
 	/**

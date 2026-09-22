@@ -7,7 +7,7 @@ import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { makeRuntime } from '../runtime/make-runtime';
 import { initializeFormatters } from '@cucumber/cucumber/lib/api/formatters';
-import { getSupportCodeLibrary } from './support';
+import { composeRecorders, getSupportCodeLibrary } from './support';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { getPicklesAndErrors } from '@cucumber/cucumber/lib/api/gherkin';
 import MessageCollector from '../runtime/message-collector';
@@ -24,6 +24,7 @@ import { startTimer, recordPhase, collectLoaderTimings, printTimingReport } from
 import { StartupProgress, describeTranspiler, plural, resolveStartupTheme } from '../utils/startup-progress';
 import { getTranspileCacheStats, pruneTranspileCache } from '../transpilers/transpile-cache';
 import { SelectiveLoadSession } from './selective-load';
+import type { SupportReloader } from './support-reloader';
 
 const runLogger = createLogger('run-cucumber');
 
@@ -39,20 +40,36 @@ export interface ITsFlowRunOptions extends IRunOptions {
 }
 
 /**
+ * State a caller keeps across several `runCucumber` calls in one process (the CLI's watch mode does).
+ * Without it every call is a one-shot run: it loads the support code as a fresh process would.
+ *
+ * @public
+ */
+export interface ITsFlowRunSession {
+	/** Keeps the support modules loaded between runs and re-evaluates only what must run again. */
+	reloader?: SupportReloader;
+	/** Files changed since the previous run, for the reloader. */
+	changedPaths?: readonly string[];
+}
+
+/**
  * Execute a Cucumber test run.
  *
  * Extended from cucumber.js so that we can use our own implementation
  * of makeRuntime
  *
  * @public
- * @param options - Configuration loaded from `loadConfiguration`.
+ * @param options - Configuration loaded from `loadConfiguration`. `options.support` is replaced by the
+ * loaded library, so a caller running more than once passes a fresh copy each time.
  * @param environment - Project environment.
  * @param onMessage - Callback fired each time Cucumber emits a message.
+ * @param session - State kept across runs of a resident process; see `ITsFlowRunSession`.
  */
 export async function runCucumber(
 	options: ITsFlowRunOptions,
 	environment: IRunEnvironment = {},
-	onMessage?: (message: Envelope) => void
+	onMessage?: (message: Envelope) => void,
+	session?: ITsFlowRunSession
 ): Promise<IRunResult> {
 	const mergedEnvironment = makeEnvironment(environment);
 	const { cwd, stdout, stderr, env, logger } = mergedEnvironment;
@@ -157,10 +174,20 @@ Running from: ${__dirname}
 	let loadImportPaths = importPaths;
 	let selectiveLoad: SelectiveLoadSession | undefined;
 	let loadNote = '';
-	if (options.runtime.selectiveLoad && !('originalCoordinates' in options.support)) {
+	const alreadyLoaded = 'originalCoordinates' in options.support;
+
+	// A resident process (watch mode): make the modules that must run again load again, keep the rest
+	const reloader = alreadyLoaded ? undefined : session?.reloader;
+	const reload = reloader?.prepare(session?.changedPaths ?? [], sourcePaths, requirePaths, importPaths);
+	if (reload) {
+		const others = reload.modules > 0 ? `, ${plural(reload.modules, 'other module')}` : '';
+		loadNote += ` (rerun ${reload.generation}: ${reload.reevaluated} evaluated again, ${reload.kept} kept loaded${others})`;
+	}
+
+	if (options.runtime.selectiveLoad && !alreadyLoaded) {
 		const unsupported = SelectiveLoadSession.unsupportedReason(supportCoordinates);
 		if (unsupported) {
-			loadNote = ` (selective load unavailable: ${unsupported})`;
+			loadNote += ` (selective load unavailable: ${unsupported})`;
 			runLogger.checkpoint('Selective load unavailable', { reason: unsupported });
 		} else {
 			selectiveLoad = new SelectiveLoadSession(
@@ -176,7 +203,7 @@ Running from: ${__dirname}
 					: selectiveLoad.plan(filteredPickles.map(filterable => filterable.pickle));
 			loadRequirePaths = plan.requirePaths;
 			loadImportPaths = plan.importPaths;
-			loadNote = plan.reason
+			loadNote += plan.reason
 				? ` (selective load: ${plan.reason})`
 				: ` (${plan.skipped} skipped: not used by the selected scenarios)`;
 			runLogger.checkpoint('Selective load plan', { skipped: plan.skipped, reason: plan.reason });
@@ -209,7 +236,7 @@ Running from: ${__dirname}
 							importPaths: loadImportPaths,
 							loaders: supportCoordinates.loaders,
 							onFileLoaded: () => progress.tick(),
-							recorder: selectiveLoad
+							recorder: composeRecorders(selectiveLoad, reloader)
 						});
 					})();
 
@@ -222,10 +249,13 @@ Running from: ${__dirname}
 		options.support = supportCodeLibrary;
 		recordPhase('registry:update', phaseStart);
 		selectiveLoad?.finish(supportCodeLibrary);
+		reloader?.finish();
 	} catch (err) {
 		selectiveLoad?.abort();
-		// Close the open progress line so the error that follows starts on its own line
+		reloader?.abort();
+		// Close the open progress line so the error that follows starts on its own line, and stop the spinner
 		progress.end('failed');
+		progress.finish();
 		throw err;
 	}
 	const hookCount =

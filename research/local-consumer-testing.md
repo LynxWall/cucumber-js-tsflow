@@ -109,6 +109,13 @@ steps take well under a second and everything else is startup. Wrap the command 
 cold filesystem cache and on-access antivirus scanning. The effect is not small — see the table below — so
 a measurement is the steady state of runs two onward, never run one.
 
+**Check for stray filesystem scanners before measuring.** A run can also be disturbed by another process
+competing for the disk: in Phase 11 an orphaned Git Bash `find / -maxdepth 8 …` from the previous day made every
+startup phase about three times its clean figure, including the ones that load nothing (`gherkin`, transpile-cache
+hits), and repeated runs did not settle. `Get-Process | Sort-Object CPU -Descending | Select-Object -First 8` finds
+such a process; a `gherkin` row at three times its usual 170 ms is the signature. See the Phase 11 hand-off in the
+execution strategy.
+
 ## First measurements
 
 Serial `utils` profile, Node 24.16.0, same machine, same session, in the order they were run:

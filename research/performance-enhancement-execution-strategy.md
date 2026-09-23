@@ -37,17 +37,21 @@ this" and "what did that measure", not "what do I do next".
 
 Updated at every hand-off, so that this block is always current.
 
-- **Stage:** 12c, review refactors, of Phase 12 (the release gate). Groups 1 to 3 of 6 are complete with the
-  boundary matrix green after each; groups 4 to 6 have not started. Group 4 (H, I, J: the transpiler layer,
-  in that order) is next; H begins with a look, not a fix (see the 12c hand-off, "Notes specific to the pause
-  and group 4"). Nothing is open. The rule from group 2 stands for the rest of the stage: the branch ships as a
-  minor release (7.8), so no published option, flag or export is removed.
-- **Branch:** one squashed commit per group, `a29eb42` (group 1), `7a7af28` (group 2) and `c57ca3f` (group 3),
-  each followed by its documentation commit, on top of the triage commit `1c842e6`. Everything is pushed. The
-  commit workflow (small commits inside a group, one squashed commit per group before the hand-off and before
-  any push) is recorded at the end of the 12c hand-off.
-- **First act of the next session:** start group 4 with H's look at the two `supports()` and the two
-  `transpileCode()`, from the 12c triage table, with the per-commit cadence from the 12c stage definition.
+- **Stage:** 12c, review refactors, of Phase 12 (the release gate). Groups 1 to 4 of 6 are complete with the
+  boundary matrix green after each; groups 5 and 6 have not started. Group 5 (D/U and N: loading and eviction,
+  the largest behavior change of the stage) is next, then group 6, the closing measurement (see the 12c
+  hand-off, "Notes specific to the pause and group 5"). Nothing is open. The rule from group 2 stands for the
+  rest of the stage: the branch ships as a minor release (7.8), so no published option, flag or export is
+  removed.
+- **Branch:** one squashed commit per group, `a29eb42` (group 1), `7a7af28` (group 2), `c57ca3f` (group 3) and
+  `1c4299b` (group 4), each followed by its documentation commit, on top of the triage commit `1c842e6`; after
+  group 4, `fec46e9` is a fix to Z's spec under async ESM hooks made by a second session working in the same
+  tree (its working agreement is in the hand-off). Everything is pushed. The commit workflow (small commits
+  inside a group, one squashed commit per group before the hand-off and before any push) is recorded at the end
+  of the 12c hand-off.
+- **First act of the next session:** start group 5 with D/U from the 12c triage table, with the per-commit
+  cadence from the 12c stage definition; read the hand-off's note on the selective-load unit-test flake first,
+  since group 5 touches the same loading code.
 - **Read next:** [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md), then the 12c triage and stage
   definition in [phase-12-plan.md](execution-strategy/phase-12-plan.md#12c-triage).
 
@@ -173,7 +177,7 @@ All documents live under [execution-strategy/](execution-strategy/). Each begins
 | [phase-12-plan.md](execution-strategy/phase-12-plan.md) | Phase 12 scope; baseline: decisions with the owner, coverage inventory, review findings A to AH, 12c triage, stages 12a to 12f with gates, amended exit criteria | Starting any Phase 12 stage |
 | [stage-12a-hand-off.md](execution-strategy/stage-12a-hand-off.md) | Test foundation: `node:test` runner, seams, unit tests, CI matrix | The unit-test layout and seams |
 | [stage-12b-hand-off.md](execution-strategy/stage-12b-hand-off.md) | Behavior discovery: end-to-end specs, failure-path pass, findings Y to AH classified | A 12b finding's origin |
-| [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md) | Review refactors, written as the groups land; groups 1 to 3, the commit workflow, A's kept flag, what group 4 starts with | Continuing 12c |
+| [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md) | Review refactors, written as the groups land; groups 1 to 4 and the Z fix, the commit workflow, the two-session working agreement, what group 5 starts with | Continuing 12c |
 
 Related documents outside this folder: [local-consumer-testing.md](local-consumer-testing.md) (the UIS Tools
 testbed and how it is linked in), [phase-4-callsite-resolution-and-jsdom.md](phase-4-callsite-resolution-and-jsdom.md)

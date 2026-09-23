@@ -4,7 +4,7 @@ Part of the [Performance Enhancement Execution Strategy](../performance-enhancem
 
 Written as the groups land (started 2026-09-23), so that a pause after any group can resume cold. Stage 12c is
 [Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **Groups 1
-to 3 are complete; groups 4–6 have not started.**
+to 4 are complete; groups 5 and 6 have not started.**
 
 ## State of the tree
 
@@ -63,6 +63,35 @@ to 3 are complete; groups 4–6 have not started.**
   Tests changed: `module-graph.test.ts` (three describe blocks moved to `paths.test.ts`),
   `support-reloader.test.ts` and `loader-utils.test.ts` (import `canonicalPath` from its new home). No CHANGELOG
   line: nothing a user sees changed.
+- **Group 4** (H, I, J; the transpiler layer) is one commit, `1c4299b`, squashed on 2026-09-23 from three
+  working commits, one per finding in the plan's order, on top of the group 3 hand-off `358f6e8`; the tree is
+  byte-identical to the last working commit. The cadence held after each (`yarn build` with no stray `.js`
+  under `src/`, the strict type-check with zero errors from the touched files and the pre-existing total still
+  21, `tsc --noEmit -p test/tsconfig.json` clean, `yarn test:unit`, and the variants the triage named: the four
+  esbuild variants after H at 31, 25, 18, 18; the four Vue variants after I at 18 each; the eight `*-exp*`
+  variants after J at 31, 31, 27, 27, 30, 30, 30, 30). At the group boundary `yarn test:all` was green on all
+  sixteen variants: 18, 18, 31, 31, 18, 18, 25, 25, 30, 30, 30, 30, 31, 31, 27, 27, identical to the group 3
+  boundary. `yarn test:unit` is at **260 tests** (252 after group 4's own eight: `esbuild.test.ts` five,
+  `decorator-mode.test.ts` two, `loadVue` one; the other eight are the Z fix's below).
+- Group 4 files added: `src/utils/decorator-mode.ts`, `test/transpilers/esbuild.test.ts`,
+  `test/utils/decorator-mode.test.ts`. Deleted: `src/transpilers/esm/vue-sfc-compiler.mjs`. Changed under
+  `src`: `transpilers/esbuild.ts`, `transpilers/esm/esbuild.mjs`, `transpilers/vue-sfc-compiler.ts`,
+  `transpilers/esm/loader-utils.mjs`, `transpilers/esm/tsnode-loader.mjs`, `api/load-configuration.ts`,
+  `runtime/parallel/worker.ts`. Tests changed: `cache-keys.test.ts`, `loader-utils.test.ts`. Also
+  `Architecture.md` (the transpile-cache paragraph, the configuration bullet on the decorator mode). No
+  CHANGELOG line for H, I or J: nothing a user sees changed; the transpile-cache entries written by earlier
+  builds of this branch become garbage under the new kinds and keys, pruned by size like any other.
+- **Z fix, source-map relay for `module.register()`**, is the commit `fec46e9` on top of `1c4299b`, made by a
+  second session working in the same tree during the group 4 session (see the coordination note under the
+  notes below). It closes the CI failure in the "Ubuntu, Node 24, async ESM hooks" job on the `before-all-throws`
+  spec and the Phase 6 item 28 limitation ("esbuild loaders under `TSFLOW_ESM_HOOKS=async` still report raw
+  positions"). Files: `src/api/register-loaders.ts`, `src/utils/our-callsite.ts`, `src/utils/loader-source-maps.ts`
+  (new), `src/transpilers/esm/source-map-relay.mjs` (new), `src/transpilers/esm/esnode-loader.mjs`,
+  `src/transpilers/esm/esvue-loader.mjs`, `test/utils/loader-source-maps.test.ts` (new),
+  `test/transpilers/esm/source-map-relay.test.ts` (new). The group 4 boundary matrix ran against a `lib/` built
+  from a working tree whose content equals `fec46e9`, so it covers this commit too. Its CHANGELOG clause was
+  added to the existing "Step definitions loaded by the esbuild ESM loaders report their TypeScript line" entry,
+  and its Architecture.md sentence to the callsite source-map paragraph, in the hand-off commit.
 
 ## What group 1 landed
 
@@ -198,24 +227,110 @@ to 3 are complete; groups 4–6 have not started.**
   its `stat`, undefined for a missing file and a directory, `sameStamp` on each field); the existing
   `selective-load.test.ts` and `transpile-cache.test.ts` prune cases cover the two consumers.
 
-## Notes specific to the pause and group 4
+## What group 4 landed
 
-- **Group 3 boundary: `yarn test:all` green on all sixteen variants (counts above).** Groups 4–6 remain, in the
-  order the plan gives; group 4 is the transpiler layer, H, I then J, which share four files
-  (`transpilers/esbuild.ts`, `esm/esbuild.mjs`, `esm/loader-utils.mjs`, `vue-sfc-compiler.ts`). H is "look, then
-  fix": confirm whether the ESM `supports()` rejecting `.ts` is deliberate before aligning or renaming the two
-  `supports()` and the two `transpileCode()`; its verification is `transpile-cache.test.ts` and the esbuild
-  variants. I runs `transformImports` before the Vue output is cached, with the path mappings in the cache key
-  (`transpile-cache.test.ts` key inputs, the Vue variants). J, marked large, passes the decorator mode to the
-  transpilers as one value across the thread boundary (the `*-exp*` variants, the Vue cache-key unit test). The
-  cache key strings are tested in `test/transpilers/cache-keys.test.ts`; a change to what goes into a key should
-  land with its assertion.
-- Nothing is open from group 3: both findings landed as triaged. The one behavior difference (E's `Callsite`
-  filename on Windows, above) is an improvement the matrix accepted, not a question.
-- The editor's diagnostics are now delivered to the assistant after every edit (a PostToolUse hook prints the
+- **H.** The look first: neither `supports()` was called anywhere (source, tests, spec workspaces), and the ESM
+  one's rejection of `.ts` dates from `e24f4ff` (2025-08), when the esbuild loaders still routed TypeScript
+  through ts-node and `supports()` said which files were esbuild's; Phase 5 removed that routing and left the
+  function behind. Both are deleted. They were reachable only through the `./lib/*` wildcard export, which
+  this branch has already treated as internal (Phase 8 deleted whole modules under it, group 2 deleted
+  `isTimingEnabled()` and two fields under it), so this is not a removal of published surface. The two
+  `transpileCode()` are aligned by sharing one implementation: `transpilers/esbuild.ts` exports
+  `transformOptionsFor()` (the fixed options, the decorator mode in `tsconfigRaw`, the caller's overrides,
+  the loader by extension, and the output format), `esbuildCacheKey()` and `runEsbuild()`; `esm/esbuild.mjs`
+  loads them through `createRequire`, as it already loaded the transpile cache, and keeps only what an ES
+  module needs (`format: 'esm'` with `platform: 'node'`, `rewritePathMappings` before the transform, the
+  mappings in its key). Both use the cache kind `esbuild`; the format is in the key, so entries stay distinct
+  (`cache-keys.test.ts` pins it). The ESM module's own loaders table and `defaultOptions` are gone. Test:
+  `test/transpilers/esbuild.test.ts`.
+- **I.** `loadVue` in `esm/loader-utils.mjs` caches the compiled component together with its
+  `transformImports` pass in one entry, kind `vue-sfc-esm`, keyed on `vueSfcCacheKey(options)` plus the
+  tsconfig `absoluteBaseUrl` and `paths` the transform rewrites bare specifiers through (the rewritten paths
+  are relative to the component's directory, which the file name in the key covers). A warm load reads one
+  entry and runs nothing; before, the regex pass ran over the cached output on every load.
+  `vue-sfc-compiler.ts` exports `resolveVueSFCOptions()`, `vueSfcCacheKey()` and `compileVueSFCUncached()`
+  for it; `compileVueSFC()` (the CJS Vue transpilers, kind `vue-sfc`) behaves as before. The format-`'esm'`
+  wrapper `esm/vue-sfc-compiler.mjs`, which only `loadVue` used, is deleted. Test: `loadVue` in
+  `loader-utils.test.ts` (one compile, then one cache read with the same output). Architecture.md's
+  transpile-cache paragraph follows.
+- **J.** `utils/decorator-mode.ts`: `setExperimentalDecorators(enabled)` records the mode once (the global for
+  the decorators' hot path, `CUCUMBER_EXPERIMENTAL_DECORATORS` for the transpilers, because only the
+  environment reaches the loader hooks thread and the forked children), and `experimentalDecorators()` reads
+  it. `loadConfiguration` and the parallel worker (which receives the mode over `EXPERIMENTAL_DECORATORS`
+  from the adapter, unchanged) call the setter; `esbuild.ts`, `esm/esbuild.mjs` and `vue-sfc-compiler.ts`
+  call the getter on every transpile instead of reading the global or the environment when their module
+  loads, and `esm/tsnode-loader.mjs` calls it when it creates its ts-node service. The Vue cache key is now
+  built from the same value the ESM transpiler uses, which closes the stale-cache ordering the finding
+  described. The decorators in `bindings/` still read the global; J's remit was the transpilers. Tests:
+  `test/utils/decorator-mode.test.ts`; the three decorator-mode cases in `cache-keys.test.ts` toggle the mode
+  through the setter and no longer re-import the transpiler modules. Architecture.md's configuration bullet
+  follows.
+
+## What the Z fix landed (source-map relay for `module.register()`)
+
+Written by the session that made `fec46e9`. Under `TSFLOW_ESM_HOOKS=async` (and on Node versions without
+`module.registerHooks`) the esbuild ESM loaders run on Node's loader hooks thread, whose globals the main thread
+never sees, so the maps `loadTypeScript()` records on `__CUCUMBER_TSFLOW_SOURCE_MAPS` were never found by
+`Callsite.resolve()`; it fell back to `source-map-support`, which has no map for in-memory transpiled code, and
+reported the `file:` URL with the transpiled line (the BeforeAll spec's `before-all-throws.ts:9` became
+`file:///...before-all-throws.ts:50` in the async CI job, and every step definition's `uri` in that mode was
+raw; the Phase 6 item 28 limitation). `registerLoader()` (`api/register-loaders.ts`) now hands tsflow's two
+esbuild loaders a `MessagePort` in the `module.register()` data, merged with the timing port options via a small
+`mergeRegisterOptions()`; the new `transpilers/esm/source-map-relay.mjs` supplies the loaders' `initialize` hook
+and wraps `load` so each module's recorded map is posted before its source is returned (a pass-through without a
+port, which is the in-thread `registerHooks` case); the new `utils/loader-source-maps.ts` keeps the receiving
+ports and drains them synchronously with `receiveMessageOnPort` on the first lookup miss, into the same global
+the in-thread path uses, and `utils/our-callsite.ts` reads through it. `esnode-loader.mjs` and `esvue-loader.mjs`
+wrap their loader and export the new `initialize`; ts-node and third-party loaders receive only the timing port.
+Ordering is safe because a loader posts before returning the module's source and callsites are resolved after
+the support code has loaded. Verified: strict null-check type-check clean on the touched files; six new unit
+tests in `test/utils/loader-source-maps.test.ts` and `test/transpilers/esm/source-map-relay.test.ts`; node-esm,
+vue-esm, node-exp-esm and vue-exp-esm esbuild variants and node-esm ts-node green under `TSFLOW_ESM_HOOKS=async`;
+node-esm esbuild unchanged under default hooks; the `before-all-throws` profile names `before-all-throws.ts:9` in
+serial and `--parallel 1` under both hook modes.
+
+## Notes specific to the pause and group 5
+
+- **Group 4 boundary: `yarn test:all` green on all sixteen variants (counts above).** Groups 5 and 6 remain.
+  Group 5 is loading and eviction, D/U and N, the largest behavior change of the stage, placed last so that if
+  the closing measurement moves the culprit is fresh. D/U: one eviction and dependent-closure implementation,
+  with `getSupportCodeLibrary()` owning eviction so its callers stop doing it three ways, and `reloadSupport()`
+  clearing the registry and notifying listeners like `SupportReloader.prepare()`; verified by `support.test.ts`,
+  `support-reloader.test.ts`, `reload-support-test.feature` and both watch specs. N: the `node` workspace's
+  `watch` profile sets `watch: true` and the spec stops passing `--watch`; verified by `watch-mode-test.feature`.
+  Group 6 is the closing measurement on the UIS suite against the Phase 10 reference, with P's compile-cache A/B.
+- Nothing is open from group 4: all three findings landed as triaged. H's look answered its question (the
+  `.ts` rejection was a leftover of the pre-Phase-5 ts-node routing, and nothing called either `supports()`).
+- **Two sessions worked in this tree at once during the group 4 session**, this one on group 4 and a second on
+  the Z fix above, and the working agreement that emerged is worth keeping whenever that happens again: each
+  session names the files it will touch before editing and keeps to them; each stages with explicit paths and
+  never `git add -A`; `yarn build` and spec runs against `lib/` are handed over by message, one session at a
+  time, since both build into the same `lib/`; nothing below HEAD is rebased, reset or squashed while the other
+  is working; and a group's squash happens before the other session's commit lands on top of it, so the soft
+  reset still has a contiguous run of working commits. The peer session is listed by `ListAgents` and reached
+  with `SendMessage`.
+- **A unit-test flake, seen twice, not reproduced since.** In one `yarn test:unit` run right after a build,
+  `SelectiveLoadSession` › "compiles patterns with the parameter types the index recorded" failed; in a
+  standalone run of the same file a minute later, "loads a file whose import graph changed since it was indexed,
+  then trusts the rewritten record" failed instead; twelve further runs (eight plain, two after a fresh build,
+  the rest standalone) were green. Both tests assert on an index the previous `run()` wrote, and
+  `SelectiveLoadSession.writeIndex()` is best-effort: a failed `renameSync` of the temp file over the index is
+  swallowed into a verbose checkpoint, so a transient Windows `EPERM`/`EBUSY` on the rename (an antivirus or
+  indexer holding the file briefly, a well-known Windows failure mode) would leave the old index in place and
+  fail the *next* assertion, which fits both symptoms. `transpile-cache.ts`'s `writeEntry` has the same shape.
+  Not in the triage; a short retry on those two codes in both writers is a candidate for the owner to accept or
+  decline (12d, or group 5 if it recurs), not something to add unasked.
+- Leftovers noticed in group 4, none in the triage, for the owner: `esm/esbuild.mjs` (`loadTsConfigPaths`) and
+  `esm/loader-utils.mjs` (`initializeTsconfigPaths`) each call `tsconfig-paths`' `loadConfig()` once per thread
+  and keep their own copy of `absoluteBaseUrl`/`paths`; one loader could hand the other its result.
+  `TranspileOptions.debug` is declared and defaulted but read nowhere. The parallel adapter carries the decorator
+  mode to its children as a second environment variable, `EXPERIMENTAL_DECORATORS`, which `run-worker.ts` turns
+  back into a boolean for the worker's `setExperimentalDecorators()`; the children also inherit
+  `CUCUMBER_EXPERIMENTAL_DECORATORS`, so one variable would do.
+- The editor's diagnostics are delivered to the assistant after every edit (a PostToolUse hook prints the
   Problems-panel entries for the edited file), so the strict type-check at the end of a change confirms rather
   than discovers; the check still runs, because the hook reports only the file just edited, not its importers.
-- Leftovers noticed in groups 1 to 3, none in the triage, all for 12d or 12e rather than group 4:
+- Leftovers noticed in groups 1 to 3, none in the triage, all for 12d or 12e rather than group 5:
   `api/load-configuration.ts` (ten sites) and `api/convert-configuration.ts` (two) still log with `logger.error`
   before rethrowing, so a configuration error prints `[tsflow:config]:ERROR …` and then the `[tsflow:run]`
   report, two copies (same mechanical change as the loaders in AB; 12d). Both READMEs still list **Parallel

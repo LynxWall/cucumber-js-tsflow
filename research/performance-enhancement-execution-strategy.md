@@ -3063,8 +3063,15 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
   shows the "Run workflow" button only when the default branch's copy of `ci.yml` declares `workflow_dispatch`,
   and master's copy has just the `push` and `pull_request` triggers, so the manual route is not offered in the
   UI. A `pull_request` event uses the workflow file from the PR's own branch, so the five-job matrix is what runs;
-  the draft PR stays open for the rest of Phase 12 and every push to the branch reruns it. The result was not yet
-  known when this section was written; the 12c session should read the Checks tab first.
+  the draft PR stays open for the rest of Phase 12 and every push to the branch reruns it. **First run:** both
+  Windows jobs green; all three Ubuntu jobs (Node 22, Node 24, Node 24 with async hooks) failed in `yarn
+  test:unit` on one test, `module-graph.test.ts` "returns undefined for anything that is not a well-formed file
+  URL", which fed `canonicalFromUrl('file:')` expecting `undefined`: `fileURLToPath('file:')` throws on Windows
+  (no drive letter) but names the root directory `/` on POSIX, so the input was malformed only where the test was
+  written. The input is now `file:///a%2Fb.js`, which Node rejects on every platform. Nothing else differed on
+  Ubuntu: the spec matrix did not run there because the unit-test step comes first, so its Ubuntu result arrives
+  with the rerun. In a `node --test` log the failing tests are listed at the end under `✖ failing tests:`, and
+  `ℹ fail` gives the count.
 - `npx tsc --noEmit -p cucumber-tsflow-specs/node/tsconfig.json` and the same for `node-esm` are clean (the
   spec workspaces have no type-check script; this is what the editor and the ts-node ESM loader see). ESLint and
   Prettier are clean on every step file added or changed.

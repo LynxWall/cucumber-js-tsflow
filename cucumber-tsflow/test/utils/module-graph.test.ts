@@ -61,7 +61,8 @@ describe('canonicalFromUrl and canonicalFromFrameFile', () => {
 	it('returns undefined for anything that is not a well-formed file URL', () => {
 		expect(canonicalFromUrl('node:fs')).to.equal(undefined);
 		expect(canonicalFromUrl('https://example.com/a.js')).to.equal(undefined);
-		expect(canonicalFromUrl('file:')).to.equal(undefined);
+		// An encoded slash is rejected on every platform; a bare 'file:' is the root directory on POSIX
+		expect(canonicalFromUrl('file:///a%2Fb.js')).to.equal(undefined);
 	});
 
 	it('reads a V8 frame file name as a URL or an absolute path, and nothing else', () => {

@@ -212,6 +212,13 @@ describe('PhaseRenderer in tty mode', () => {
 		expect(writes.at(-1)?.startsWith(REDRAW_PREFIX(1))).to.equal(true);
 		expect(last()).to.equal('[ ✓ ] Prepping the cucumbers — globs 12 files, 1.2s\r\n');
 	});
+
+	it('ends a failed phase with the failure mark in place of the check mark', () => {
+		const { renderer: r, last } = renderer('tty');
+		r.start('load', 'files', 3);
+		r.end('failed, 350ms', true);
+		expect(last()).to.equal('[ ✗ ] Packing the jars — files failed, 350ms\r\n');
+	});
 });
 
 describe('PhaseRenderer static helpers', () => {
@@ -232,6 +239,9 @@ describe('PhaseRenderer static helpers', () => {
 			'[ | ] Packing the jars'
 		);
 		expect(strip(PhaseRenderer.closingLine(theme, 'load', 'x', 'done'))).to.equal('[ ✓ ] Packing the jars — x done');
+		expect(strip(PhaseRenderer.closingLine(theme, 'load', 'x', 'failed', true))).to.equal(
+			'[ ✗ ] Packing the jars — x failed'
+		);
 	});
 });
 
@@ -309,6 +319,27 @@ describe('StartupProgress', () => {
 		expect(strip(s.writes.at(-1)!)).to.equal('[ ✓ ] Prepping the cucumbers done, 0ms\r\n');
 	});
 
+	it('closes a failed phase with the failure mark, and fail() is a no-op once the phase has closed', () => {
+		const s = stream(true);
+		const progress = new StartupProgress(s, theme, { now: () => 0 });
+		progress.begin('load', 'files', 2);
+		progress.fail();
+		expect(strip(s.writes.at(-1)!)).to.equal('[ ✗ ] Packing the jars — files failed, 0ms\r\n');
+		const written = s.writes.length;
+		progress.fail();
+		progress.finish();
+		expect(s.writes, 'nothing more for a phase that is not open').to.have.length(written);
+
+		const plain = stream(false);
+		const plainProgress = new StartupProgress(plain, theme, { now: () => 0 });
+		plainProgress.begin('load', 'files');
+		plainProgress.fail();
+		expect(plain.writes.map(strip), 'no mark on a plain stream, only the closing text').to.deep.equal([
+			'Packing the jars — files',
+			' failed, 0ms\n'
+		]);
+	});
+
 	interface FakeWorker extends SpinnerWorkerHandle {
 		posted: SpinnerWorkerCommand[];
 		terminated: boolean;
@@ -355,7 +386,7 @@ describe('StartupProgress', () => {
 		expect(created[0].worker.posted).to.deep.equal([
 			{ type: 'start', phase: 'load', detail: 'files', total: 4 },
 			{ type: 'tick' },
-			{ type: 'end', text: '4 files, 0ms' }
+			{ type: 'end', text: '4 files, 0ms', failed: false }
 		]);
 		expect(s.writes.map(strip), 'only the opening line came from the main thread').to.deep.equal([
 			'[ | ] Packing the jars — files (0/4)\r\n'

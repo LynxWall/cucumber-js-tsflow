@@ -59,8 +59,10 @@ export interface StartupTheme {
 	label: (text: string) => string;
 	/** Colour applied to the plain-language detail, the heartbeat quips and the elapsed-time summary */
 	detail: (text: string) => string;
-	/** Colour applied to the check mark that replaces the spinner when the phase completes */
+	/** Color applied to the check mark that replaces the spinner when the phase completes */
 	mark: (text: string) => string;
+	/** Color applied to the cross that replaces the spinner when the phase ends in failure */
+	failMark: (text: string) => string;
 	/** Text printed between a title and its detail */
 	separator: string;
 	/** Heartbeat text while a phase has completed no units yet, for phases without their own */
@@ -108,6 +110,8 @@ const SPINNER_WHEEL = WHEEL_STOPS.flatMap((from, i) => {
 });
 /** What the spinner slot shows once the phase has completed */
 const DONE_MARK = '✓';
+/** What the spinner slot shows when the phase ended in failure (a load error, a throwing BeforeAll hook) */
+const FAIL_MARK = '✗';
 /** Time between spinner frames (the `cli-spinners` "line" preset interval) */
 export const SPINNER_INTERVAL_MS = 130;
 /** How long a phase may go without a message before the heartbeat shows a quip */
@@ -128,6 +132,8 @@ export const DEFAULT_COLUMNS = 120;
 
 const steelBlue = ansis.hex('#5F87AF');
 const gold = ansis.hex('#D4AF37');
+/** The failure mark in both themes: the muted red of the spinner wheel's red stop, so it reads as a failure without glaring */
+const mutedRed = ansis.hex('#D75F5F');
 
 /** Default theme: the steps of making pickles, since cucumbers are what we are working with. */
 const PICKLE_THEME: StartupTheme = {
@@ -135,6 +141,7 @@ const PICKLE_THEME: StartupTheme = {
 	label: text => steelBlue(text),
 	detail: text => ansis.dim(text),
 	mark: text => steelBlue(text),
+	failMark: text => mutedRed(text),
 	separator: ' — ',
 	waiting: 'still at it, {elapsed} so far',
 	quips: ['{done} of {total} done, {elapsed} in', 'still going: {done} down, {left} to go'],
@@ -173,6 +180,7 @@ const LOTR_THEME: StartupTheme = {
 	label: text => gold(text),
 	detail: text => ansis.dim(text),
 	mark: text => gold(text),
+	failMark: text => mutedRed(text),
 	separator: ' — ',
 	waiting: 'the road goes ever on 🚶, {elapsed} so far',
 	quips: ['{done} of {total} behind us, {left} ahead 🌄', 'not all those who wander are lost 🧭 {done} of {total}'],
@@ -354,9 +362,16 @@ export class PhaseRenderer {
 		return `${spinnerSlot(0)} ${phaseText(theme, id, detail)}${theme.detail(counterText(0, total))}`;
 	}
 
-	/** The finished form of a phase line: check mark, title and detail, closing text. */
-	static closingLine(theme: StartupTheme, id: StartupPhaseId, detail: string | undefined, text: string): string {
-		return `${theme.mark(`[ ${DONE_MARK} ]`)} ${phaseText(theme, id, detail)}${theme.detail(` ${text}`)}`;
+	/** The finished form of a phase line: check mark (or the failure mark), title and detail, closing text. */
+	static closingLine(
+		theme: StartupTheme,
+		id: StartupPhaseId,
+		detail: string | undefined,
+		text: string,
+		failed = false
+	): string {
+		const mark = failed ? theme.failMark(`[ ${FAIL_MARK} ]`) : theme.mark(`[ ${DONE_MARK} ]`);
+		return `${mark} ${phaseText(theme, id, detail)}${theme.detail(` ${text}`)}`;
 	}
 
 	/**
@@ -445,14 +460,15 @@ export class PhaseRenderer {
 	}
 
 	/**
-	 * Finish the phase: the spinner slot becomes a check mark in the theme colour, the closing text (summary and elapsed time)
-	 * replaces the counter, the message line is erased, and the cursor is left at the start of a fresh line.
+	 * Finish the phase: the spinner slot becomes a check mark in the theme color (the failure mark when `failed`), the
+	 * closing text (summary and elapsed time) replaces the counter, the message line is erased, and the cursor is left
+	 * at the start of a fresh line.
 	 */
-	end(text: string): void {
+	end(text: string, failed = false): void {
 		if (!this.current) return;
 		if (this.mode === 'tty') {
 			const { id, detail, drawnRows } = this.current;
-			const closing = PhaseRenderer.closingLine(this.theme, id, detail, text);
+			const closing = PhaseRenderer.closingLine(this.theme, id, detail, text, failed);
 			this.write(`${cursorUp(drawnRows)}${COLUMN_0}${ERASE_DOWN}${closing}${NEW_LINE}`);
 		} else {
 			this.write(`${this.theme.detail(` ${text}`)}\n`);
@@ -566,7 +582,7 @@ function visibleWidth(text: string): number {
 export type SpinnerWorkerCommand =
 	| { type: 'start'; phase: StartupPhaseId; detail: string | undefined; total: number | undefined }
 	| { type: 'tick' }
-	| { type: 'end'; text: string };
+	| { type: 'end'; text: string; failed: boolean };
 
 /** `workerData` handed to the spinner worker thread. */
 export interface SpinnerWorkerData {
@@ -707,6 +723,19 @@ export class StartupProgress {
 
 	/** Finish the current phase: replaces the spinner with a check mark and the counter with the elapsed time (and an optional summary). */
 	end(summary?: string): void {
+		this.close(summary, false);
+	}
+
+	/**
+	 * Finish the current phase as failed: the spinner becomes the failure mark and the counter the elapsed time after
+	 * `summary` (`failed` by default). Nothing is printed for a phase that is not open, so a caller on an error path
+	 * can call it without knowing whether the phase had already closed.
+	 */
+	fail(summary = 'failed'): void {
+		this.close(summary, true);
+	}
+
+	private close(summary: string | undefined, failed: boolean): void {
 		if (!this.theme || !this.current) return;
 		const { id, detail, total, start } = this.current;
 		const elapsed = formatDuration(this.now() - start);
@@ -715,7 +744,7 @@ export class StartupProgress {
 
 		if (this.local) {
 			clearInterval(this.local.timer);
-			this.local.renderer.end(text);
+			this.local.renderer.end(text, failed);
 			this.local = undefined;
 			return;
 		}
@@ -723,7 +752,7 @@ export class StartupProgress {
 			// Wait for the worker to write the closing line, so whatever the caller prints next (the next
 			// phase line, a formatter's first output) lands after it.
 			Atomics.store(this.signal, 0, 0);
-			this.worker.postMessage({ type: 'end', text } satisfies SpinnerWorkerCommand);
+			this.worker.postMessage({ type: 'end', text, failed } satisfies SpinnerWorkerCommand);
 			const outcome = Atomics.wait(this.signal, 0, 0, this.handshakeTimeoutMs);
 			if (outcome === 'timed-out') {
 				// Write the closing line the worker did not: the cursor rests on the row after the block, which is
@@ -731,7 +760,7 @@ export class StartupProgress {
 				this.disposeWorker();
 				const width = this.width();
 				const rows = PhaseRenderer.rows(PhaseRenderer.openingLine(this.theme, id, detail, total, true), width);
-				const closing = PhaseRenderer.closingLine(this.theme, id, detail, text);
+				const closing = PhaseRenderer.closingLine(this.theme, id, detail, text, failed);
 				this.stream.write(`${cursorUp(rows)}${COLUMN_0}${ERASE_DOWN}${closing}${NEW_LINE}`);
 			}
 		}

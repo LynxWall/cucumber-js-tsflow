@@ -3,7 +3,7 @@
  * [... keep existing docblock ...]
  */
 import { resolveSpecifier, loadVue, handleCommonFileTypes } from './loader-utils.mjs';
-import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { createLogger, describeThrowable, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
 
 // TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
@@ -39,7 +39,7 @@ async function getTsLoader() {
 		logger.checkpoint('ts-node ESM loader cached');
 		return tsLoader;
 	} catch (error) {
-		logger.error('Failed to load ts-node ESM loader', error);
+		if (verbose) logger.checkpoint('Failed to load ts-node ESM loader', { error: describeThrowable(error) });
 		throw new Error(`Failed to load ts-node ESM loader: ${error.message}`, { cause: error });
 	}
 }
@@ -65,7 +65,7 @@ export async function load(url, context, nextLoad) {
 				if (verbose) logger.checkpoint('Vue file loaded successfully', { url });
 				return result;
 			} catch (error) {
-				logger.error('Failed to compile Vue SFC', error, { url });
+				if (verbose) logger.checkpoint('Failed to compile Vue SFC', { url, error: describeThrowable(error) });
 				throw new Error(`Failed to compile Vue SFC ${url}: ${error.message}`, { cause: error });
 			}
 		}
@@ -80,7 +80,7 @@ export async function load(url, context, nextLoad) {
 				if (verbose) logger.checkpoint('ts-node load success', { url });
 				return result;
 			} catch (error) {
-				logger.error('ts-node failed', error, { url });
+				if (verbose) logger.checkpoint('ts-node failed', { url, error: describeThrowable(error) });
 				throw new Error(`ts-node failed for ${url}: ${error.message}`, { cause: error });
 			}
 		}

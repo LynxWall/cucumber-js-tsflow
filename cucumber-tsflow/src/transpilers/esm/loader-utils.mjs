@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
 import { createRequire } from 'node:module';
-import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { createLogger, describeThrowable, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
 
 // The import-graph recorder is a CJS module shared with the main process (selective loading reads what
@@ -308,7 +308,7 @@ function transformImports(code, parentURL) {
 
 		return transformed;
 	} catch (error) {
-		loggerLoad.error('transformImports failed', error, { parentURL });
+		if (verbose) loggerLoad.checkpoint('transformImports failed', { parentURL, error: describeThrowable(error) });
 		throw new Error(`Failed to transform imports: ${error.message}`, { cause: error });
 	}
 }
@@ -322,7 +322,7 @@ export function loadVue(url) {
 		code = readSource(url);
 		if (verbose) loggerLoad.checkpoint('Vue source loaded', { sourceLength: code.length });
 	} catch (error) {
-		loggerLoad.error('Failed to load Vue source', error, { url });
+		if (verbose) loggerLoad.checkpoint('Failed to load Vue source', { url, error: describeThrowable(error) });
 		throw new Error(`Failed to load Vue source from ${url}: ${error.message}`, { cause: error });
 	}
 
@@ -336,7 +336,7 @@ export function loadVue(url) {
 		});
 		if (verbose) loggerLoad.checkpoint('Vue SFC compiled', { outputLength: compiled?.code?.length });
 	} catch (error) {
-		loggerLoad.error('Vue SFC compilation failed', error, { filename });
+		if (verbose) loggerLoad.checkpoint('Vue SFC compilation failed', { filename, error: describeThrowable(error) });
 		throw new Error(`Failed to compile Vue SFC ${filename}: ${error.message}`, { cause: error });
 	}
 
@@ -345,7 +345,7 @@ export function loadVue(url) {
 		transformed = transformImports(compiled.code, url);
 		if (verbose) loggerLoad.checkpoint('Vue imports transformed');
 	} catch (error) {
-		loggerLoad.error('Failed to transform Vue imports', error, { url });
+		if (verbose) loggerLoad.checkpoint('Failed to transform Vue imports', { url, error: describeThrowable(error) });
 		throw new Error(`Failed to transform imports in ${url}: ${error.message}`, { cause: error });
 	}
 
@@ -399,7 +399,7 @@ export function loadJson(url) {
 			shortCircuit: true
 		};
 	} catch (error) {
-		loggerLoad.error('loadJson failed', error, { url });
+		if (verbose) loggerLoad.checkpoint('loadJson failed', { url, error: describeThrowable(error) });
 		throw new Error(`Failed to load JSON ${url}: ${error.message}`, { cause: error });
 	}
 }
@@ -516,7 +516,7 @@ export function createEsbuildLoader(options = {}) {
 				}
 				return result;
 			} catch (error) {
-				loaderLogger.error('resolve failed', error, { specifier });
+				if (verbose) loaderLogger.checkpoint('resolve failed', { specifier, error: describeThrowable(error) });
 				throw new Error(`Failed to resolve ${specifier}: ${error.message}`, { cause: error });
 			} finally {
 				recordPhase('esm:resolve', resolveStart);
@@ -550,7 +550,8 @@ export function createEsbuildLoader(options = {}) {
 						if (verbose) loaderLogger.checkpoint('Vue file loaded successfully', { url });
 						return result;
 					} catch (error) {
-						loaderLogger.error(`Failed to compile Vue SFC ${url}`, error);
+						if (verbose)
+							loaderLogger.checkpoint(`Failed to compile Vue SFC ${url}`, { error: describeThrowable(error) });
 						throw new Error(`Failed to compile Vue SFC ${url}: ${error.message}`, { cause: error });
 					}
 				}
@@ -564,7 +565,7 @@ export function createEsbuildLoader(options = {}) {
 						if (verbose) loaderLogger.checkpoint('TypeScript file loaded successfully', { url });
 						return result;
 					} catch (error) {
-						loaderLogger.error(`esbuild failed for ${url}`, error);
+						if (verbose) loaderLogger.checkpoint(`esbuild failed for ${url}`, { error: describeThrowable(error) });
 						throw error;
 					}
 				}
@@ -572,7 +573,7 @@ export function createEsbuildLoader(options = {}) {
 				if (verbose) loaderLogger.checkpoint('load delegating to nextLoad', { url });
 				return nextLoad(url, context);
 			} catch (error) {
-				loaderLogger.error('load failed', error, { url });
+				if (verbose) loaderLogger.checkpoint('load failed', { url, error: describeThrowable(error) });
 				throw error;
 			} finally {
 				recordPhase('esm:load', loadStart);

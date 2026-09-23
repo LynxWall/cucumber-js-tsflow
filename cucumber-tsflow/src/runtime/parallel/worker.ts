@@ -79,6 +79,7 @@ export class ChildProcessWorker {
 	 * Initialize this child process worker
 	 */
 	async initialize({
+		testRunStartedId,
 		supportCodeCoordinates,
 		supportCodeIds,
 		options,
@@ -141,9 +142,17 @@ export class ChildProcessWorker {
 		this.supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(this.supportCodeLibrary);
 		recordPhase('registry:update', phaseStart);
 
-		// Initialize a worker and run BeforeAll hooks
+		// Initialize a worker and run the BeforeAll hooks; one that throws rejects this command, and run-worker.ts
+		// reports the error and exits 1, which the coordinator counts as a failed run
 		this.options = options;
-		this.worker = new Worker(this.id, this.eventBroadcaster, this.newId, this.options, this.supportCodeLibrary);
+		this.worker = new Worker(
+			testRunStartedId,
+			this.id,
+			this.eventBroadcaster,
+			this.newId,
+			this.options,
+			this.supportCodeLibrary
+		);
 		phaseStart = startTimer();
 		await this.worker.runBeforeAllHooks();
 		recordPhase('hooks:before-all', phaseStart);

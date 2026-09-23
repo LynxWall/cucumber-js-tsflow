@@ -29,7 +29,7 @@ import { resetTranspileCacheStats } from '../transpilers/transpile-cache';
 import { formatDuration } from '../utils/helpers';
 import { canonicalPath } from '../utils/module-graph';
 import { plural } from '../utils/startup-progress';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, formatThrowable } from '../utils/tsflow-logger';
 import { resetTimings } from '../utils/tsflow-timing';
 
 const logger = createLogger('watch');
@@ -190,7 +190,8 @@ class WatchSession {
 			this.lastSuccess = this.reloader ? await this.runInProcess(changed) : await this.runInChild();
 		} catch (error) {
 			this.lastSuccess = false;
-			this.stderr.write(`${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
+			// The one report of a failed run: the error and its causes, with stacks under TSFLOW_VERBOSE, like the CLI's
+			this.stderr.write(`${formatThrowable(error)}\n`);
 		}
 		const elapsed = formatDuration(performance.now() - start);
 		this.running = false;

@@ -206,6 +206,10 @@ describe('SupportReloader over ES module support files', () => {
 		const coordinates = { requireModules: [], requirePaths: [], importPaths: [], loaders: [] };
 		expect(SupportReloader.unsupportedReason(coordinates)).to.equal(undefined);
 		const loaders = ['@lynxwall/cucumber-tsflow/lib/transpilers/esm/vue-loader'];
-		expect(SupportReloader.unsupportedReason({ ...coordinates, loaders })).to.include('vue-loader');
+		// A built-in loader is named as the load phase names it; anything else by its specifier
+		expect(SupportReloader.unsupportedReason({ ...coordinates, loaders })).to.include('the ts-vue-esm loader');
+		expect(SupportReloader.unsupportedReason({ ...coordinates, loaders: ['ts-node-maintained/esm'] })).to.include(
+			'the ts-node-maintained/esm loader'
+		);
 	});
 });

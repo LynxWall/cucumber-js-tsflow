@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import { resolveSpecifier } from './loader-utils.mjs';
 import { loadConfig } from 'tsconfig-paths';
 import path from 'path';
-import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { createLogger, describeThrowable, isVerbose, messageOf } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
 
 // TSFLOW_TIMING support: receives the timing MessagePort passed via module.register() data
@@ -94,6 +94,20 @@ const esmHooks = tsNode.createEsmHooks(service);
 logger.checkpoint('ESM hooks created');
 recordPhase('esm:hooks-init', initStart);
 
+/**
+ * An error thrown from these hooks reaches the main thread by structured clone, which carries over only genuine
+ * `Error` instances. ts-node's `TSError` is built by make-error without calling `Error`, so it arrived as an
+ * empty object with no prototype: the CLI could name neither the file nor the diagnostic (`undefined: undefined`).
+ * Rebuild such a value as a plain `Error` with the same text and stack, naming the module it happened in.
+ */
+function transferableError(error, url) {
+	if (Object.prototype.toString.call(error) === '[object Error]') return error;
+	const name = typeof error?.name === 'string' && error.name !== 'Error' ? `${error.name}: ` : '';
+	const plain = new Error(`${name}${messageOf(error).trimEnd()} (while loading ${url})`);
+	if (typeof error?.stack === 'string') plain.stack = error.stack;
+	return plain;
+}
+
 export async function resolve(specifier, context, nextResolve) {
 	if (verbose) logger.checkpoint('resolve', { specifier, parentURL: context.parentURL });
 	const resolveStart = startTimer();
@@ -115,6 +129,9 @@ export async function resolve(specifier, context, nextResolve) {
 			return { ...result, format: 'module' };
 		}
 		return result;
+	} catch (error) {
+		if (verbose) logger.checkpoint('resolve failed', { specifier, error: describeThrowable(error) });
+		throw transferableError(error, context.parentURL ?? specifier);
 	} finally {
 		recordPhase('esm:resolve', resolveStart);
 	}
@@ -175,8 +192,8 @@ export const load = async (url, context, nextLoad) => {
 				if (verbose) logger.checkpoint('load complete', { url });
 				return result;
 			} catch (error) {
-				logger.error('load failed', error, { url });
-				throw error;
+				if (verbose) logger.checkpoint('load failed', { url, error: describeThrowable(error) });
+				throw transferableError(error, url);
 			}
 		}
 

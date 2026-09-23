@@ -34,6 +34,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { threadId } from 'node:worker_threads';
 import type { Pickle } from '@cucumber/messages';
+import { describeTranspiler } from '../utils/startup-progress';
 import type {
 	ISupportCodeCoordinates,
 	SupportCodeLibrary
@@ -226,7 +227,7 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 	static unsupportedReason(coordinates: ISupportCodeCoordinates): string | undefined {
 		const asyncLoader = coordinates.loaders.find(loader => loaderHooksMode(loader) === 'async');
 		return asyncLoader
-			? `the ${asyncLoader} loader runs on Node's loader hooks thread, where imports cannot be tracked`
+			? `the ${describeTranspiler([], [asyncLoader]) ?? asyncLoader} loader runs on Node's loader hooks thread, where imports cannot be tracked`
 			: undefined;
 	}
 

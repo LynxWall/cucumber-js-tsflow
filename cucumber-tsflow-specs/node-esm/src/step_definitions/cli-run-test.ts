@@ -23,6 +23,40 @@ class CliRun {
 	public stderr = '';
 	public exitCode: number | null | undefined;
 	private child: ChildProcess | undefined;
+	/** Files written by a `generated support file` step, removed after the scenario. */
+	private readonly generated: string[] = [];
+
+	/** Write a support file that does not compile, so a run can fail on it without a broken file sitting in the tree. */
+	generateSyntaxError(relativePath: string): void {
+		const file = path.resolve(process.cwd(), relativePath);
+		fs.mkdirSync(path.dirname(file), { recursive: true });
+		const lines = [
+			"import { binding, given } from '@lynxwall/cucumber-tsflow';",
+			'',
+			'@binding()',
+			'export default class GeneratedSyntaxError {',
+			"	@given('a step in a file that does not compile')",
+			'	step(): void {',
+			"		console.log('unbalanced'",
+			'	}',
+			'}',
+			''
+		];
+		fs.writeFileSync(file, lines.join('\r\n'));
+		this.generated.push(file);
+	}
+
+	removeGenerated(): void {
+		const directories = new Set<string>();
+		for (const file of this.generated.splice(0)) {
+			fs.rmSync(file, { force: true });
+			directories.add(path.dirname(file));
+		}
+		// Leave no empty directory behind either; one that still holds other files stays
+		for (const directory of directories) {
+			if (fs.existsSync(directory) && fs.readdirSync(directory).length === 0) fs.rmdirSync(directory);
+		}
+	}
 
 	run(args: string[]): Promise<void> {
 		const packageRoot = path.dirname(require.resolve('@lynxwall/cucumber-tsflow/package.json'));
@@ -60,6 +94,11 @@ class CliRun {
 @binding([CliRun])
 export default class CliRunSteps {
 	constructor(private readonly run: CliRun) {}
+
+	@given('a generated support file {string} with a syntax error')
+	generateBrokenFile(relativePath: string): void {
+		this.run.generateSyntaxError(relativePath);
+	}
 
 	@given('the {string} profile has run once to write its selective-load index', undefined, RUN_TIMEOUT_MS)
 	async warmIndex(profile: string): Promise<void> {
@@ -132,6 +171,27 @@ export default class CliRunSteps {
 		expect(slashes(this.run.stderr)).to.include(slashes(relativePath));
 	}
 
+	@then('the error output names {string} exactly once')
+	verifyErrorNamesFileOnce(relativePath: string): void {
+		const occurrences = slashes(this.run.stderr).split(slashes(relativePath)).length - 1;
+		expect(occurrences, this.run.stderr).to.equal(1);
+	}
+
+	@then('no scenario ran')
+	verifyNothingRan(): void {
+		// The progress formatter's summary counts scenarios in parentheses once at least one has run
+		expect(this.run.stdout).to.not.match(/[1-9]\d* scenarios? \(/);
+	}
+
+	@then('the BeforeAll hook output starts on its own line')
+	verifyHookOutputOnOwnLine(): void {
+		// The launch phase line closes before the hooks run, so what a hook prints is not appended to it
+		const launchLine = this.run.stdout.split(/\r?\n/).find(text => text.includes('assembling'));
+		expect(launchLine, this.run.stdout).to.not.equal(undefined);
+		expect(launchLine).to.not.include('beforeAll was called');
+		expect(this.run.stdout).to.match(/^beforeAll was called/m);
+	}
+
 	@then('the standard output holds no escape sequences')
 	verifyNoEscapes(): void {
 		// eslint-disable-next-line no-control-regex
@@ -141,5 +201,6 @@ export default class CliRunSteps {
 	@after('@cli-run')
 	stopRun(): void {
 		this.run.kill();
+		this.run.removeGenerated();
 	}
 }

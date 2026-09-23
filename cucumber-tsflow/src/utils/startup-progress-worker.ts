@@ -98,7 +98,7 @@ if (theme && parentPort) {
 			case 'end':
 				if (timer) clearInterval(timer);
 				timer = undefined;
-				renderer.end(command.text);
+				renderer.end(command.text, command.failed);
 				Atomics.store(flag, 0, 1);
 				Atomics.notify(flag, 0);
 				break;

@@ -47,5 +47,61 @@
 		"format": ["progress"],
 		"parallel": 0,
 		"tags": "@node-esm"
+	},
+	"before-all-throws": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/basic-test.feature"],
+		"import": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/before-all-throws.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
+	},
+	"syntax-error": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/basic-test.feature"],
+		"import": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/generated/syntax-error.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
+	},
+	"syntax-error-tsnode": {
+		"transpiler": "ts-node-esm",
+		"paths": ["../features/basic-test.feature"],
+		"import": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/generated/syntax-error.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
+	},
+	"syntax-error-raw-loader": {
+		"loader": ["ts-node-maintained/esm"],
+		"paths": ["../features/basic-test.feature"],
+		"import": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/generated/syntax-error.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
+	},
+	"basic": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/basic-test.feature"],
+		"import": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
 	}
 }

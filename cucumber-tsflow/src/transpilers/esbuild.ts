@@ -20,7 +20,9 @@ const defaultOptions: TranspileOptions = {
 
 const commonOptions: CommonOptions = {
 	format: 'cjs',
-	logLevel: 'info',
+	// esbuild would otherwise print its own diagnostic to stderr from inside transformSync, on top of the open progress
+	// line; the thrown error carries the same text (file, line, column and message) and is reported once by the CLI
+	logLevel: 'silent',
 	target: [`es2022`],
 	minify: false,
 	sourcemap: 'external'

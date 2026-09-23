@@ -175,7 +175,11 @@ describe('SelectiveLoadSession', () => {
 
 	it('is unavailable for a loader that runs on the hooks thread', () => {
 		const loaders = ['@lynxwall/cucumber-tsflow/lib/transpilers/esm/tsnode-loader'];
-		expect(SelectiveLoadSession.unsupportedReason({ ...coordinates, loaders })).to.include('tsnode-loader');
+		// A built-in loader is named as the load phase names it; anything else by its specifier
+		expect(SelectiveLoadSession.unsupportedReason({ ...coordinates, loaders })).to.include('the ts-node-esm loader');
+		expect(SelectiveLoadSession.unsupportedReason({ ...coordinates, loaders: ['ts-node-maintained/esm'] })).to.include(
+			'the ts-node-maintained/esm loader'
+		);
 		expect(SelectiveLoadSession.unsupportedReason(coordinates)).to.equal(undefined);
 	});
 });

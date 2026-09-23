@@ -61,7 +61,8 @@ export default async function run(): Promise<void> {
 
 	// 0 = success, 2 = failed or has pending, undefined or unknown steps
 	let exitCode = result.success ? 0 : 2;
-	if (!result.success && global.messageCollector.hasFailures()) {
+	// The collector exists only once the support code has loaded; a run that failed before that has no test failures
+	if (!result.success && global.messageCollector?.hasFailures()) {
 		// 3 = implemented tests have failed
 		exitCode = 3;
 	}

@@ -58,5 +58,49 @@
 		"format": ["progress"],
 		"parallel": 0,
 		"tags": "@node"
+	},
+	"before-all-throws": {
+		"transpiler": "es-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/before-all-throws.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node"
+	},
+	"syntax-error": {
+		"transpiler": "es-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/generated/syntax-error.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node"
+	},
+	"syntax-error-tsnode": {
+		"transpiler": "ts-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/generated/syntax-error.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node"
+	},
+	"basic": {
+		"transpiler": "es-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node"
 	}
 }

@@ -196,6 +196,21 @@ export default class WatchModeSteps {
 		expect(this.session.output.match(RERUN_NOTE) ?? []).to.have.length(0);
 	}
 
+	@then('every run failed to load the support code')
+	verifyEveryRunFailedToLoad(): void {
+		// The load phase closes with ` failed, <elapsed>` on each run whose support code did not load
+		const failures = this.session.output.match(/ failed, \d+/g) ?? [];
+		expect(failures.length, this.session.output).to.equal(this.session.runs);
+	}
+
+	@then('nothing was printed after the session stopped')
+	verifyQuietStop(): void {
+		const stopped = 'Watch mode stopped.';
+		const index = this.session.output.lastIndexOf(stopped);
+		expect(index, this.session.output).to.be.greaterThan(-1);
+		expect(this.session.output.slice(index + stopped.length).trim()).to.equal('');
+	}
+
 	@then('the session exited with code {int}')
 	verifyExitCode(code: number): void {
 		expect(this.session.exitCode).to.equal(code);

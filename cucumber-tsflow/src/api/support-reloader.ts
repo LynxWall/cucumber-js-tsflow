@@ -35,6 +35,7 @@
  */
 import type { ISupportCodeCoordinates } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { BindingRegistry } from '../bindings/binding-registry';
+import { describeTranspiler } from '../utils/startup-progress';
 import {
 	bumpModuleVersions,
 	canonicalFromFrameFile,
@@ -92,7 +93,7 @@ export class SupportReloader implements SupportLoadRecorder {
 	static unsupportedReason(coordinates: ISupportCodeCoordinates): string | undefined {
 		const asyncLoader = coordinates.loaders.find(loader => loaderHooksMode(loader) === 'async');
 		return asyncLoader
-			? `the ${asyncLoader} loader runs on Node's loader hooks thread, where modules cannot be reloaded in place`
+			? `the ${describeTranspiler([], [asyncLoader]) ?? asyncLoader} loader runs on Node's loader hooks thread, where modules cannot be reloaded in place`
 			: undefined;
 	}
 

@@ -1,3 +1,4 @@
+import { messageOf } from '../utils/tsflow-logger';
 import { pathToFileURL } from 'node:url';
 import { IdGenerator } from '@cucumber/messages';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -108,7 +109,16 @@ export async function getSupportCodeLibrary({
 		const fileStart = startTimer();
 		recorder?.beginFile(path, 'import');
 		// In a resident process (watch mode) a file to evaluate again carries a version query; see module-graph.ts
-		await import(versionedUrl(pathToFileURL(path).toString()));
+		try {
+			await import(versionedUrl(pathToFileURL(path).toString()));
+		} catch (error) {
+			// A loader on Node's loader hooks thread cannot transfer its own error classes: they arrive here as an empty
+			// object with no prototype. Name the file, which the value itself no longer can; a real Error passes as is.
+			if (Object.prototype.toString.call(error) !== '[object Error]') {
+				throw new Error(`Failed to import support file "${path}": ${messageOf(error)}`, { cause: error });
+			}
+			throw error;
+		}
 		recorder?.endFile(path, 'import');
 		recordFile('import', path, fileStart);
 		onFileLoaded?.(path);

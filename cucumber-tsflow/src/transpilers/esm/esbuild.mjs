@@ -3,7 +3,7 @@ import path from 'path';
 import { createRequire } from 'node:module';
 import { loadConfig } from 'tsconfig-paths';
 import { pathToFileURL } from 'url';
-import { createLogger, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { createLogger, describeThrowable, isVerbose } from '../../utils/tsflow-logger.mjs';
 import { startTimer, recordFile } from '../../utils/tsflow-timing.mjs';
 
 // The on-disk transpile cache is the CJS build one directory up (lib/transpilers/transpile-cache.js),
@@ -106,7 +106,9 @@ function rewritePathMappings(code, filename) {
 
 const commonOptions = {
 	format: 'esm',
-	logLevel: 'info',
+	// esbuild would otherwise print its own diagnostic to stderr from inside transformSync, on top of the open progress
+	// line; the thrown error carries the same text (file, line, column and message) and is reported once by the CLI
+	logLevel: 'silent',
 	target: ['es2022'],
 	minify: false,
 	sourcemap: 'external',
@@ -212,11 +214,15 @@ export const transpileCode = (code, filename, ext, _options) => {
 
 			return { output: ret.code, sourceMap: ret.map };
 		} catch (error) {
-			logger.error('esbuild transformSync failed', error, {
-				filename,
-				loader: loadersMap[loaderExt],
-				codePreview: processedCode?.substring(0, 200)
-			});
+			// The error propagates to the CLI, which reports it once; only the verbose trail keeps a copy here
+			if (verbose) {
+				logger.checkpoint('esbuild transformSync failed', {
+					filename,
+					loader: loadersMap[loaderExt],
+					codePreview: processedCode?.substring(0, 200),
+					error: describeThrowable(error)
+				});
+			}
 			throw error;
 		}
 	});

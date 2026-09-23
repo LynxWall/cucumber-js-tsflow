@@ -3,6 +3,13 @@ import * as messages from '@cucumber/messages';
 import { IdGenerator } from '@cucumber/messages';
 import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
+import TestRunHookDefinition from '@cucumber/cucumber/lib/models/test_run_hook_definition';
+import UserCodeRunner from '@cucumber/cucumber/lib/user_code_runner';
+import { formatError } from '@cucumber/cucumber/lib/runtime/format_error';
+import { formatLocation } from '@cucumber/cucumber/lib/formatter/helpers/location_helpers';
+import { runInTestRunScope } from '@cucumber/cucumber/lib/runtime/scope/index';
+import { create as createStopwatch, timestamp } from '@cucumber/cucumber/lib/runtime/stopwatch';
+import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import TestCaseRunner from './test-case-runner';
 import { retriesForPickle, shouldCauseFailure } from '@cucumber/cucumber/lib/runtime/helpers';
 import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/index';
@@ -10,11 +17,13 @@ import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/index';
 /** Result of running a single test-run hook */
 export interface RunHookResult {
 	result: messages.TestStepResult;
-	error?: any;
+	/** Set when the hook threw: `a BeforeAll hook errored, process exiting: <uri>:<line>`, with the hook's error as its cause */
+	error?: Error;
 }
 
 export class Worker {
 	constructor(
+		private readonly testRunStartedId: string,
 		private readonly workerId: string | undefined,
 		private readonly eventBroadcaster: EventEmitter,
 		private readonly newId: IdGenerator.NewId,
@@ -22,11 +31,13 @@ export class Worker {
 		private readonly supportCodeLibrary: SupportCodeLibrary
 	) {}
 
+	/** Run the BeforeAll hooks in order; the first one that throws ends the run with its wrapped error. */
 	async runBeforeAllHooks(): Promise<RunHookResult[]> {
 		const results: RunHookResult[] = [];
 		for (const hookDefinition of this.supportCodeLibrary.beforeTestRunHookDefinitions) {
 			const result = await this.runTestRunHook(hookDefinition, 'a BeforeAll');
 			results.push(result);
+			if (result.error) throw result.error;
 		}
 		return results;
 	}
@@ -51,59 +62,83 @@ export class Worker {
 		return !shouldCauseFailure(status, this.options);
 	}
 
+	/** Run the AfterAll hooks in reverse order; the first one that throws ends the run with its wrapped error. */
 	async runAfterAllHooks(): Promise<RunHookResult[]> {
 		const results: RunHookResult[] = [];
 		const hooks = this.supportCodeLibrary.afterTestRunHookDefinitions.slice(0).reverse();
 		for (const hookDefinition of hooks) {
 			const result = await this.runTestRunHook(hookDefinition, 'an AfterAll');
 			results.push(result);
+			if (result.error) throw result.error;
 		}
 		return results;
 	}
 
 	/**
-	 * Run a single test-run hook (BeforeAll/AfterAll).
-	 * Replicates the logic previously in makeRunTestRunHooks which was removed
-	 * from Cucumber 12.3+.
+	 * Run a single test-run hook (BeforeAll/AfterAll) the way CucumberJS's own worker does: a `testRunHookStarted`
+	 * envelope, the hook under its timeout and in the test-run scope (so the `context` proxy works inside it), a
+	 * `testRunHookFinished` envelope with the timed result, and, when the hook threw, an error naming the hook's
+	 * location for the caller to end the run with.
 	 */
-	private async runTestRunHook(hookDefinition: any, name: string): Promise<RunHookResult> {
-		if (this.options.dryRun) {
-			return {
-				result: {
-					status: messages.TestStepResultStatus.SKIPPED,
-					duration: { seconds: 0, nanos: 0 }
-				}
-			};
-		}
-
-		try {
-			await hookDefinition.code.apply(null, []);
-			return {
-				result: {
-					status: messages.TestStepResultStatus.PASSED,
-					duration: { seconds: 0, nanos: 0 }
-				}
-			};
-		} catch (error: any) {
-			let errorMessage = `${name} hook errored`;
-			if (this.workerId) {
-				errorMessage += ` on worker ${this.workerId}`;
+	private async runTestRunHook(hookDefinition: TestRunHookDefinition, name: string): Promise<RunHookResult> {
+		const testRunHookStartedId = this.newId();
+		this.eventBroadcaster.emit('envelope', {
+			testRunHookStarted: {
+				testRunStartedId: this.testRunStartedId,
+				workerId: this.workerId,
+				id: testRunHookStartedId,
+				hookId: hookDefinition.id,
+				timestamp: timestamp()
 			}
-			const location = `${hookDefinition.uri}:${hookDefinition.line}`;
-			errorMessage += `, process exiting: ${location}`;
+		} satisfies messages.Envelope);
 
-			return {
-				result: {
-					status: messages.TestStepResultStatus.FAILED,
-					duration: { seconds: 0, nanos: 0 },
-					message: error.message || errorMessage,
-					exception: {
-						type: error.constructor?.name || 'Error',
-						message: error.message || errorMessage
-					}
-				},
-				error
+		let result: messages.TestStepResult;
+		let error: Error | undefined;
+		if (this.options.dryRun) {
+			result = {
+				status: messages.TestStepResultStatus.SKIPPED,
+				duration: { seconds: 0, nanos: 0 }
 			};
+		} else {
+			const stopwatch = createStopwatch().start();
+			const context = { parameters: this.options.worldParameters };
+			const { error: thrown } = await runInTestRunScope({ context }, () =>
+				UserCodeRunner.run({
+					argsArray: [],
+					fn: hookDefinition.code,
+					thisArg: context,
+					timeoutInMilliseconds: hookDefinition.options.timeout ?? this.supportCodeLibrary.defaultTimeout
+				})
+			);
+			const duration = stopwatch.stop().duration();
+			if (doesHaveValue(thrown)) {
+				result = {
+					status: messages.TestStepResultStatus.FAILED,
+					duration,
+					...formatError(thrown, this.options.filterStacktraces)
+				};
+				let message = `${name} hook errored`;
+				if (this.workerId) {
+					message += ` on worker ${this.workerId}`;
+				}
+				message += `, process exiting: ${formatLocation(hookDefinition)}`;
+				error = new Error(message, { cause: thrown });
+			} else {
+				result = {
+					status: messages.TestStepResultStatus.PASSED,
+					duration
+				};
+			}
 		}
+
+		this.eventBroadcaster.emit('envelope', {
+			testRunHookFinished: {
+				testRunHookStartedId,
+				result,
+				timestamp: timestamp()
+			}
+		} satisfies messages.Envelope);
+
+		return { result, error };
 	}
 }

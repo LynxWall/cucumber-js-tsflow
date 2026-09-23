@@ -7,7 +7,7 @@ import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
 import ArgvParser from './argv-parser';
 import { watchCucumber } from './watch';
 import debug from 'debug';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, messageOf } from '../utils/tsflow-logger';
 import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 const logger = createLogger('cli');
@@ -68,8 +68,7 @@ export default class Cli {
 			argvConfiguration = parsed.configuration;
 			logger.checkpoint('Argv parsed', { options });
 		} catch (error: any) {
-			logger.error('Argv parsing failed', error, { argv: this.argv });
-			throw new Error(`Failed to parse command line arguments: ${error.message}`, { cause: error });
+			throw new Error(`Failed to parse command line arguments: ${messageOf(error)}`, { cause: error });
 		}
 
 		if (options.i18nLanguages) {
@@ -123,8 +122,7 @@ export default class Cli {
 				parallel: runConfiguration.runtime?.parallel
 			});
 		} catch (error: any) {
-			logger.error('Configuration loading failed', error);
-			throw new Error(`Failed to load configuration: ${error.message}`, { cause: error });
+			throw new Error(`Failed to load configuration: ${messageOf(error)}`, { cause: error });
 		}
 
 		// Watch mode: run, then stay resident and rerun on changes until the user quits
@@ -145,8 +143,7 @@ export default class Cli {
 				success
 			};
 		} catch (error: any) {
-			logger.error('Cucumber execution failed', error);
-			throw new Error(`Failed during cucumber execution: ${error.message}`, { cause: error });
+			throw new Error(`Failed during cucumber execution: ${messageOf(error)}`, { cause: error });
 		}
 	}
 }

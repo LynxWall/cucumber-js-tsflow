@@ -253,8 +253,8 @@ Running from: ${__dirname}
 	} catch (err) {
 		selectiveLoad?.abort();
 		reloader?.abort();
-		// Close the open progress line so the error that follows starts on its own line, and stop the spinner
-		progress.end('failed');
+		// Close the open progress line as failed so the error that follows starts on its own line, and stop the spinner
+		progress.fail();
 		progress.finish();
 		throw err;
 	}
@@ -334,19 +334,22 @@ Running from: ${__dirname}
 		newId
 	});
 
-	// The last silent stretch: BeforeAll hooks in serial mode, or every child process loading the support
-	// code again in parallel mode. Ends when the first test case starts and the formatter takes over stdout.
-	if (options.runtime.parallel > 0) {
+	// The last silent stretch. In parallel mode every child process loads the support code again, and the phase
+	// ends when the first test case starts and the formatter takes over stdout. In serial mode it covers assembling
+	// the test cases and ends before the first BeforeAll hook runs: what a hook prints then starts on its own row
+	// instead of landing on the open phase line, where a redraw would erase it.
+	const serial = options.runtime.parallel === 0;
+	if (serial) {
+		progress.begin('launch', `assembling ${plural(filteredPickles.length, 'test case')}`);
+	} else {
 		progress.begin(
 			'launch',
 			`starting ${plural(options.runtime.parallel, 'worker process')}, each loading the support code`,
 			options.runtime.parallel
 		);
-	} else {
-		progress.begin('launch', 'running BeforeAll hooks');
 	}
 	eventBroadcaster.on('envelope', (envelope: Envelope) => {
-		if (envelope.testCaseStarted) progress.finish();
+		if (envelope.testCaseStarted || (serial && envelope.testRunHookStarted)) progress.finish();
 	});
 
 	phaseStart = startTimer();
@@ -362,7 +365,15 @@ Running from: ${__dirname}
 		resolvedSupportPaths: { requirePaths: loadRequirePaths, importPaths: loadImportPaths },
 		onWorkerReady: () => progress.tick()
 	});
-	const success = await runtime.run();
+	let success: boolean;
+	try {
+		success = await runtime.run();
+	} catch (err) {
+		// A BeforeAll or AfterAll hook threw: close the open phase line as failed so the error starts on its own line
+		progress.fail();
+		progress.finish();
+		throw err;
+	}
 	progress.finish();
 	recordPhase('runtime:run', phaseStart);
 	await pluginManager.cleanup();

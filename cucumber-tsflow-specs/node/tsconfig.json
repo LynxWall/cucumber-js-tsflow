@@ -12,5 +12,7 @@
 		"lib": ["es2022", "esnext.decorators"],
 		"typeRoots": ["../../node_modules/@types"]
 	},
-	"include": ["./src/**/*.ts", "./src/**/*.vue"]
+	"include": ["./src/**/*.ts", "./src/**/*.vue"],
+	// Written and removed by the syntax-error spec while it runs; never something for the editor to judge
+	"exclude": ["./src/fixtures/failing/generated"]
 }

@@ -11,12 +11,14 @@ import type { StepBinding } from '../../lib/bindings/step-binding.js';
 import type { Callsite } from '../../lib/utils/our-callsite.js';
 import bindings from '../../lib/bindings.js';
 import moduleGraph from '../../lib/utils/module-graph.js';
+import paths from '../../lib/utils/paths.js';
 import { temporaryDirectory } from '../helpers/temp.ts';
 
 const { SupportReloader } = supportReloader;
 const registry = bindingRegistry.BindingRegistry.instance;
 const { StepBindingFlags } = bindingTypes;
-const { canonicalPath, recordImportEdge, versionedUrl, addReloadListener } = moduleGraph;
+const { recordImportEdge, versionedUrl, addReloadListener } = moduleGraph;
+const { canonicalPath } = paths;
 const builder = bindings.supportCodeLibraryBuilder;
 const require = createRequire(import.meta.url);
 

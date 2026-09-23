@@ -32,7 +32,7 @@
  * package is left out, since dependencies are versioned and the library's version is part of the index key.
  */
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { canonicalFromUrl, canonicalPath } from './paths';
 
 /** Recorded ESM import edges, parent to children, both as canonical paths. */
 const importEdges = new Map<string, Set<string>>();
@@ -51,31 +51,6 @@ type CachedModule = NonNullable<(typeof require.cache)[string]>;
 
 /** This package's root (`lib/utils` is two levels down); its own modules are never project modules. */
 const LIBRARY_ROOT = canonicalPath(path.join(__dirname, '..', '..'));
-
-/**
- * An absolute, normalised form of `file` that is equal for two spellings of the same file: on Windows the
- * drive letter and path case vary between the glob results, `require.cache` keys and `file:` URLs.
- */
-export function canonicalPath(file: string): string {
-	const resolved = path.resolve(file);
-	return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
-}
-
-/** The canonical path of a `file:` URL (its query and fragment ignored), or undefined for any other URL. */
-export function canonicalFromUrl(url: string): string | undefined {
-	if (!url.startsWith('file:')) return undefined;
-	try {
-		return canonicalPath(fileURLToPath(url));
-	} catch {
-		return undefined;
-	}
-}
-
-/** The canonical path of a module as V8 names it in a stack frame: a `file:` URL for an ES module, a path otherwise. */
-export function canonicalFromFrameFile(file: string): string | undefined {
-	if (file.startsWith('file:')) return canonicalFromUrl(file);
-	return path.isAbsolute(file) ? canonicalPath(file) : undefined;
-}
 
 /** `url` without its query string and fragment. */
 export function withoutQuery(url: string): string {

@@ -27,20 +27,12 @@
  * exactly the entries no current source produces any more, and those are the oldest.
  */
 import { createHash } from 'node:crypto';
-import {
-	existsSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	renameSync,
-	statSync,
-	unlinkSync,
-	writeFileSync
-} from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { threadId } from 'node:worker_threads';
 import { version as tsflowVersion } from '../version';
+import { FileStamp, stampOf } from '../utils/file-stamp';
 import { startTimer, recordFile, recordPhase } from '../utils/tsflow-timing';
 
 /** Bumped when the on-disk entry shape changes; part of every key, so old entries simply become garbage. */
@@ -245,26 +237,23 @@ export function pruneTranspileCache(maxBytes: number = DEFAULT_MAX_BYTES): void 
 	if (stats.writes === 0 || !directory) return;
 	const start = startTimer();
 	try {
-		const entries: Array<{ file: string; size: number; mtimeMs: number }> = [];
+		const entries: Array<{ file: string; stamp: FileStamp }> = [];
 		let total = 0;
 		for (const name of readdirSync(directory)) {
 			const file = path.join(directory, name);
-			try {
-				const stat = statSync(file);
-				if (!stat.isFile()) continue;
-				entries.push({ file, size: stat.size, mtimeMs: stat.mtimeMs });
-				total += stat.size;
-			} catch {
-				// Removed by another process between readdir and stat
-			}
+			// Not a regular file, or removed by another process between readdir and stat: nothing to count
+			const stamp = stampOf(file);
+			if (!stamp) continue;
+			entries.push({ file, stamp });
+			total += stamp.size;
 		}
 		if (total <= maxBytes) return;
-		entries.sort((a, b) => a.mtimeMs - b.mtimeMs);
+		entries.sort((a, b) => a.stamp.mtimeMs - b.stamp.mtimeMs);
 		for (const entry of entries) {
 			if (total <= maxBytes) break;
 			try {
 				unlinkSync(entry.file);
-				total -= entry.size;
+				total -= entry.stamp.size;
 			} catch {
 				// In use or already gone; skip it
 			}

@@ -26,6 +26,7 @@
  */
 import ansis from 'ansis';
 import { formatDuration } from './helpers';
+import { toPosixPath } from './paths';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
@@ -843,7 +844,7 @@ const TRANSPILER_NAMES: Array<[RegExp, string]> = [
  */
 export function describeTranspiler(requireModules: readonly string[], loaders: readonly string[]): string | undefined {
 	for (const specifier of [...loaders, ...requireModules]) {
-		const normalized = specifier.replace(/\\/g, '/');
+		const normalized = toPosixPath(specifier);
 		for (const [pattern, name] of TRANSPILER_NAMES) {
 			if (pattern.test(normalized)) return name;
 		}

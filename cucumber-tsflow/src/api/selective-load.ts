@@ -29,7 +29,7 @@
  * directory, the support-code coordinates, the decorator mode and this library's version.
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { threadId } from 'node:worker_threads';
@@ -44,7 +44,9 @@ import { version as tsflowVersion } from '../version';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { StepBinding, StepBindingFlags } from '../bindings/step-binding';
 import { getCacheRootDirectory } from '../transpilers/transpile-cache';
-import { canonicalPath, importedProjectModules, requiredProjectModules } from '../utils/module-graph';
+import { FileStamp, sameStamp, stampOf } from '../utils/file-stamp';
+import { importedProjectModules, requiredProjectModules } from '../utils/module-graph';
+import { canonicalPath } from '../utils/paths';
 import { startTimer, recordPhase } from '../utils/tsflow-timing';
 import { createLogger } from '../utils/tsflow-logger';
 import { loaderHooksMode } from './register-loaders';
@@ -61,15 +63,13 @@ const { ExpressionFactory, ParameterType, ParameterTypeRegistry }: ExpressionsMo
 )('@cucumber/cucumber-expressions');
 
 /** Bumped when the on-disk shape changes; an index of another format is ignored and rebuilt. */
-const INDEX_FORMAT = 1;
+const INDEX_FORMAT = 2;
 
 /** A step pattern as stored: `[source, flags]` for a regular expression, `[expression, null]` for a Cucumber expression. */
 export type StoredPattern = [string, string | null];
 
-/** `[mtimeMs, size]` of a file, or `[-1, -1]` when it could not be stat'd. */
-type Stamp = [number, number];
-
-const MISSING_STAMP: Stamp = [-1, -1];
+/** Recorded for a file that could not be stat'd, so that it compares equal only to itself. */
+const MISSING_STAMP: FileStamp = { mtimeMs: -1, size: -1 };
 
 interface IndexEntry {
 	/** Indexes into `IndexFile.files` of every project module the file loads, itself first. */
@@ -92,7 +92,7 @@ interface IndexFile {
 	/** Every project module any entry depends on, canonical paths. */
 	files: string[];
 	/** Stamp of `files[i]` when its dependents were last loaded. */
-	stamps: Stamp[];
+	stamps: FileStamp[];
 	/** By canonical support-file path. */
 	entries: Record<string, IndexEntry>;
 	/** Parameter types the support code defines beyond the built-in ones, needed to compile the patterns. */
@@ -163,15 +163,6 @@ export function literalPrefix([source, flags]: StoredPattern): string {
 	return body.slice(0, quantifier ? Math.max(0, end - 1) : end);
 }
 
-function stampOf(file: string): Stamp {
-	try {
-		const stat = statSync(file);
-		return [stat.mtimeMs, stat.size];
-	} catch {
-		return MISSING_STAMP;
-	}
-}
-
 /** A support file being loaded, or loaded, in this run. */
 interface FileRecord {
 	kind: SupportFileKind;
@@ -185,7 +176,7 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 	private previous: IndexFile | undefined;
 	private current: FileRecord | undefined;
 	private readonly records = new Map<string, FileRecord>();
-	private readonly stamps = new Map<string, Stamp>();
+	private readonly stamps = new Map<string, FileStamp>();
 	private readonly all: Array<{ path: string; key: string; kind: SupportFileKind }>;
 	private readonly removeListener: () => void;
 
@@ -403,9 +394,9 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 		const start = startTimer();
 		try {
 			const files: string[] = [];
-			const stamps: Stamp[] = [];
+			const stamps: FileStamp[] = [];
 			const fileIds = new Map<string, number>();
-			const fileId = (file: string, stamp: Stamp): number => {
+			const fileId = (file: string, stamp: FileStamp): number => {
 				let id = fileIds.get(file);
 				if (id === undefined) {
 					id = files.length;
@@ -423,7 +414,7 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 				if (record) {
 					const deps = kind === 'require' ? requiredProjectModules(file) : importedProjectModules(file);
 					entries[key] = {
-						deps: deps.map(dep => fileId(dep, stampOf(dep))),
+						deps: deps.map(dep => fileId(dep, stampOf(dep) ?? MISSING_STAMP)),
 						steps: Array.from(record.steps.values()),
 						always: record.always
 					};
@@ -456,17 +447,15 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 
 	private isStale(index: IndexFile, entry: IndexEntry): boolean {
 		for (const i of entry.deps) {
-			const [mtimeMs, size] = this.stamp(index.files[i]);
-			const [indexedMtimeMs, indexedSize] = index.stamps[i];
-			if (mtimeMs !== indexedMtimeMs || size !== indexedSize) return true;
+			if (!sameStamp(this.stamp(index.files[i]), index.stamps[i])) return true;
 		}
 		return false;
 	}
 
-	private stamp(file: string): Stamp {
+	private stamp(file: string): FileStamp {
 		let stamp = this.stamps.get(file);
 		if (!stamp) {
-			stamp = stampOf(file);
+			stamp = stampOf(file) ?? MISSING_STAMP;
 			this.stamps.set(file, stamp);
 		}
 		return stamp;

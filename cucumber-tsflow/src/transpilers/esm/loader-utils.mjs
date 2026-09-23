@@ -13,6 +13,7 @@ import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.m
 // hook resolves); loaded the way esbuild.mjs loads the transpile cache.
 const require = createRequire(import.meta.url);
 const { recordImportEdge, versionedUrl, withoutQuery, addReloadListener } = require('../../utils/module-graph.js');
+const { toPosixPath } = require('../../utils/paths.js');
 
 // Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
 // `nextLoad`, so the same hook functions work under both registration mechanisms: `module.registerHooks()`
@@ -290,7 +291,7 @@ function transformImports(code, parentURL) {
 				try {
 					const parentDir = path.dirname(fileURLToPath(parentURL));
 					const resolvedPath = fileURLToPath(resolved.url);
-					let relativePath = path.relative(parentDir, resolvedPath).replace(/\\/g, '/');
+					let relativePath = toPosixPath(path.relative(parentDir, resolvedPath));
 
 					if (!relativePath.startsWith('.')) {
 						relativePath = './' + relativePath;

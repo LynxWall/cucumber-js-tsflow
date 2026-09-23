@@ -38,13 +38,12 @@ import { BindingRegistry } from '../bindings/binding-registry';
 import { describeTranspiler } from '../utils/startup-progress';
 import {
 	bumpModuleVersions,
-	canonicalFromFrameFile,
-	canonicalPath,
 	dependentProjectModules,
 	evictRequiredModules,
 	knownProjectModules,
 	notifyReload
 } from '../utils/module-graph';
+import { canonicalFromFrameFile, canonicalPath } from '../utils/paths';
 import { createLogger } from '../utils/tsflow-logger';
 import { BuilderFingerprint, builderFingerprint, registeredBeyondSteps } from './builder-fingerprint';
 import { loaderHooksMode } from './register-loaders';

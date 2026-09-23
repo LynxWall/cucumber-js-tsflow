@@ -1,6 +1,7 @@
 import * as nodeModule from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { toPosixPath } from '../utils/paths';
 import { startTimer, recordPhase, timingRegisterOptions } from '../utils/tsflow-timing';
 
 /**
@@ -42,7 +43,7 @@ export function registeredLoaders(): { sync: string[]; async: string[] } {
 }
 
 function syncLoaderFile(specifier: string): string | undefined {
-	const match = /\/transpilers\/esm\/([^/]+?)(\.mjs)?$/.exec(specifier.replace(/\\/g, '/'));
+	const match = /\/transpilers\/esm\/([^/]+?)(\.mjs)?$/.exec(toPosixPath(specifier));
 	if (!match || !SYNC_CAPABLE_LOADERS.has(match[1])) {
 		return undefined;
 	}

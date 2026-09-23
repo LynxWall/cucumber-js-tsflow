@@ -1,8 +1,8 @@
 import { originalPositionFor, TraceMap } from '@jridgewell/trace-mapping';
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as sourceMapSupport from 'source-map-support';
 import { CallSite } from 'source-map-support';
+import { relativeToCwd } from './paths';
 
 /**
  * Frames on the stack when `capture()` takes it: `capture()` itself, the decorator factory that called it
@@ -79,7 +79,6 @@ function withoutBrowserDetection<T>(fn: () => T): T {
  * is built, and never while a support file is being evaluated.
  */
 export class Callsite {
-	private static readonly cwdPrefix = `${process.cwd()}${path.sep}`;
 	private resolved?: { filename: string; lineNumber: number };
 
 	private constructor(private readonly frame: CallSite | undefined) {}
@@ -163,11 +162,7 @@ export class Callsite {
 				const mapped = frame ? withoutBrowserDetection(() => sourceMapSupport.wrapCallSite(frame)) : undefined;
 				traced = { filename: mapped?.getFileName() || '', lineNumber: mapped?.getLineNumber() || -1 };
 			}
-			let { filename } = traced;
-			if (filename.startsWith(Callsite.cwdPrefix)) {
-				filename = filename.slice(Callsite.cwdPrefix.length);
-			}
-			this.resolved = { filename, lineNumber: traced.lineNumber };
+			this.resolved = { filename: relativeToCwd(traced.filename), lineNumber: traced.lineNumber };
 		}
 		return this.resolved;
 	}

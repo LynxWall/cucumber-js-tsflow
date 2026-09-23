@@ -22,8 +22,7 @@
  * `.mjs` twin used by the ESM loaders share one store per thread. When the mode is off every entry point is a single boolean check.
  */
 import { MessageChannel, MessagePort } from 'node:worker_threads';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { canonicalFromUrl, canonicalPath, relativeToCwd } from './paths';
 
 export type FileTimingKind = 'transpile' | 'load' | 'require' | 'import';
 
@@ -353,32 +352,17 @@ function pushSlowestFiles(lines: string[], sections: TimingSection[]): void {
 	pushTable(
 		lines,
 		['transpile ms', 'load ms', 'evaluate ms', 'context', 'file'],
-		sorted.map(r => [fmt(r.transpile), fmt(r.load), fmt(r.evaluate), r.scope, displayPath(r.file)]),
+		sorted.map(r => [fmt(r.transpile), fmt(r.load), fmt(r.evaluate), r.scope, relativeToCwd(r.file)]),
 		[true, true, true, false, false]
 	);
 }
 
 /**
- * Normalize a recorded file identity so every spelling of the same file shares a row:
- * the ESM hooks record file:// URLs, ts-node passes forward-slash paths, and the support
- * loader passes native paths. Case is folded on Windows where the filesystem is case-insensitive.
+ * Normalize a recorded file identity so every spelling of the same file shares a row: the ESM hooks record
+ * file:// URLs, ts-node passes forward-slash paths, and the support loader passes native paths.
  */
 function normalizeFile(file: string): string {
-	let filePath = file;
-	if (file.startsWith('file:')) {
-		try {
-			filePath = fileURLToPath(file);
-		} catch {
-			return file;
-		}
-	}
-	const resolved = path.resolve(filePath);
-	return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
-}
-
-function displayPath(file: string): string {
-	const relative = path.relative(process.cwd(), file);
-	return relative && !relative.startsWith('..') && !path.isAbsolute(relative) ? relative : file;
+	return file.startsWith('file:') ? (canonicalFromUrl(file) ?? file) : canonicalPath(file);
 }
 
 function pushTable(lines: string[], header: string[], rows: string[][], rightAlign: boolean[]): void {

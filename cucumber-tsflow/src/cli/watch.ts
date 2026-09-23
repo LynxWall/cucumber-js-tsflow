@@ -27,7 +27,7 @@ import { SupportReloader } from '../api/support-reloader';
 import { ITsFlowRunConfiguration } from '../runtime/types';
 import { resetTranspileCacheStats } from '../transpilers/transpile-cache';
 import { formatDuration } from '../utils/helpers';
-import { canonicalPath } from '../utils/module-graph';
+import { canonicalPath } from '../utils/paths';
 import { plural } from '../utils/startup-progress';
 import { createLogger, formatThrowable } from '../utils/tsflow-logger';
 import { resetTimings } from '../utils/tsflow-timing';

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as loaderUtils from '../../../lib/transpilers/esm/loader-utils.mjs';
 import moduleGraph from '../../../lib/utils/module-graph.js';
+import paths from '../../../lib/utils/paths.js';
 import { temporaryDirectory } from '../../helpers/temp.ts';
 
 const {
@@ -17,7 +18,8 @@ const {
 	shouldEnableVueStyle,
 	createEsbuildLoader
 } = loaderUtils;
-const { canonicalPath, importedProjectModules, bumpModuleVersions } = moduleGraph;
+const { importedProjectModules, bumpModuleVersions } = moduleGraph;
+const { canonicalPath } = paths;
 
 const root = temporaryDirectory('loader-utils');
 // Transpiles in this file go through the on-disk cache; keep them out of the project's cache

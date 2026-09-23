@@ -3059,8 +3059,12 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
   there. `yarn build` unchanged (the library did not change); `yarn test:unit` unchanged at 218 green.
 - `yarn test:all` green on all sixteen variants on this machine, with the `node` workspace now at 25 scenarios
   (20 in 12a) and `node-esm` at 18 (15 in 12a); the other twelve counts are as in 12a. The CI matrix written in 12a
-  has still not been executed: it only runs on `master`, `release/**` and by hand, and nothing in this session was
-  pushed. Running it needs the commit pushed and `workflow_dispatch` triggered on the branch.
+  first ran after this commit was pushed, through a **draft pull request** from the branch to `master`: GitHub
+  shows the "Run workflow" button only when the default branch's copy of `ci.yml` declares `workflow_dispatch`,
+  and master's copy has just the `push` and `pull_request` triggers, so the manual route is not offered in the
+  UI. A `pull_request` event uses the workflow file from the PR's own branch, so the five-job matrix is what runs;
+  the draft PR stays open for the rest of Phase 12 and every push to the branch reruns it. The result was not yet
+  known when this section was written; the 12c session should read the Checks tab first.
 - `npx tsc --noEmit -p cucumber-tsflow-specs/node/tsconfig.json` and the same for `node-esm` are clean (the
   spec workspaces have no type-check script; this is what the editor and the ts-node ESM loader see). ESLint and
   Prettier are clean on every step file added or changed.
@@ -3145,8 +3149,8 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
 
 - The gate is met as far as this machine can tell: `test:all` green with the seven new scenarios (four features)
   on both profiles of the two workspaces that run them; every failure-path case above is classified. The CI
-  matrix remains unexecuted (see the state of the tree); running it is the first thing to do after the commit
-  is pushed, and it covers Ubuntu and Node 22 which nothing on this branch has touched.
+  matrix is running on the draft pull request (see the state of the tree) and covers Ubuntu and Node 22, which
+  nothing on this branch had touched; its result is the last item of the 12b gate and the first thing 12c reads.
 - Findings A–X were not pruned in the 12a pause and Y–AH join them; **pruning the whole list with the owner is
   the first act of 12c**, before any refactor. The 12b fixes that are not in doubt: Z (both adapters), AA
   (one guard), AB (`logLevel: 'silent'` plus one report site), AC (rethrow a plain `Error` in the ts-node loader,

@@ -4,7 +4,7 @@ Part of the [Performance Enhancement Execution Strategy](../performance-enhancem
 
 Written as the groups land (started 2026-09-23), so that a pause after any group can resume cold. Stage 12c is
 [Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **Groups 1
-to 4 are complete; groups 5 and 6 have not started.**
+to 5 are complete; group 6, the closing measurement, has not started.**
 
 ## State of the tree
 
@@ -92,6 +92,27 @@ to 4 are complete; groups 5 and 6 have not started.**
   from a working tree whose content equals `fec46e9`, so it covers this commit too. Its CHANGELOG clause was
   added to the existing "Step definitions loaded by the esbuild ESM loaders report their TypeScript line" entry,
   and its Architecture.md sentence to the callsite source-map paragraph, in the hand-off commit.
+- **Group 5** (D/U and N; loading and eviction, the largest behavior change of the stage) is one commit,
+  `85dc327`, squashed on 2026-09-23 from two working commits (D/U with the spec move and the documents, then N)
+  on top of the group 4 hand-off `0183162`; the tree is byte-identical to the last working commit. The cadence
+  held after each (`yarn build` with no stray `.js` under `src/`, the strict type-check with zero errors from
+  the touched files and the pre-existing total still 21, `yarn test:unit` at **261 tests**, Prettier and ESLint
+  on the changed files, the three changed spec workspaces' `tsc --noEmit`, and the variants the triage named:
+  the reload spec on `node` es-node and `node-exp` es-node with `parallel: 2`, the two `node` watch specs, the
+  two `node-esm` watch specs including the `watch-tsnode` fallback). At the group boundary `yarn test:all` was
+  green on all sixteen variants: 18, 18, 31, 31, 18, 18, 25, 25, 30, 30, 30, 30, 31, 31, 27, 27, identical to the
+  group 4 boundary (the reload feature still has four scenarios; its fourth changed in substance rather than in
+  number). `tsc --noEmit -p test/tsconfig.json` reports four errors, all in the Z fix's two test files, none in
+  group 5's; see the notes.
+- Group 5 files added: `cucumber-tsflow-specs/node/src/fixtures/reload-driver.ts` and `reload-fixture-two.ts`,
+  and the same two under `node-exp`. Changed under `src`: `api/support.ts`, `api/support-reloader.ts`,
+  `api/load-support.ts`, `api/run-cucumber.ts`, `runtime/parallel/worker.ts`. Tests changed: `support.test.ts`,
+  `support-reloader.test.ts`. Specs changed: `reload-support-test.feature`, `watch-mode-test.feature`,
+  `watch-mode-esm-test.feature`, `watch-mode-failure-test.feature`; `reload-support-test.ts` and
+  `watch-mode-test.ts` in `node`, `reload-support-test.ts` in `node-exp`, `watch-mode-test.ts` in `node-esm`;
+  `cucumber.json` in `node` and `node-esm`. Also `Architecture.md` (a new "Loading support code" section, the
+  watch-mode paragraph, the loader-registration sentence, the API list), both READMEs' `reloadSupport`
+  paragraph, and the CHANGELOG (one `Fixed` entry for `reloadSupport`, one `Changed` line for the parallel child).
 
 ## What group 1 landed
 
@@ -289,16 +310,77 @@ vue-esm, node-exp-esm and vue-exp-esm esbuild variants and node-esm ts-node gree
 node-esm esbuild unchanged under default hooks; the `before-all-throws` profile names `before-all-throws.ts:9` in
 serial and `--parallel 1` under both hook modes.
 
-## Notes specific to the pause and group 5
+## What group 5 landed
 
-- **Group 4 boundary: `yarn test:all` green on all sixteen variants (counts above).** Groups 5 and 6 remain.
-  Group 5 is loading and eviction, D/U and N, the largest behavior change of the stage, placed last so that if
-  the closing measurement moves the culprit is fresh. D/U: one eviction and dependent-closure implementation,
-  with `getSupportCodeLibrary()` owning eviction so its callers stop doing it three ways, and `reloadSupport()`
-  clearing the registry and notifying listeners like `SupportReloader.prepare()`; verified by `support.test.ts`,
-  `support-reloader.test.ts`, `reload-support-test.feature` and both watch specs. N: the `node` workspace's
-  `watch` profile sets `watch: true` and the spec stops passing `--watch`; verified by `watch-mode-test.feature`.
-  Group 6 is the closing measurement on the UIS suite against the Phase 10 reference, with P's compile-cache A/B.
+- **D / U.** One implementation of "make these modules evaluate again", in the place that loads.
+  `getSupportCodeLibrary()` (`api/support.ts`) starts every load from nothing (`resetStepPatternRegistrations()`,
+  `BindingRegistry.instance.clear()`, the builder reset) and, on every load after the first in a process (a
+  module-level counter, which is also the ESM version it hands out), calls `evictRequiredModules()`,
+  `bumpModuleVersions()` and `notifyReload()` for the set its new `reevaluate` parameter names, by default every
+  support file being loaded. `SupportReloader.prepare()` no longer evicts, versions, clears or notifies: it
+  computes the set as before and returns it in its summary as `files`, which `runCucumber` passes on.
+  `loadSupport()` and `reloadSupport()` share one body: the set is the entry files plus, when `changedPaths` is
+  non-empty, the changed modules and `dependentProjectModules(changed)`; `evictChangedAndDependents` and
+  `evictAllSupportModules` are deleted with their duplicate closure. Both now call `setExperimentalDecorators()`
+  when `options.experimentalDecorators` is given, an option the interface declared and nothing read (the spec's
+  driver process needs it, and so does any API consumer that never calls `loadConfiguration`). The parallel
+  child (`runtime/parallel/worker.ts`) loads through `getSupportCodeLibrary` with the coordinator's
+  `supportCodeIds` (a new optional parameter, passed to `finalize()`) instead of through a copy of the loop, and
+  `logger` became optional for it; a child now names a support file that fails to import the way the
+  coordinator does. Four defects of `reloadSupport` fall out, recorded in one `Fixed` entry: an unchanged support
+  file stayed cached and was missing from the reloaded library (only the changed file and its support-file
+  dependents were evicted); a changed helper's intermediate dependents were not evicted, so a re-evaluated file
+  could keep the old helper; ES modules were never reloaded; and the registry kept the previous evaluation's
+  bindings, so the old class shadowed the new one under the same pattern (`registerStepBinding` deduplicates on
+  the raw callsite position, and the step wrappers look bindings up in the registry at execution time).
+- **The reload-support spec left the process.** With the registry cleared per load, calling `loadSupport` from
+  inside a running scenario wipes the suite's own bindings; verified before the rewrite: `Unable to find
+  StepBinding!` on the step after the call. `reload-support-test.feature` keeps four scenarios, reworded, whose
+  steps drive `src/fixtures/reload-driver.ts` in a child process started as `node -r
+  @lynxwall/cucumber-tsflow/esnode` (the package's `./esnode` export, resolved from the workspace), one command
+  per stdin line and one JSON reply per stdout line, the way a persistent worker uses the API. The driver loads
+  two fixtures (`reload-fixture.ts` and the new `reload-fixture-two.ts`), takes the decorator mode from the
+  `CUCUMBER_EXPERIMENTAL_DECORATORS` the spec run's environment carries and passes it as `experimentalDecorators`,
+  and reports the sorted step patterns, the hook count, and whether the first fixture's `require.cache` entry is
+  a new object since the previous command. The fourth scenario is new in substance: a reload with the first
+  fixture as the changed path must keep the second file's step, which the old code failed. The `@reload` tag and
+  the ESM workspaces' `not @reload` exclusion are unchanged. Files in both `node` and `node-exp`.
+- **N.** `watch: true` on the `node` workspace's `watch` profile and on the `node-esm` workspace's `watch` and
+  `watch-tsnode` profiles; `WatchSession.start(profile, args)` passes only the arguments a scenario names. The
+  in-process watch scenarios therefore exercise a profile turning watch mode on, and the `watch-tsnode` fallback
+  exercises the child's `--no-watch` overriding it (CucumberJS merges with `lodash.mergewith`, which keeps a
+  profile's `true` when the argv value is undefined and lets an explicit `false` win; both ends now run in the
+  matrix). The failure spec's `missing-import` profile is also run once, without watch, by the load-failure spec,
+  so it cannot set `watch`; a new step, `a watch session on the {string} profile with {string} has completed its
+  first run`, keeps the flag there. Extended beyond the triage's "`node` workspace" to `node-esm` because the two
+  workspaces share the step text, and one rule for both reads better than a launcher that guesses.
+- Tests: `support.test.ts` records the new contract (a later load evaluates every file again and the class the
+  second evaluation defined is the one bound; `reevaluate` honored, with the kept file registering nothing;
+  versions and reload listeners on every load after the first; the old "leaves eviction to the caller" case is
+  gone with the contract). `support-reloader.test.ts` loads through the real `getSupportCodeLibrary` with the
+  reloader as recorder and `summary.files` as `reevaluate`; its temp fixtures report their evaluation through a
+  global (`__tsflowReloaderTest`), which also stands in for their decorators, and the assertions are on which
+  modules evaluated rather than on `require.cache` state. `yarn test:unit` is at **261 tests**.
+
+## Notes specific to the pause and group 6
+
+- **Group 5 boundary: `yarn test:all` green on all sixteen variants (counts above).** Group 6 remains: the
+  closing measurement on the UIS suite (`dim` and the full suite, fresh process and one `--watch` rerun) against
+  the Phase 10 clean reference in [phase-10-hand-off.md](phase-10-hand-off.md), following the Phase 11 note about
+  stray filesystem scanners first, with finding P riding along as one A/B pair (compile cache on and off). The
+  UIS testbed and its `link:` wiring are in [local-consumer-testing.md](../local-consumer-testing.md). If the
+  numbers moved, stop and look before touching anything else; group 5 is the freshest suspect by design, and its
+  two working commits (D/U, then N) are recoverable from the squashed diff by file if bisecting is needed.
+- Nothing is open from group 5: all three findings landed as triaged, with two decisions the owner may want to
+  read: the reload spec moved out of process (the triage's own decision, a load clearing the registry, made the
+  in-process spec impossible), and N covers `node-esm` as well as `node`.
+- Leftovers noticed in group 5, none in the triage, for the owner: `BindingRegistry.removeBindingsForFile()` and
+  `hasBindingForKey()` (`bindings/binding-registry.ts`) are called nowhere; they were written for the old
+  delta-aware reload that D replaced and are reachable only through the `./lib/*` wildcard export, which this
+  branch treats as internal, so they can go in 12d. `tsc --noEmit -p test/tsconfig.json`, part of the cadence
+  since group 2, reports four `TS7017` errors (`globalThis` indexed without a signature) in
+  `test/transpilers/esm/source-map-relay.test.ts` and `test/utils/loader-source-maps.test.ts`, both from the Z
+  fix `fec46e9`; `node --test` strips types without checking, so the tests run green. One cast each fixes them.
 - Nothing is open from group 4: all three findings landed as triaged. H's look answered its question (the
   `.ts` rejection was a leftover of the pre-Phase-5 ts-node routing, and nothing called either `supports()`).
 - **Two sessions worked in this tree at once during the group 4 session**, this one on group 4 and a second on

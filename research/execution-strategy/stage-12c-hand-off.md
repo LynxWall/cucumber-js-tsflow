@@ -128,7 +128,11 @@ and 2 are complete; groups 3–6 have not started.**
   `error: unknown option`. The triage framed A as dead code, which the four declarations were and the flag is
   not. If the next release is a major, removing the flag is one commander option, one declaration, one unit
   test in `argv-parser.test.ts`, one `Deprecated` to `Removed` move in the CHANGELOG, and the CLI column of the
-  `parallelLoad` row in both READMEs.
+  `parallelLoad` row in both READMEs. **Confirmed by the owner the same day:** the branch ships as a minor
+  release (7.8), and a minor must not remove or break anything a user could rely on; a major just to drop
+  `parallelLoad` is not wanted. The flag stays, the deprecation notice (which already says the option does
+  nothing, why, and that the transpile cache needs no configuration) is the message a user gets, and removal
+  waits for the next major. A is closed as landed.
 - **B.** `IMessageData.coordinates` is gone, and with it the `ChildProcessAdapter` constructor parameter and the
   `makeRuntime` option that existed only to carry it (upstream's `makeRuntime` and adapter never took one);
   `runCucumber` no longer passes `options.sources` to the runtime. `makeRuntime` is not exported from the
@@ -156,7 +160,8 @@ and 2 are complete; groups 3–6 have not started.**
   order the plan gives; group 3 (E, F: one path-normalization helper, one stamp shape) is next and needs no spec
   changes. Its verification is `module-graph.test.ts`, `tsflow-timing.test.ts`, `selective-load.test.ts`,
   `transpile-cache.test.ts` and, for E, the full matrix, because `loader-utils.mjs` is one of the six call sites.
-- The one open question from group 2 is A's kept flag, above. Everything else in group 2 matched the triage.
+- Nothing is open from group 2: the owner confirmed A's kept flag (above), and everything else matched the
+  triage. The rule it set, no removals of published surface in a minor release, applies to the rest of 12c.
 - Leftovers noticed in groups 1 and 2, none in the triage, all for 12d or 12e rather than group 3:
   `api/load-configuration.ts` (ten sites) and `api/convert-configuration.ts` (two) still log with `logger.error`
   before rethrowing, so a configuration error prints `[tsflow:config]:ERROR …` and then the `[tsflow:run]`

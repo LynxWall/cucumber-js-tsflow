@@ -39,15 +39,15 @@ Updated at every hand-off, so that this block is always current.
 
 - **Stage:** 12c, review refactors, of Phase 12 (the release gate). Groups 1 and 2 of 6 are complete with the
   boundary matrix green after each; groups 3 to 6 have not started. Group 3 (E, F: the path-normalization
-  helper and the stamp shape) is next and needs no spec changes. One decision is open for the owner: group 2
-  kept the published `--parallel-load` flag that finding A said to delete (see the 12c hand-off, "What group 2
-  landed", A).
+  helper and the stamp shape) is next and needs no spec changes. Nothing is open: the owner confirmed that
+  group 2 keeps the published `--parallel-load` flag, because the branch ships as a minor release (7.8) and a
+  minor removes nothing (see the 12c hand-off, "What group 2 landed", A).
 - **Branch:** one squashed commit per group, `a29eb42` (group 1) and `7a7af28` (group 2), each followed by
   its documentation commit, on top of the triage commit `1c842e6`. Everything is pushed. The commit workflow
   (small commits inside a group, one squashed commit per group before the hand-off and before any push) is
   recorded at the end of the 12c hand-off.
-- **First act of the next session:** read the owner's answer on A if there is one, then start group 3 (E, F)
-  from the 12c triage table, with the per-commit cadence from the 12c stage definition.
+- **First act of the next session:** start group 3 (E, F) from the 12c triage table, with the per-commit
+  cadence from the 12c stage definition.
 - **Read next:** [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md), then the 12c triage and stage
   definition in [phase-12-plan.md](execution-strategy/phase-12-plan.md#12c-triage).
 

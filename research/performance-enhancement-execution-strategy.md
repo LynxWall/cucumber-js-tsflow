@@ -2730,6 +2730,46 @@ Added by the 12b failure-path pass (see [Stage 12b hand-off](#stage-12b-hand-off
 - **AG.** *(closed, document in 12e)* In the child-process fallback the watcher knows only the feature and support files (`Watching 3 files in 2 directories` against 4 files in 3 directories in process), so an edit to a project module such as `fixtures/scenario-context.ts` does not rerun. By design since Phase 10; the guide should say so.
 - **AH.** *(closed)* Ctrl-C: the watch loop treats the `\x03` key (raw-mode stdin, and through a pipe, verified) like `q`. There is no `SIGINT` handler, so a signal (a console Ctrl-C with a non-raw stdin, `kill -INT` on Linux) ends the process with Node's default, without `Watch mode stopped.`, and report files may be partial, as with CucumberJS. Acceptable. Raw-mode restoration on a console whose stdin is a TTY was not observed (the console harness pipes stdin) and rests on `finishQuit()` running before the AA crash, which the `Watch mode stopped.` line on the real console shows.
 
+### 12c triage
+
+Decided with the owner at the start of 12c (2026-09-23), before any refactor. The session was framed as a pruning,
+but a finding should only be closed when it is wrong by name and right by design, or when the regression risk
+outweighs the benefit and no test can pin it; 12a built the nets, so the second reason barely applies and only
+three letters close or defer. Every other letter is a fix, grouped by the vehicle that verifies it, and the groups
+are ordered so each leaves the tree green (see [12c: Review refactors](#12c-review-refactors) for the cadence).
+
+| Letter | Disposition | Group | Verified by |
+|---|---|---|---|
+| A | fix: delete the `--parallel-load` option and its five type declarations | 2 | build, strict type-check, `argv-parser.test.ts` |
+| B | fix: drop `IMessageData.coordinates` | 2 | build, strict type-check, parallel spec variants |
+| C | fix: delete `TranspileCacheStats.enabled` / `.directory` and both `isTimingEnabled()`; write `selectiveLoad` back to the environment like `transpileCache` or comment why not | 2 | `transpile-cache.test.ts`, `tsflow-timing.test.ts`, selective-load spec |
+| D | fix: one eviction and dependent-closure implementation, `reloadSupport()` clearing the registry and notifying listeners like `SupportReloader.prepare()` | 5 | `support.test.ts`, `support-reloader.test.ts`, `reload-support-test.feature`, both watch specs |
+| E | fix: one path-normalization helper used by `module-graph.ts`, `tsflow-timing.ts`, `our-callsite.ts`, `register-loaders.ts`, `startup-progress.ts` and `loader-utils.mjs` | 3 | `module-graph.test.ts`, `tsflow-timing.test.ts`, full matrix |
+| F | fix: one stamp shape shared by `selective-load.ts` and the transpile-cache prune scan | 3 | `selective-load.test.ts`, `transpile-cache.test.ts` |
+| G | moved to 12e: document the cache participation rule in Architecture.md, do not unify the caches | — | owner reads it |
+| H | look, then fix: confirm whether the ESM `supports()` rejecting `.ts` is deliberate; align the two `supports()` and the two `transpileCode()` or rename them so the difference is visible | 4 | `transpile-cache.test.ts`, esbuild variants of the matrix |
+| I | fix: run `transformImports` before the Vue output is cached, with the path mappings in the cache key | 4 | `transpile-cache.test.ts` (key inputs), Vue variants of the matrix |
+| J | fix: one decorator-mode value passed to the transpilers, crossing the thread boundary in one form | 4 | `*-exp*` variants of the matrix, Vue cache-key unit test |
+| K / V | fix: settle the `endFile` signature | 2 | `support.test.ts` type-checks without the workaround |
+| L | fix: rename the phase id `assemble` to `parse` (one type, one call site, two unit-test lines) | 2 | `startup-progress.test.ts` |
+| M | **closed, by design**: the watch loop wraps whole runs, so `watch` is not a property of one run configuration and belongs on the flat configuration read by `Cli.run()`; `--no-watch` is documented in 12e beside AG | — | — |
+| N | fix: the `node` workspace's `watch` profile sets `watch: true` and the spec stops passing `--watch`, so "a profile turns on watch mode" is exercised | 5 | `watch-mode-test.feature` |
+| O | keep and test, decided at the baseline | — | already covered in 12a |
+| P | folded into the closing measurement as one A/B pair (compile cache on and off on the UIS suite) | 6 | the measurement |
+| Q, R, W | moved to 12d, where they were already listed | — | `lint` and `typecheck` gates |
+| S, T | fixed in 12a | — | — |
+| U | fix, with D: `getSupportCodeLibrary()` owns eviction so its callers stop doing it three ways | 5 | as D |
+| X | **deferred**: cosmetic; revisit when the timing report layout is next touched | — | — |
+| Y, AH | closed in 12b | — | — |
+| Z | fix: report a throwing `BeforeAll`, emit both envelopes, fail the run in both adapters | 1 | new `before-all-throws` spec |
+| AA | fix: guard `global.messageCollector` in `cli/run.ts` | 1 | new "survives a failing run" watch scenario |
+| AB | fix: `logLevel: 'silent'` in both esbuild transpilers, one report after the phase line closes | 1 | load-failure spec asserts one copy; real console |
+| AC | fix: rethrow a plain `Error` from `tsnode-loader.mjs`, format non-`Error` throwables in `tsflow-logger.ts`; decide the CJS / ESM type-check asymmetry | 1 | logger unit test with a null-prototype object |
+| AD | fix: `PhaseRenderer.finished()` uses a failure mark when the phase failed | 1 | `startup-progress.test.ts`; real console |
+| AE | **decided: fix**, close the launch phase line before the `BeforeAll` hooks run so user output starts on its own row | 1 | plain-mode spec logs; real console |
+| AF | fix: the async-hooks banner names the loader through `describeTranspiler` | 1 | unit test on the banner text |
+| AG | closed in 12b, documented in 12e | — | — |
+
 ### Stages and gates
 
 Phase 12 was too large for one gate, so the owner split it into six stages. "Phase 12" stays the umbrella name;
@@ -2781,17 +2821,22 @@ findings A–R are pruned with the owner, with the tests open beside them; nothi
 
 #### 12c: Review refactors
 
-- The pruned findings list, one concern per commit, small ones first, D and J last since they touch the most.
-  Fixes queued from 12b land here too.
+- The triaged findings list (see [12c triage](#12c-triage)), one concern per commit, in six groups ordered so
+  each leaves the tree green: (1) the user-visible 12b fixes, each with a spec waiting; (2) dead-code deletions
+  with no behavior change; (3) small consolidations of pure helpers; (4) the transpiler layer, H, I then J, which
+  share four files; (5) loading and eviction, D/U and N, the largest behavior change, placed last so that if the
+  measurement moves the culprit is fresh; (6) the closing measurement.
 - **(added) Closing measurement.** After the last refactor, measure the UIS suite (`dim` and the full suite,
   fresh process and one `--watch` rerun) against the Phase 10 clean reference, following the Phase 11 note about
-  stray filesystem scanners first.
+  stray filesystem scanners first. Finding P rides along as one A/B pair with the compile cache on and off.
 
-**Gate:** the findings list fully resolved (landed or closed with a reason); unit tests and the matrix green after
-every commit; the UIS numbers within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look
-before touching anything else.
+**Gate:** the findings list fully resolved (landed, moved to a named stage, or closed with a reason); after every
+commit, `yarn build`, the strict type-check on the touched files, `yarn test:unit` and the one spec variant that
+covers the change; the full `yarn test:all` matrix at every group boundary and before the measurement (the owner
+chose this cadence over a full matrix per commit, 2026-09-23: same coverage, far less waiting); the UIS numbers
+within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look before touching anything else.
 
-**Status: next.** Start from [Starting 12c](#starting-12c) in the 12b hand-off.
+**Status: triaged (2026-09-23), execution next.** Start from [Starting 12c](#starting-12c) in the 12b hand-off.
 
 #### 12d: Housekeeping sweeps
 
@@ -3189,27 +3234,51 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
 
 ### Starting 12c
 
-Written for a fresh session. 12c is [Review refactors](#12c-review-refactors): the pruned findings, one concern
-per commit, then the closing measurement.
+Written for a fresh session. 12c is [Review refactors](#12c-review-refactors): the triaged findings, one concern
+per commit, then the closing measurement. **The triage is done** (2026-09-23, with the owner) and recorded in
+[12c triage](#12c-triage); the execution session starts with group 1 and does not reopen the dispositions.
 
-- **Read first:** [Phase 12 scope](#phase-12-scope) strand 2, the [review findings](#review-findings-for-strand-2)
-  A–AH in full, the [12a hand-off](#stage-12a-hand-off) for what each unit-test file covers (the net for every
-  refactor), and this hand-off for the failure-path table. Then **prune the list with the owner** and record each
-  decision beside its letter before changing anything.
-- **Start state:** the 12b commit, clean. `yarn`, `yarn build`, `yarn test:unit` (218) and `yarn test:all` (sixteen
-  variants; `node` 25, `node-esm` 18) reproduce the gate.
-- **Order:** the 12b fixes first, since each is small and has a spec waiting: AA (guard `global.messageCollector`
-  in `cli/run.ts`; then add the watch scenario "survives a failing run" on the `missing-import` profile: Enter
-  after the failed first run, quit, exit code 2, no stack trace after `Watch mode stopped.`), Z (report the hook
-  error and emit the envelopes in `runtime/worker.ts`, fail the run in `runtime/parallel/worker.ts`; a
+- **Read first:** the [12c triage](#12c-triage) table (every letter's disposition, group and verifying test), the
+  [review findings](#review-findings-for-strand-2) A–AH for the detail behind each row, the
+  [12a hand-off](#stage-12a-hand-off) for what each unit-test file covers (the net for every refactor), and this
+  hand-off's failure-path table for the reproductions behind group 1.
+- **Start state:** the 12b commit plus the triage commit, clean. `yarn`, `yarn build`, `yarn test:unit` (218) and
+  `yarn test:all` (sixteen variants; `node` 25, `node-esm` 18) reproduce the gate. The CI matrix on the draft
+  pull request was green at the end of 12b.
+- **Cadence, decided by the owner:** after every commit, `yarn build`, the strict type-check on the touched files
+  (`npx tsc --noEmit -p tsconfig.node.json --strictNullChecks` from `cucumber-tsflow`, filtered to the edited
+  files), `yarn test:unit`, and the one spec variant that covers the change (for example
+  `yarn test:node:cjs-esbuild`, or the `*-exp*` variants for J, the Vue variants for I). The full `yarn test:all`
+  runs at each group boundary and once more before the measurement. Each group closes with a one-line note in the
+  12c hand-off saying the boundary matrix was green.
+- **Group 1, the 12b fixes**, each small with a spec waiting: AA (guard `global.messageCollector` in
+  `cli/run.ts`; then add the watch scenario "survives a failing run" on the `missing-import` profile: Enter after
+  the failed first run, quit, exit code 2, no stack trace after `Watch mode stopped.`), Z (report the hook error
+  and emit the envelopes in `runtime/worker.ts`, fail the run in `runtime/parallel/worker.ts`; a
   `before-all-throws` fixture and a scenario asserting the message names the hook's file and line and the exit
   code), AB (`logLevel: 'silent'` in both esbuild transpilers, one report after `progress.end('failed')`, drop the
   repeated `[tsflow:*]:ERROR` copies; the load-failure spec then asserts the message appears once), AC (rethrow in
   `tsnode-loader.mjs`, format non-`Error` throwables in `tsflow-logger.ts`; a unit test with a null-prototype
-  object), AD and AF. Then the small review findings (A, B, C, K/V, L, M/N, Q, R), then E, F, H, I, then D/U and J
-  last, each behind the 12a unit tests and the matrix.
-- **The measurement** closes the stage: the UIS suite (`dim`, the full suite, fresh process and one `--watch`
-  rerun) against the Phase 10 clean reference, after checking for stray filesystem scanners as the Phase 11
-  notes describe. If it moved, stop and look before anything else.
+  object), AD (failure mark in `PhaseRenderer.finished()`), AE (close the launch phase line before the `BeforeAll`
+  hooks run) and AF (`describeTranspiler` in the async-hooks banner). AB, AD and AE change what a console shows;
+  verify them together with the `verify-console-output` skill once, at the end of the group.
+- **Group 2, dead code:** A, B, C, K/V, L. No behavior change; the strict type-check and the unit tests are the
+  whole proof. Do this before group 5 because A removes types from `api/load-support.ts`, which D rewrites.
+- **Group 3, pure helpers:** E (one path-normalization helper), F (one stamp shape).
+- **Group 4, the transpiler layer:** H first, and it starts with a look, not an edit: find out whether
+  `esm/esbuild.mjs` rejecting `.ts` in `supports()` is deliberate before aligning or renaming. Then I (rewrite
+  before caching; the path mappings join the Vue cache key), then J (one decorator-mode value, one form across the
+  thread boundary). These share `transpilers/esbuild.ts`, `esm/esbuild.mjs`, `esm/loader-utils.mjs` and
+  `vue-sfc-compiler.ts`; doing them back to back avoids editing the same code three times.
+- **Group 5, loading and eviction:** D/U together (one eviction implementation, `getSupportCodeLibrary()` owning
+  it, `reloadSupport()` clearing the registry and notifying listeners), then N (the `watch` profile sets
+  `watch: true`, the spec drops `--watch`). Run the watch features from one workspace at a time; they edit files
+  in place.
+- **Group 6, the measurement** closes the stage: the UIS suite (`dim`, the full suite, fresh process and one
+  `--watch` rerun) against the Phase 10 clean reference, after checking for stray filesystem scanners as the
+  Phase 11 notes describe, plus one A/B pair with the compile cache in `bin/cucumber-tsflow.js` on and off for
+  finding P. If it moved, stop and look before anything else.
+- **Closed or moved, do not touch in 12c:** M (by design), X (deferred), G and AG (12e documentation), Q, R and W
+  (12d), S, T, Y, AH (done).
 - **What not to do in 12c:** no spelling or strict-mode sweeps (12d), no documentation beyond this file and the
   CHANGELOG entries for the fixes (12e).

@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as loaderUtils from '../../../lib/transpilers/esm/loader-utils.mjs';
+import cache from '../../../lib/transpilers/transpile-cache.js';
 import moduleGraph from '../../../lib/utils/module-graph.js';
 import paths from '../../../lib/utils/paths.js';
 import { temporaryDirectory } from '../../helpers/temp.ts';
@@ -15,6 +16,7 @@ const {
 	resolveTsconfigPaths,
 	handleCommonFileTypes,
 	loadTypeScript,
+	loadVue,
 	shouldEnableVueStyle,
 	createEsbuildLoader
 } = loaderUtils;
@@ -180,5 +182,34 @@ describe('createEsbuildLoader hooks', () => {
 		const other = next();
 		expect(load(url('plain.js'), importing, other.fn).source).to.equal('next');
 		expect(other.calls).to.have.length(1);
+	});
+});
+
+describe('loadVue', () => {
+	writeFileSync(
+		file('Hello.vue'),
+		[
+			'<template><div class="hello">{{ count }}</div></template>',
+			'<script lang="ts">export default { data() { return { count: 1 as number }; } };</script>',
+			''
+		].join('\n')
+	);
+
+	it('compiles the component to an ES module once and serves the transformed output from the cache', () => {
+		cache.resetTranspileCacheStats();
+		const first = loadVue(url('Hello.vue'));
+		expect(first.format).to.equal('module');
+		expect(first.source).to.include('export default');
+		expect(first.source).to.not.include('as number');
+		expect(cache.getTranspileCacheStats().misses, 'the first load compiles').to.equal(1);
+
+		cache.resetTranspileCacheStats();
+		const second = loadVue(url('Hello.vue'));
+		expect(cache.getTranspileCacheStats(), 'the second load is one cache read').to.deep.equal({
+			hits: 1,
+			misses: 0,
+			writes: 0
+		});
+		expect(second.source).to.equal(first.source);
 	});
 });

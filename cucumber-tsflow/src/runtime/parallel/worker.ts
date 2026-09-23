@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { pathToFileURL } from 'node:url';
 import { registerLoader } from '../../api/register-loaders';
+import { setExperimentalDecorators } from '../../utils/decorator-mode';
 import { Envelope, IdGenerator } from '@cucumber/messages';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -67,8 +68,8 @@ export class ChildProcessWorker {
 		// integration with event data
 		global.messageCollector = new MessageCollector(this.eventBroadcaster);
 
-		// initialize the global experimentalDecorators setting
-		global.experimentalDecorators = experimentalDecorators;
+		// record the decorator mode the coordinator chose, for this process's decorators and transpilers
+		setExperimentalDecorators(experimentalDecorators);
 
 		// pass any envelope messages up to the parent process to keep our main
 		// message collector in sync with this one.

@@ -1,6 +1,7 @@
 import { parse, compileScript, compileTemplate, compileStyle } from 'vue/compiler-sfc';
 import hash from 'hash-sum';
 import { transformSync, version as esbuildVersion } from 'esbuild';
+import { experimentalDecorators } from '../utils/decorator-mode';
 import { createLogger, isVerbose } from '../utils/tsflow-logger';
 import { startTimer, recordFile } from '../utils/tsflow-timing';
 import { withTranspileCache } from './transpile-cache';
@@ -28,8 +29,30 @@ export type VueSFCOptions = {
 	format?: VueSFCFormat;
 };
 
+/** `VueSFCOptions` with the defaults applied and the decorator mode read: every input to the output but the source and file name. */
+export interface ResolvedVueSFCOptions {
+	enableStyle: boolean;
+	format: VueSFCFormat;
+	experimentalDecorators: boolean;
+}
+
+/** Apply the defaults to `options` and read the decorator mode. */
+export function resolveVueSFCOptions(options: VueSFCOptions = {}): ResolvedVueSFCOptions {
+	const { enableStyle = false, format = 'cjs' } = options;
+	return { enableStyle, format, experimentalDecorators: experimentalDecorators() };
+}
+
 /**
- * Compile a Vue Single File Component to JavaScript.
+ * The transpile-cache configuration for `options`: the style and format options, the decorator mode, and
+ * the Vue compiler and esbuild versions. The file name is in the key already (the component id is derived
+ * from it). The ESM loader appends what its import transform bakes into the output.
+ */
+export function vueSfcCacheKey(options: ResolvedVueSFCOptions): string {
+	return `vue@${vueVersion};esbuild@${esbuildVersion};` + JSON.stringify(options);
+}
+
+/**
+ * Compile a Vue Single File Component to JavaScript, through the transpile cache.
  *
  * For CJS format: assembles script + template + styles then runs a single
  * esbuild pass (format: 'cjs') over the complete output with TS stripping.
@@ -42,21 +65,24 @@ export type VueSFCOptions = {
  * @param options - Compilation options
  */
 export function compileVueSFC(source: string, filename: string, options: VueSFCOptions = {}): { code: string } {
-	const { enableStyle = false, format = 'cjs' } = options;
-	// Read experimentalDecorators from global (set by load-configuration before transpilers run)
-	const experimentalDecorators = !!(global as any).experimentalDecorators;
+	const resolved = resolveVueSFCOptions(options);
+	return withTranspileCache('vue-sfc', filename, source, vueSfcCacheKey(resolved), () =>
+		compileVueSFCUncached(source, filename, resolved)
+	);
+}
 
+/**
+ * The compile itself, for a caller that caches the result together with a transform of its own (the ESM
+ * loader's `loadVue`, which rewrites the output's imports before caching it under its own key).
+ */
+export function compileVueSFCUncached(
+	source: string,
+	filename: string,
+	options: ResolvedVueSFCOptions
+): { code: string } {
 	if (!source) throw new Error(`Invalid source for ${filename}: source is ${typeof source}`);
 	if (!filename) throw new Error('Filename is required for Vue SFC compilation');
-
-	// Cached on the source plus every other input to the output: the style and format options, the
-	// decorator mode, and the Vue compiler and esbuild versions. The file name is in the key already (the
-	// component id is derived from it).
-	const configuration =
-		`vue@${vueVersion};esbuild@${esbuildVersion};` + JSON.stringify({ enableStyle, format, experimentalDecorators });
-	return withTranspileCache('vue-sfc', filename, source, configuration, () =>
-		compile(source, filename, enableStyle, format, experimentalDecorators)
-	);
+	return compile(source, filename, options.enableStyle, options.format, options.experimentalDecorators);
 }
 
 function compile(

@@ -1,4 +1,3 @@
-import { compileVueSFC } from './vue-sfc-compiler.mjs';
 import { transpileCode } from './esbuild.mjs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { existsSync, readFileSync } from 'fs';
@@ -14,6 +13,11 @@ import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.m
 const require = createRequire(import.meta.url);
 const { recordImportEdge, versionedUrl, withoutQuery, addReloadListener } = require('../../utils/module-graph.js');
 const { toPosixPath } = require('../../utils/paths.js');
+// The Vue SFC compiler and the transpile cache are the CJS build's too, so every transpiler in a thread shares
+// one compiler instance and one set of cache counters; `loadVue` caches the compiled component together with
+// its import transform, which is why it takes the uncached compile and the key and wraps them itself.
+const { compileVueSFCUncached, resolveVueSFCOptions, vueSfcCacheKey } = require('../vue-sfc-compiler.js');
+const { withTranspileCache } = require('../transpile-cache.js');
 
 // Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
 // `nextLoad`, so the same hook functions work under both registration mechanisms: `module.registerHooks()`
@@ -58,6 +62,9 @@ export function isRequire(context) {
 
 // TSConfig paths initialization
 let matchPath;
+// The `baseUrl` and `paths` behind `matchPath`, for cache keys: what `transformImports` writes into a module
+// depends on them. Empty until a tsconfig with paths has been loaded.
+let tsconfigPaths = {};
 export function initializeTsconfigPaths() {
 	if (matchPath) return matchPath;
 
@@ -71,6 +78,7 @@ export function initializeTsconfigPaths() {
 		});
 
 		if (configLoaderResult.resultType === 'success') {
+			tsconfigPaths = { absoluteBaseUrl: configLoaderResult.absoluteBaseUrl, paths: configLoaderResult.paths };
 			matchPath = createMatchPath(
 				configLoaderResult.absoluteBaseUrl,
 				configLoaderResult.paths,
@@ -328,27 +336,34 @@ export function loadVue(url) {
 	}
 
 	const filename = fileURLToPath(url);
+	const options = resolveVueSFCOptions({ enableStyle: shouldEnableVueStyle(), format: 'esm' });
 
-	let compiled;
-	try {
-		if (verbose) loggerLoad.checkpoint('Compiling Vue SFC', { filename, enableStyle: shouldEnableVueStyle() });
-		compiled = compileVueSFC(code, filename, {
-			enableStyle: shouldEnableVueStyle()
-		});
-		if (verbose) loggerLoad.checkpoint('Vue SFC compiled', { outputLength: compiled?.code?.length });
-	} catch (error) {
-		if (verbose) loggerLoad.checkpoint('Vue SFC compilation failed', { filename, error: describeThrowable(error) });
-		throw new Error(`Failed to compile Vue SFC ${filename}: ${error.message}`, { cause: error });
-	}
+	// Cached on the .vue source with the import transform inside, so a warm load reads one entry and runs
+	// nothing. The key carries what transformImports bakes into the output beyond the compiler's inputs: the
+	// tsconfig baseUrl and paths it rewrites bare specifiers through (the rewritten paths are relative to this
+	// file's directory, which the file name in the key covers).
+	initializeTsconfigPaths();
+	const configuration = vueSfcCacheKey(options) + JSON.stringify(tsconfigPaths);
+	const { code: transformed } = withTranspileCache('vue-sfc-esm', filename, code, configuration, () => {
+		let compiled;
+		try {
+			if (verbose) loggerLoad.checkpoint('Compiling Vue SFC', { filename, enableStyle: options.enableStyle });
+			compiled = compileVueSFCUncached(code, filename, options);
+			if (verbose) loggerLoad.checkpoint('Vue SFC compiled', { outputLength: compiled?.code?.length });
+		} catch (error) {
+			if (verbose) loggerLoad.checkpoint('Vue SFC compilation failed', { filename, error: describeThrowable(error) });
+			throw new Error(`Failed to compile Vue SFC ${filename}: ${error.message}`, { cause: error });
+		}
 
-	let transformed;
-	try {
-		transformed = transformImports(compiled.code, url);
-		if (verbose) loggerLoad.checkpoint('Vue imports transformed');
-	} catch (error) {
-		if (verbose) loggerLoad.checkpoint('Failed to transform Vue imports', { url, error: describeThrowable(error) });
-		throw new Error(`Failed to transform imports in ${url}: ${error.message}`, { cause: error });
-	}
+		try {
+			const result = { code: transformImports(compiled.code, url) };
+			if (verbose) loggerLoad.checkpoint('Vue imports transformed');
+			return result;
+		} catch (error) {
+			if (verbose) loggerLoad.checkpoint('Failed to transform Vue imports', { url, error: describeThrowable(error) });
+			throw new Error(`Failed to transform imports in ${url}: ${error.message}`, { cause: error });
+		}
+	});
 
 	return {
 		format: 'module',

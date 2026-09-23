@@ -1,24 +1,25 @@
-import { transformSync, version as esbuildVersion } from 'esbuild';
 import path from 'path';
 import { createRequire } from 'node:module';
 import { loadConfig } from 'tsconfig-paths';
 import { pathToFileURL } from 'url';
 import { createLogger, describeThrowable, isVerbose } from '../../utils/tsflow-logger.mjs';
-import { startTimer, recordFile } from '../../utils/tsflow-timing.mjs';
 
-// The on-disk transpile cache is the CJS build one directory up (lib/transpilers/transpile-cache.js),
-// shared with the CJS transpilers and the Vue SFC compiler so all three keep one set of counters per thread.
+// The transform itself is the CJS build's `transpilers/esbuild.js` (options table, loaders table, cache-key
+// recipe and timing), shared with ts-node's transpiler plugin; this module adds what only an ES module
+// needs: tsconfig path aliases rewritten to file:// URLs before the transform, and `format: 'esm'`. The
+// on-disk transpile cache is loaded the same way, so all of the transpilers keep one set of counters per thread.
 const require = createRequire(import.meta.url);
+const { transformOptionsFor, esbuildCacheKey, runEsbuild } = require('../esbuild.js');
 const { withTranspileCache } = require('../transpile-cache.js');
+const { experimentalDecorators } = require('../../utils/decorator-mode.js');
 
 const logger = createLogger('esbuild');
 
 // Per-file checkpoints are guarded so their detail objects are never built when verbose logging is off
 const verbose = isVerbose();
 
-export const defaultOptions = {
-	debug: true
-};
+/** ES modules for Node: the one thing this caller fixes that the CommonJS transpiler does not. */
+const OUTPUT = { format: 'esm', platform: 'node' };
 
 // Cache for tsconfig data
 let tsconfigCache = null;
@@ -104,63 +105,7 @@ function rewritePathMappings(code, filename) {
 	return modifiedCode;
 }
 
-const commonOptions = {
-	format: 'esm',
-	// esbuild would otherwise print its own diagnostic to stderr from inside transformSync, on top of the open progress
-	// line; the thrown error carries the same text (file, line, column and message) and is reported once by the CLI
-	logLevel: 'silent',
-	target: ['es2022'],
-	minify: false,
-	sourcemap: 'external',
-	platform: 'node'
-};
-
-if (process.env.CUCUMBER_EXPERIMENTAL_DECORATORS === 'true') {
-	logger.checkpoint('Experimental decorators enabled');
-	commonOptions.tsconfigRaw = {
-		compilerOptions: {
-			experimentalDecorators: true,
-			importsNotUsedAsValues: 'remove',
-			strict: true
-		}
-	};
-} else {
-	commonOptions.tsconfigRaw = {
-		compilerOptions: {
-			importsNotUsedAsValues: 'remove',
-			strict: true
-		}
-	};
-}
-
-export const loaders = {
-	'.js': 'js',
-	'.mjs': 'js',
-	'.cjs': 'js',
-	'.jsx': 'jsx',
-	'.ts': 'ts',
-	'.tsx': 'tsx',
-	'.json': 'json'
-};
-
-export const supports = filename => {
-	if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return false;
-	if (filename.includes('cucumber-tsflow/lib') || filename.includes('cucumber-tsflow\\lib')) {
-		return false;
-	}
-	if (filename.includes('node_modules')) return false;
-
-	return path.extname(filename) in loaders;
-};
-
-const getLoaders = options => {
-	const ret = { ...loaders };
-	if (typeof options.esbuild?.loader === 'object') {
-		for (const [e, l] of Object.entries(options.esbuild.loader)) ret[e] = l;
-	}
-	return ret;
-};
-
+/** Transpile `code` to an ES module, through the transpile cache, with tsconfig path aliases rewritten first. */
 export const transpileCode = (code, filename, ext, _options) => {
 	if (verbose) {
 		logger.checkpoint('transpileCode', {
@@ -170,55 +115,42 @@ export const transpileCode = (code, filename, ext, _options) => {
 		});
 	}
 
-	const options = { ...defaultOptions, ..._options };
-	const loadersMap = getLoaders(options);
-	const loaderExt = ext != undefined ? ext : path.extname(filename);
-
-	const transformOptions = {
-		...commonOptions,
-		...(options.esbuild || {}),
-		loader: loadersMap[loaderExt],
-		sourcefile: filename
-	};
+	const transformOptions = transformOptionsFor(filename, ext, _options, OUTPUT, experimentalDecorators());
 
 	// Cached on the original source. The key must also carry what rewritePathMappings bakes into the
-	// output (absolute file:// URLs built from the tsconfig baseUrl and paths), the full transform options
-	// (including `tsconfigRaw` with the decorator mode) and the esbuild version.
+	// output (absolute file:// URLs built from the tsconfig baseUrl and paths).
 	const { absoluteBaseUrl, paths } = loadTsConfigPaths();
-	const configuration =
-		`esbuild@${esbuildVersion}` + JSON.stringify(transformOptions) + JSON.stringify({ absoluteBaseUrl, paths });
+	const configuration = esbuildCacheKey(transformOptions) + JSON.stringify({ absoluteBaseUrl, paths });
 
-	return withTranspileCache('esbuild-esm', filename, code, configuration, () => {
+	return withTranspileCache('esbuild', filename, code, configuration, () => {
 		if (verbose) logger.checkpoint('Rewriting path mappings', { filename });
 		const processedCode = rewritePathMappings(code, filename);
 
 		if (verbose) {
 			logger.checkpoint('Calling esbuild transformSync', {
 				filename,
-				loader: loadersMap[loaderExt],
+				loader: transformOptions.loader,
 				processedCodeLength: processedCode?.length
 			});
 		}
 
 		try {
-			const start = startTimer();
-			const ret = transformSync(processedCode, transformOptions);
-			recordFile('transpile', filename, start);
+			const ret = runEsbuild(processedCode, filename, transformOptions);
 
 			if (verbose) {
 				logger.checkpoint('esbuild transformSync success', {
 					filename,
-					outputLength: ret.code?.length
+					outputLength: ret.output?.length
 				});
 			}
 
-			return { output: ret.code, sourceMap: ret.map };
+			return ret;
 		} catch (error) {
 			// The error propagates to the CLI, which reports it once; only the verbose trail keeps a copy here
 			if (verbose) {
 				logger.checkpoint('esbuild transformSync failed', {
 					filename,
-					loader: loadersMap[loaderExt],
+					loader: transformOptions.loader,
 					codePreview: processedCode?.substring(0, 200),
 					error: describeThrowable(error)
 				});

@@ -11,6 +11,7 @@ import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/vali
 import { convertConfiguration } from './convert-configuration';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { ITsflowConfiguration } from '../cli/argv-parser';
+import { setExperimentalDecorators } from '../utils/decorator-mode';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
 import ansis from 'ansis';
@@ -139,8 +140,7 @@ export const loadConfiguration = async (
 		original.experimentalDecorators = false;
 	}
 	const experimentalDecorators = original.experimentalDecorators;
-	global.experimentalDecorators = experimentalDecorators;
-	process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(experimentalDecorators);
+	setExperimentalDecorators(experimentalDecorators);
 
 	logger.checkpoint('Experimental decorators configured', { experimentalDecorators });
 

@@ -61,7 +61,8 @@ const pathMappings = configLoaderResult.resultType === 'success' ? compilePathMa
 logger.checkpoint('Loading ts-node-maintained');
 const tsNode = require('ts-node-maintained');
 
-const experimentalDecorators = process.env.CUCUMBER_EXPERIMENTAL_DECORATORS === 'true';
+// Read once: the service is created here with the option and lives for the thread
+const experimentalDecorators = require('../../utils/decorator-mode.js').experimentalDecorators();
 
 logger.checkpoint('Creating ts-node service', {
 	experimentalDecorators,

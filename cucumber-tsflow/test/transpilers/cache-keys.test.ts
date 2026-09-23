@@ -1,23 +1,22 @@
 import { describe, it } from 'node:test';
 import { expect } from 'chai';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import cache from '../../lib/transpilers/transpile-cache.js';
 import esbuildCjs from '../../lib/transpilers/esbuild.js';
 import * as esbuildEsm from '../../lib/transpilers/esm/esbuild.mjs';
 import vueSfc from '../../lib/transpilers/vue-sfc-compiler.js';
+import decoratorMode from '../../lib/utils/decorator-mode.js';
 import { temporaryDirectory } from '../helpers/temp.ts';
+
+const { setExperimentalDecorators } = decoratorMode;
 
 // The three transpilers build their own cache-key strings; these tests check that every input each one
 // promises to cover really changes the key, by watching whether the transpiler runs or the cache answers.
 const store = temporaryDirectory('cache-keys');
 process.env.TSFLOW_TRANSPILE_CACHE_DIR = store;
 delete process.env.TSFLOW_TRANSPILE_CACHE;
-delete process.env.CUCUMBER_EXPERIMENTAL_DECORATORS;
+setExperimentalDecorators(false);
 cache.resetTranspileCacheDirectory();
-
-const globals = globalThis as { experimentalDecorators?: boolean };
-const require = createRequire(import.meta.url);
 
 /** Whether the transpiler ran for the single lookup in `fn`, read from this thread's counters. */
 function transpiled(fn: () => unknown): boolean {
@@ -58,18 +57,15 @@ describe('the CommonJS esbuild transpiler key', () => {
 		expect(transpiled(() => esbuildCjs.transpileCode(code, file, undefined, options))).to.equal(false);
 	});
 
-	it('changes with the decorator mode, which this transpiler reads when it loads', () => {
-		const resolved = require.resolve('../../lib/transpilers/esbuild.js');
-		delete require.cache[resolved];
-		globals.experimentalDecorators = true;
+	it('changes with the decorator mode, which this transpiler reads on every call', () => {
+		setExperimentalDecorators(true);
 		try {
-			const experimental = require(resolved) as typeof esbuildCjs;
-			expect(transpiled(() => experimental.transpileCode(code, file))).to.equal(true);
-			expect(transpiled(() => experimental.transpileCode(code, file))).to.equal(false);
+			expect(transpiled(() => esbuildCjs.transpileCode(code, file))).to.equal(true);
+			expect(transpiled(() => esbuildCjs.transpileCode(code, file))).to.equal(false);
 		} finally {
-			globals.experimentalDecorators = false;
-			delete require.cache[resolved];
+			setExperimentalDecorators(false);
 		}
+		expect(transpiled(() => esbuildCjs.transpileCode(code, file))).to.equal(false);
 	});
 });
 
@@ -90,16 +86,15 @@ describe('the ES module esbuild transpiler key', () => {
 		expect(transpiled(() => esbuildEsm.transpileCode(code, file, undefined, options))).to.equal(true);
 	});
 
-	it('changes with the decorator mode, which this transpiler reads from the environment when it loads', async () => {
-		process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = 'true';
+	it('changes with the decorator mode, which this transpiler reads on every call', () => {
+		setExperimentalDecorators(true);
 		try {
-			const specifier = new URL('../../lib/transpilers/esm/esbuild.mjs?decorators=experimental', import.meta.url).href;
-			const experimental = (await import(specifier)) as typeof esbuildEsm;
-			expect(transpiled(() => experimental.transpileCode(code, file))).to.equal(true);
-			expect(transpiled(() => experimental.transpileCode(code, file))).to.equal(false);
+			expect(transpiled(() => esbuildEsm.transpileCode(code, file))).to.equal(true);
+			expect(transpiled(() => esbuildEsm.transpileCode(code, file))).to.equal(false);
 		} finally {
-			delete process.env.CUCUMBER_EXPERIMENTAL_DECORATORS;
+			setExperimentalDecorators(false);
 		}
+		expect(transpiled(() => esbuildEsm.transpileCode(code, file))).to.equal(false);
 	});
 });
 
@@ -126,12 +121,12 @@ describe('the Vue SFC compiler key', () => {
 	});
 
 	it('changes with the decorator mode, which this compiler reads on every call', () => {
-		globals.experimentalDecorators = true;
+		setExperimentalDecorators(true);
 		try {
 			expect(transpiled(() => vueSfc.compileVueSFC(sfc, component))).to.equal(true);
 			expect(transpiled(() => vueSfc.compileVueSFC(sfc, component))).to.equal(false);
 		} finally {
-			globals.experimentalDecorators = false;
+			setExperimentalDecorators(false);
 		}
 		expect(transpiled(() => vueSfc.compileVueSFC(sfc, component))).to.equal(false);
 	});

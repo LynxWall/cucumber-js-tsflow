@@ -2,6 +2,7 @@ import { originalPositionFor, TraceMap } from '@jridgewell/trace-mapping';
 import { fileURLToPath } from 'node:url';
 import * as sourceMapSupport from 'source-map-support';
 import { CallSite } from 'source-map-support';
+import { loaderSourceMap } from './loader-source-maps';
 import { relativeToCwd } from './paths';
 
 /**
@@ -10,16 +11,16 @@ import { relativeToCwd } from './paths';
  */
 const CAPTURE_DEPTH = 3;
 
-/** Decoded maps from `__CUCUMBER_TSFLOW_SOURCE_MAPS`, by module URL; `null` records a URL with no map. */
+/** Decoded maps from `loaderSourceMap()`, by module URL; `null` records a URL with no map. */
 const traceMaps = new Map<string, TraceMap | null>();
 
 /**
- * Map a position in a module the esbuild ESM loader transpiled on this thread back to its TypeScript
- * line. The loader keeps each module's source map on `__CUCUMBER_TSFLOW_SOURCE_MAPS` (see
- * `loadTypeScript()` in `transpilers/esm/loader-utils.mjs`) because the transpiled code exists only in
- * memory, so `source-map-support`, which reads the file on disk, cannot find a map for it. Returns
- * undefined when the module was not loaded that way or the position has no mapping, and the caller falls
- * back to `source-map-support`.
+ * Map a position in a module the esbuild ESM loader transpiled back to its TypeScript line. The loader
+ * keeps each module's source map (see `loadTypeScript()` in `transpilers/esm/loader-utils.mjs`, and
+ * `loader-source-maps.ts` for how a map recorded on the loader hooks thread reaches this one) because the
+ * transpiled code exists only in memory, so `source-map-support`, which reads the file on disk, cannot find
+ * a map for it. Returns undefined when the module was not loaded that way or the position has no mapping,
+ * and the caller falls back to `source-map-support`.
  *
  * @param url - The frame's file name, a `file:` URL for an ES module
  * @param line - 1-based line in the transpiled code
@@ -32,7 +33,7 @@ function traceLoaderMap(
 ): { filename: string; lineNumber: number } | undefined {
 	let map = traceMaps.get(url);
 	if (map === undefined) {
-		const raw = globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS?.get(url);
+		const raw = loaderSourceMap(url);
 		map = raw ? new TraceMap(raw) : null;
 		traceMaps.set(url, map);
 	}

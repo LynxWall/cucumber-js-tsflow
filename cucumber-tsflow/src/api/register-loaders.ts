@@ -1,6 +1,8 @@
 import * as nodeModule from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { MessagePort } from 'node:worker_threads';
+import { sourceMapRegisterOptions } from '../utils/loader-source-maps';
 import { toPosixPath } from '../utils/paths';
 import { startTimer, recordPhase, timingRegisterOptions } from '../utils/tsflow-timing';
 
@@ -42,6 +44,17 @@ export function registeredLoaders(): { sync: string[]; async: string[] } {
 	return { sync: Array.from(registeredSync), async: Array.from(registeredAsync) };
 }
 
+type RegisterOptions = { data: object; transferList: MessagePort[] } | undefined;
+
+/** One `module.register()` options object carrying the `data` and transfer lists of both, or undefined when neither is set. */
+function mergeRegisterOptions(first: RegisterOptions, second: RegisterOptions): RegisterOptions {
+	if (!first || !second) return first ?? second;
+	return {
+		data: { ...first.data, ...second.data },
+		transferList: [...first.transferList, ...second.transferList]
+	};
+}
+
 function syncLoaderFile(specifier: string): string | undefined {
 	const match = /\/transpilers\/esm\/([^/]+?)(\.mjs)?$/.exec(toPosixPath(specifier));
 	if (!match || !SYNC_CAPABLE_LOADERS.has(match[1])) {
@@ -67,10 +80,18 @@ export function loaderHooksMode(specifier: string): LoaderHooksMode {
  * Returns the mechanism used.
  */
 export async function registerLoader(specifier: string): Promise<LoaderHooksMode> {
-	const file = loaderHooksMode(specifier) === 'sync' ? syncLoaderFile(specifier) : undefined;
+	const esbuildLoader = syncLoaderFile(specifier);
+	const file = loaderHooksMode(specifier) === 'sync' ? esbuildLoader : undefined;
 	if (!file || !registerHooks) {
 		if (!registeredAsync.has(specifier)) {
-			nodeModule.register(specifier, pathToFileURL('./'), timingRegisterOptions());
+			// On the hooks thread tsflow's esbuild loaders relay each module's source map back over a port, so
+			// callsites still resolve to TypeScript lines (see transpilers/esm/source-map-relay.mjs); the ts-node
+			// and third-party loaders receive only the timing port.
+			const options = mergeRegisterOptions(
+				timingRegisterOptions(),
+				esbuildLoader ? sourceMapRegisterOptions() : undefined
+			);
+			nodeModule.register(specifier, pathToFileURL('./'), options);
 			registeredAsync.add(specifier);
 		}
 		return 'async';

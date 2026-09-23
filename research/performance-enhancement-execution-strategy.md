@@ -2777,7 +2777,7 @@ findings A–R are pruned with the owner, with the tests open beside them; nothi
 
 **Gate:** `test:all` green with the new scenarios on the matrix; no failure-path finding left unclassified.
 
-**Status: COMPLETE (2026-09-23).** See [Stage 12b hand-off](#stage-12b-hand-off).
+**Status: COMPLETE (2026-09-23), committed as `47842ca`.** See [Stage 12b hand-off](#stage-12b-hand-off).
 
 #### 12c: Review refactors
 
@@ -3054,8 +3054,9 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
 ### State of the tree
 
 - Branch `2026-09-speed-enhancements`, started from `7811636` (the 12a hand-off commit). The 12b work is
-  uncommitted at the time of writing and waits for the owner's review, as the 12a work did; the commit id belongs
-  here once it exists. `yarn build` unchanged (the library did not change); `yarn test:unit` unchanged at 218 green.
+  committed as `47842ca` ("Stage 12b: end-to-end scenarios for watch, selective load, parse and load failures;
+  failure-path findings") after the owner's review on 2026-09-23; the tree was clean after it, and 12c starts from
+  there. `yarn build` unchanged (the library did not change); `yarn test:unit` unchanged at 218 green.
 - `yarn test:all` green on all sixteen variants on this machine, with the `node` workspace now at 25 scenarios
   (20 in 12a) and `node-esm` at 18 (15 in 12a); the other twelve counts are as in 12a. The CI matrix written in 12a
   has still not been executed: it only runs on `master`, `release/**` and by hand, and nothing in this session was

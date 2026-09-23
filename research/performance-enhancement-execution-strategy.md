@@ -2747,7 +2747,7 @@ additions are marked **(added)** below.
 **Gate:** `test:unit` and `test:all` green on the full matrix; every risk 1–6 has a test. **Pause:** the review
 findings A–R are pruned with the owner, with the tests open beside them; nothing in 12c is decided before this.
 
-**Status: landed 2026-09-22, awaiting the owner's review and the pause.** See [Stage 12a hand-off](#stage-12a-hand-off).
+**Status: COMPLETE (2026-09-23), committed as `65d9526`.** See [Stage 12a hand-off](#stage-12a-hand-off).
 
 #### 12b: Behavior discovery
 
@@ -2763,6 +2763,8 @@ findings A–R are pruned with the owner, with the tests open beside them; nothi
   rather than fixes them: each finding becomes a test, a fix queued for 12c, or a closed entry with a reason.
 
 **Gate:** `test:all` green with the new scenarios on the matrix; no failure-path finding left unclassified.
+
+**Status: next.** Start from [Starting 12b](#starting-12b) in the 12a hand-off.
 
 #### 12c: Review refactors
 
@@ -2846,11 +2848,12 @@ the risk list, and the CI matrix.
 ### State of the tree
 
 - Branch `2026-09-speed-enhancements`. The Phase 12 baseline written in the previous session (decisions, coverage
-  inventory, findings A–R, the six stages) is committed as `4604940`. The 12a work itself is **uncommitted** in the
-  working tree for the owner's review, as Phase 10's was before its commit: `yarn build` clean, no stray `.js` under
-  `src/`; `yarn test:unit` green (218 tests in 16 files, about 1.6 s on this machine); `yarn test:all` green on all
-  sixteen variants on the same build, with the scenario counts unchanged since Phase 10 (18, 18, 20, 20, 18, 18, 15,
-  15, 30, 30, 30, 30, 31, 31, 27, 27).
+  inventory, findings A–R, the six stages) is committed as `4604940`. The 12a work is committed as `65d9526` ("Stage
+  12a: unit-test foundation, seams, risk-list tests and CI matrix") after the owner's review on 2026-09-23; the tree
+  was clean after it, and 12b starts from there. On that build: `yarn build` clean, no stray `.js` under `src/`;
+  `yarn test:unit` green (218 tests in 16 files, about 1.6 s on this machine); `yarn test:all` green on all sixteen
+  variants, with the scenario counts unchanged since Phase 10 (18, 18, 20, 20, 18, 18, 15, 15, 30, 30, 30, 30, 31,
+  31, 27, 27).
 - `npx tsc -p test/tsconfig.json` (from `cucumber-tsflow/`) is clean with `strict`, `verbatimModuleSyntax` and
   `erasableSyntaxOnly` on. `npx tsc --noEmit -p tsconfig.node.json --strictNullChecks` reports nothing in the touched
   source files (the pre-existing 21 errors stand). `npx eslint cucumber-tsflow/src` is unchanged (0 errors, the
@@ -2948,8 +2951,8 @@ the risk list, and the CI matrix.
 
 - The gate is met as far as this machine can tell: `test:unit` and `test:all` green here, every item on the risk
   list has a test, with 3 (ESM watch reruns end to end) and 5's end-to-end form deliberately left to 12b's scenarios.
-  The owner's review of the uncommitted tree and the pruning of findings A–X come next; nothing in 12c is decided
-  before that.
+  The owner reviewed and approved the tree on 2026-09-23 without changes. The pruning of findings A–X did not happen
+  in that review; 12b does not depend on it, and it stays the first thing 12c needs.
 - Running one test file: `node --test test/api/selective-load.test.ts` from `cucumber-tsflow/` after `yarn build`.
   Each file is its own process, so module-level state (the timing store, the module graph, the transpile-cache
   directory, the binding registry) is isolated between files but shared within one; the files that depend on order
@@ -2964,3 +2967,65 @@ the risk list, and the CI matrix.
   stage text asks for a spec scenario in a workspace no other profile globs, and that remains the plan for the
   user-visible form.
 - Build with `yarn build`, never bare `tsc`; run `yarn test:unit` and `yarn test:all` before calling a stage done.
+
+### Starting 12b
+
+Written for a fresh session, so that it can start without re-deriving anything. 12b is
+[Behavior discovery](#12b-behavior-discovery): three end-to-end scenarios and a failure-path pass. It finds things
+and records them; fixes go to 12c.
+
+- **Read first:** [Phase 12 scope](#phase-12-scope), the [12b stage text](#12b-behavior-discovery), this hand-off (the
+  runner, the seams and what each test file already covers), and the
+  [Phase 10 hand-off](#phase-10-hand-off) for what watch mode promised and how its spec drives the CLI. The
+  `coverage inventory` rows for `api/run-cucumber.ts`, `cli/watch.ts` and `api/support-reloader.ts` list the
+  behaviors that still have only end-to-end or no coverage.
+- **Start state:** branch `2026-09-speed-enhancements` at `65d9526`, clean. `yarn`, `yarn build`, then
+  `yarn test:unit` (218 green) and `yarn test:all` (sixteen variants green) reproduce the 12a gate. Build with
+  `yarn build`, never bare `tsc`.
+- **Scenario 1, ESM watch rerun (risk 3).** The existing spec is [watch-mode-test.feature](../cucumber-tsflow-specs/features/watch-mode-test.feature)
+  with its steps in `cucumber-tsflow-specs/node/src/step_definitions/watch-mode-test.ts` (a `WatchSession` class that
+  spawns `bin/cucumber-tsflow.js -p <profile> --watch` through piped stdin, waits for each `Run took` line, and
+  quits with `q`). It runs on the `node` workspace's `watch` profile and is tagged `@watch @node`. The ESM version
+  needs: a `watch` profile in `cucumber-tsflow-specs/node-esm/cucumber.json` (transpiler `es-node-esm`, one feature,
+  two support files, `format: ["progress"]`, `parallel: 0`), a copy of the steps in the `node-esm` workspace
+  (the CJS steps use `require.resolve` for the bin path; the ESM copy needs `createRequire` or `import.meta.resolve`),
+  a feature tagged so only `node-esm` runs it (`@node-esm`, and check the `tsnodeesm` profile's tag expression
+  `@node-esm and not @reload`: under `ts-node-maintained/esm` watch mode falls back to a child process per run, so
+  either exclude the scenario from that profile with a tag or write a second scenario asserting the fallback banner
+  `Support code cannot be kept loaded between runs`). The scenario edits a support file between runs (append a
+  comment, then restore it in an `@after` hook), and asserts the `Changed: <relative path>` line, the
+  `(rerun N: A evaluated again, B kept loaded, C other modules)` note and `N scenarios (N passed)` on the rerun.
+  Watch debounce is 200 ms; the file event may arrive twice (editors write twice), which the loop coalesces.
+- **Scenario 2, selective-load second run.** `selectiveLoad: true` is already set on the `esnode` (node),
+  `esnodeesm` (node-esm) and the corresponding Vue profiles. A second run of a filtered profile prints
+  `N of M support files … (K skipped: not used by the selected scenarios)` in the load-phase line (plain text when
+  stdout is not a TTY, with `TSFLOW_THEME` at its default). The control is the same profile with
+  `--no-selective-load`, whose line reads `M support files` with no skip note. The index lives under
+  `node_modules/.cache/cucumber-tsflow/selective-load`, keyed on cwd, coordinates, decorator mode and version, so the
+  scenario must run the CLI twice itself (first run writes the index) or point `TSFLOW_TRANSPILE_CACHE_DIR` nowhere
+  (the index does not follow that variable; it follows `getCacheRootDirectory()`, which is the workspace's
+  `node_modules`). A child-process step file in the `node` workspace, tagged `@node` only, is the simplest home;
+  on CI every run is cold, so the scenario is the only thing that ever exercises the warm path there.
+- **Scenario 3, parse error and envelope order (risk 5).** `api/run-cucumber.test.ts` already covers the order and
+  the parse-error path in-process (`meta`, `source`, `gherkinDocument`, `pickle`, then support, then the run;
+  on a parse error the support code loads, `parseError` is emitted, nothing runs, `success` is false, stderr says
+  `Parse error in`). The stage text wants the user-visible form: a malformed feature in a directory no other profile
+  globs (every profile globs `../features/**/*.feature`, so it must live outside `cucumber-tsflow-specs/features/`,
+  for example `cucumber-tsflow-specs/node/src/fixtures/broken/`), run through the CLI by a step, asserting the
+  `1 parse error` phase summary, the `Parse error in "<uri>"` message and exit code 2. Two `Feature:` lines in one
+  file is a reliable parse error; free text under a scenario is only a description.
+- **Failure-path pass.** No test for these exists yet; the pass is manual first, then each finding becomes a test, a
+  12c fix or a closed entry. Drive the CLI as the watch spec does (child process, piped stdin, captured stdout and
+  stderr, exit code). Cases: a syntax error in a support file, a missing import, a `BeforeAll` that throws, the
+  malformed feature, and Ctrl-C mid-run (`child.kill('SIGINT')` on Linux; on Windows a piped stdin cannot deliver
+  Ctrl-C, so send `q` in watch mode and use `child.kill()` for the plain run). Check on each: the message names the
+  file, the spinner worker and message line shut down (no stray escape sequences after the error, the process exits
+  on its own), stdin leaves raw mode (only observable on a real console: use the `verify-console-output` skill for
+  that one), the exit code (2 for a failed run, 3 when implemented steps failed, 1 for a CLI error), and that a watch
+  session survives a failing run and reruns on Enter. `progress.finish()` on the failed-load path was added in Phase
+  10 and is the code under test for the spinner shutdown.
+- **What not to do in 12b:** no refactors (12c), no spelling or strict-mode sweeps (12d), no documentation beyond
+  this file (12e). Findings go into the strand 2 list with the next letters (Y onward) and into the 12b hand-off.
+- **Gate and hand-off:** `yarn test:all` green with the new scenarios on the matrix (run the CI workflow by hand on
+  the branch; it has a manual trigger and does not fire on this branch's pushes); no failure-path finding left
+  unclassified; a "Stage 12b hand-off" section in this document in the shape of the 12a one.

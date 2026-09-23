@@ -182,7 +182,7 @@ loaded, C other modules)` note. The Phase 10 hand-off in the execution strategy 
 
 ## Profiling a run
 
-Item 27 of the [execution strategy](performance-enhancement-execution-strategy.md) asks where the time
+Item 27 of the [execution strategy](execution-strategy/ratings.md#re-rating-after-phase-5) asks where the time
 inside `runtime:run` goes. `TSFLOW_TIMING` cannot answer that — it brackets the whole runtime as one
 phase — so the tool is V8's sampling profiler, `node --cpu-prof`, and a script in this repository that
 splits the samples by layer.

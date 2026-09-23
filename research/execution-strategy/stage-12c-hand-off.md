@@ -4,7 +4,7 @@ Part of the [Performance Enhancement Execution Strategy](../performance-enhancem
 
 Written as the groups land (started 2026-09-23), so that a pause after any group can resume cold. Stage 12c is
 [Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **Groups 1
-and 2 are complete; groups 3–6 have not started.**
+to 3 are complete; groups 4–6 have not started.**
 
 ## State of the tree
 
@@ -48,6 +48,21 @@ and 2 are complete; groups 3–6 have not started.**
   `tsflow-timing.test.ts`, `support.test.ts`, `startup-progress.test.ts`. Also `Architecture.md` (the phase list
   and the unit-of-work table), one CHANGELOG clause (B), and the console-verification skill's
   `scripts/child-template.js` (L).
+- **Group 3** (E, F; two helper consolidations, no behavior change intended) is one commit, `c57ca3f`, squashed on
+  2026-09-23 from two working commits, one per finding, on top of the hand-off commit `8cc62fc`; the tree is
+  byte-identical to the last working commit. The cadence held after each (`yarn build` with no stray `.js` under
+  `src/`, the strict type-check with zero errors from the touched files and the pre-existing total unchanged at
+  21, `tsc --noEmit -p test/tsconfig.json` clean, `yarn test:unit` at **246 tests** after E's five new cases and
+  F's three, and `yarn test:node:cjs-esbuild` at 31 of 31). At the group boundary `yarn test:all` was green on all
+  sixteen variants: 18, 18, 31, 31, 18, 18, 25, 25, 30, 30, 30, 30, 31, 31, 27, 27, identical to the group 2
+  boundary. No spec changes, as the plan said.
+- Group 3 files added: `src/utils/paths.ts`, `src/utils/file-stamp.ts`, `test/utils/paths.test.ts`,
+  `test/utils/file-stamp.test.ts`. Changed under `src`: `utils/module-graph.ts`, `utils/tsflow-timing.ts`,
+  `utils/our-callsite.ts`, `utils/startup-progress.ts`, `api/register-loaders.ts`, `api/selective-load.ts`,
+  `api/support-reloader.ts`, `cli/watch.ts`, `transpilers/transpile-cache.ts`, `transpilers/esm/loader-utils.mjs`.
+  Tests changed: `module-graph.test.ts` (three describe blocks moved to `paths.test.ts`),
+  `support-reloader.test.ts` and `loader-utils.test.ts` (import `canonicalPath` from its new home). No CHANGELOG
+  line: nothing a user sees changed.
 
 ## What group 1 landed
 
@@ -154,15 +169,53 @@ and 2 are complete; groups 3–6 have not started.**
   longer says the formatters have a phase) and `.claude/skills/verify-console-output/scripts/child-template.js`,
   which drives the phases by id. The `TSFLOW_TIMING` phase named `gherkin` is unchanged.
 
-## Notes specific to the pause and group 3
+## What group 3 landed
 
-- **Group 2 boundary: `yarn test:all` green on all sixteen variants (counts above).** Groups 3–6 remain, in the
-  order the plan gives; group 3 (E, F: one path-normalization helper, one stamp shape) is next and needs no spec
-  changes. Its verification is `module-graph.test.ts`, `tsflow-timing.test.ts`, `selective-load.test.ts`,
-  `transpile-cache.test.ts` and, for E, the full matrix, because `loader-utils.mjs` is one of the six call sites.
-- Nothing is open from group 2: the owner confirmed A's kept flag (above), and everything else matched the
-  triage. The rule it set, no removals of published surface in a minor release, applies to the rest of 12c.
-- Leftovers noticed in groups 1 and 2, none in the triage, all for 12d or 12e rather than group 3:
+- **E.** `src/utils/paths.ts` is the one place a file path is normalized. `canonicalPath`, `canonicalFromUrl` and
+  `canonicalFromFrameFile` moved there from `module-graph.ts` unchanged (module-graph keeps the graph, the
+  versioning and `withoutQuery`, and imports the canonical family; `selective-load.ts`, `support-reloader.ts` and
+  `cli/watch.ts` import it from the new home). Two helpers join them: `toPosixPath()` replaces the three ad-hoc
+  `replace(/\\/g, '/')` calls (`register-loaders.ts` and `startup-progress.ts` match a specifier against a
+  pattern, `loader-utils.mjs` builds a relative import specifier; the loader reaches it through the same
+  `createRequire` it already uses for `module-graph.js`), and `relativeToCwd()` replaces both the timing report's
+  `displayPath` and `Callsite`'s cwd-prefix strip. `tsflow-timing.ts`'s `normalizeFile`, which duplicated
+  `canonicalPath` byte for byte, is now `canonicalFromUrl(file) ?? file` for a URL and `canonicalPath(file)`
+  otherwise. **One deliberate difference:** `Callsite.filename` used a case-sensitive prefix comparison against
+  `process.cwd() + sep` computed at module load; `relativeToCwd` uses `path.relative`, so on Windows a mapped
+  filename whose drive letter case or separators differ from the working directory's is now made relative where
+  it was left absolute before, and a filename that is already relative is returned untouched (the old code would
+  never have matched it either). The working directory is read per call. The Windows matrix passed; CI's Linux
+  jobs see the change when the group is pushed. Tests: the three moved describe blocks plus `toPosixPath` and
+  `relativeToCwd` (a file beneath the cwd, a relative input, the cwd itself, a sibling and a parent, and on
+  Windows the drive-letter and separator spellings) in `test/utils/paths.test.ts`.
+- **F.** `src/utils/file-stamp.ts` holds `FileStamp { mtimeMs, size }`, `stampOf(file)` (undefined for anything
+  but a regular file that can be stat'd) and `sameStamp(a, b)`. `selective-load.ts` stores that shape in its
+  index (so `INDEX_FORMAT` is 2: an index written by the tuple format is ignored and rebuilt once, which costs a
+  full load on the next run of any suite that had one; the feature is unreleased, so no user has such an index)
+  and keeps `MISSING_STAMP = { -1, -1 }` for a dependency it cannot stat, as before; `isStale` is one `sameStamp`
+  per dependency. The transpile-cache prune scan's entries are `{ file, stamp }`, its `isFile()` check and its
+  stat `try/catch` both now being `stampOf`. Tests: `test/utils/file-stamp.test.ts` (a real file's stamp equals
+  its `stat`, undefined for a missing file and a directory, `sameStamp` on each field); the existing
+  `selective-load.test.ts` and `transpile-cache.test.ts` prune cases cover the two consumers.
+
+## Notes specific to the pause and group 4
+
+- **Group 3 boundary: `yarn test:all` green on all sixteen variants (counts above).** Groups 4–6 remain, in the
+  order the plan gives; group 4 is the transpiler layer, H, I then J, which share four files
+  (`transpilers/esbuild.ts`, `esm/esbuild.mjs`, `esm/loader-utils.mjs`, `vue-sfc-compiler.ts`). H is "look, then
+  fix": confirm whether the ESM `supports()` rejecting `.ts` is deliberate before aligning or renaming the two
+  `supports()` and the two `transpileCode()`; its verification is `transpile-cache.test.ts` and the esbuild
+  variants. I runs `transformImports` before the Vue output is cached, with the path mappings in the cache key
+  (`transpile-cache.test.ts` key inputs, the Vue variants). J, marked large, passes the decorator mode to the
+  transpilers as one value across the thread boundary (the `*-exp*` variants, the Vue cache-key unit test). The
+  cache key strings are tested in `test/transpilers/cache-keys.test.ts`; a change to what goes into a key should
+  land with its assertion.
+- Nothing is open from group 3: both findings landed as triaged. The one behavior difference (E's `Callsite`
+  filename on Windows, above) is an improvement the matrix accepted, not a question.
+- The editor's diagnostics are now delivered to the assistant after every edit (a PostToolUse hook prints the
+  Problems-panel entries for the edited file), so the strict type-check at the end of a change confirms rather
+  than discovers; the check still runs, because the hook reports only the file just edited, not its importers.
+- Leftovers noticed in groups 1 to 3, none in the triage, all for 12d or 12e rather than group 4:
   `api/load-configuration.ts` (ten sites) and `api/convert-configuration.ts` (two) still log with `logger.error`
   before rethrowing, so a configuration error prints `[tsflow:config]:ERROR …` and then the `[tsflow:run]`
   report, two copies (same mechanical change as the loaders in AB; 12d). Both READMEs still list **Parallel

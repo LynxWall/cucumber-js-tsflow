@@ -3074,7 +3074,12 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
   22) spent about two minutes in `yarn test:all`, the others 23 seconds or less. The 12b gate is closed. The run
   carried one annotation, "Node 20 is deprecated … actions/checkout@v4, actions/setup-node@v4 are being forced
   to run on Node 24": the Node version an action's own code runs on, unrelated to the Node the matrix installs;
-  both actions were moved to their v5 majors, which declare Node 24. In a `node --test` log the failing tests are
+  both actions were moved to their v5 majors, which declare Node 24. A second annotation said the `ubuntu-latest`
+  label moves from Ubuntu 24.04 to 26.04 between October 19 and November 19, 2026 (actions/runner-images issue
+  14748). The workflow depends on nothing the image ships (Node from `setup-node`, Yarn from `.yarn/releases`,
+  esbuild's own prebuilt binary), so the label was kept on purpose: the matrix should test what a consumer gets by
+  default. If an Ubuntu job turns red in that window with no code change behind it, pin `runs-on: ubuntu-24.04`
+  or add an explicit `ubuntu-26.04` entry to see the new image early. In a `node --test` log the failing tests are
   listed at the end under `✖ failing tests:`, and `ℹ fail` gives the count.
 - `npx tsc --noEmit -p cucumber-tsflow-specs/node/tsconfig.json` and the same for `node-esm` are clean (the
   spec workspaces have no type-check script; this is what the editor and the ts-node ESM loader see). ESLint and

@@ -3,8 +3,10 @@ Feature: Watch mode with ES modules
 
   Node cannot evict an ES module, so a rerun re-imports the support files
   that must evaluate again under a cache-busting query. These scenarios
-  start the CLI as a child process on a profile of this workspace, drive it
-  through its stdin, and edit files between runs. The child runs with the
+  start the CLI as a child process on a profile of this workspace that sets
+  "watch": true, drive it through its stdin, and edit files between runs.
+  The fallback scenario's fresh process per run gets --no-watch, which has
+  to override the profile. The child runs with the
   loader hooks on its main thread whatever the parent's TSFLOW_ESM_HOOKS
   setting, because the in-process rerun is what the first scenario tests.
 

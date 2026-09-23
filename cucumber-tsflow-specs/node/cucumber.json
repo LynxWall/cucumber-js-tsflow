@@ -17,6 +17,7 @@
 		"tags": "@node"
 	},
 	"watch": {
+		"watch": true,
 		"transpiler": "es-node",
 		"paths": ["../features/basic-test.feature"],
 		"require": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],

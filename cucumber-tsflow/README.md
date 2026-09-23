@@ -52,7 +52,7 @@ This release adds a new API function for incremental support-code reloading and 
 
 ### `reloadSupport` API
 
-- **`reloadSupport(options, changedPaths, environment?)`** — evicts only the changed files (and their dependents) from Node's `require.cache`, then re-requires all support files. Unchanged files resolve instantly from transpiler cache; only changed files pay the full compilation cost. Pass an empty `changedPaths` array to evict and reload all support modules.
+- **`reloadSupport(options, changedPaths, environment?)`** — loads the support code again in a process that has loaded it before. Every support file evaluates again (a module Node has cached registers nothing, so the library is the one a fresh process would build), and so do the changed files and every project module that imports or requires one of them, so no re-evaluated file keeps a stale dependency; everything else stays loaded, and unchanged files come back from the transpile caches rather than being compiled again. CommonJS modules are evicted from `require.cache`; ES modules are re-imported under a version query. The previous load's bindings are cleared first. Pass an empty `changedPaths` array to evaluate every support file again with nothing else evicted.
 - Designed for use by persistent worker processes such as the companion [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=lynxwall.cucumber-tsflow-vscode), which can call `reloadSupport` when a step file is saved instead of doing a full `loadSupport` on every run.
 
 ### Vue SFC compiler consolidation

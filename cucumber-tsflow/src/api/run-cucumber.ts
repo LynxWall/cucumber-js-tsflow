@@ -132,11 +132,7 @@ Running from: ${__dirname}
 	const gherkinEnvelopes: Envelope[] = [];
 	let filteredPickles: ReadonlyArray<IFilterablePickle> = [];
 	let parseErrors: ParseError[] = [];
-	progress.begin(
-		'parse',
-		`parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`,
-		sourcePaths.length
-	);
+	progress.begin('parse', `parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`, sourcePaths.length);
 	let phaseStart = startTimer();
 	if (sourcePaths.length > 0) {
 		const gherkinResult = await getPicklesAndErrors({
@@ -235,6 +231,7 @@ Running from: ${__dirname}
 							requireModules: supportCoordinates.requireModules,
 							importPaths: loadImportPaths,
 							loaders: supportCoordinates.loaders,
+							reevaluate: reload?.files,
 							onFileLoaded: () => progress.tick(),
 							recorder: composeRecorders(selectiveLoad, reloader)
 						});

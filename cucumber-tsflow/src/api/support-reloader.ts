@@ -9,7 +9,7 @@
  *   and a file's decorators register with it while the file evaluates, so a file that contributed step
  *   definitions, hooks, parameter types, a `World`, a default timeout or a definition wrapper must run again
  *   for the new library to contain them. A file that registered nothing (a set-up module such as the jsdom
- *   initialisation) is evaluated once and kept: running it again would gain the library nothing, and
+ *   initialization) is evaluated once and kept: running it again would gain the library nothing, and
  *   running set-up twice is exactly what a resident process must avoid.
  * - **Changed files and everything that depends on them.** An edited module and every project module that
  *   imports or requires it, directly or through others (`dependentProjectModules()`), so that no kept module
@@ -18,14 +18,16 @@
  *   and is imported by a support file registers only when it evaluates, and a cached helper would not; such
  *   modules are found from the registry's callsites after each load and evaluated on every run.
  *
- * The previous run's bindings are cleared from the `BindingRegistry` first, so nothing stale can shadow a
- * re-registered binding. How a module is made to evaluate again depends on its module system and is the
- * business of `utils/module-graph.ts`: CommonJS modules are evicted from `require.cache`; ES modules are
- * given a version that the in-thread `resolve` hook appends to their URL as a query, since Node's module
- * map cannot be invalidated. That hook must run in this thread (the esbuild ESM loaders under
- * `module.registerHooks()`): a loader on Node's loader hooks thread (`ts-node-maintained/esm`, third-party
- * loaders, `TSFLOW_ESM_HOOKS=async`) neither records the import graph nor sees the versions, so
- * `unsupportedReason()` tells the CLI to fall back to a fresh process per run.
+ * The reloader only decides. `runCucumber` hands the set to `getSupportCodeLibrary`, which does for it what
+ * it does for any load after the first in a process: the previous run's bindings are cleared from the
+ * `BindingRegistry`, so nothing stale can shadow a re-registered binding, and each module in the set is
+ * made to evaluate again in the way its module system allows (`utils/module-graph.ts`): CommonJS modules
+ * are evicted from `require.cache`; ES modules are given a version that the in-thread `resolve` hook
+ * appends to their URL as a query, since Node's module map cannot be invalidated. That hook must run in
+ * this thread (the esbuild ESM loaders under `module.registerHooks()`): a loader on Node's loader hooks
+ * thread (`ts-node-maintained/esm`, third-party loaders, `TSFLOW_ESM_HOOKS=async`) neither records the
+ * import graph nor sees the versions, so `unsupportedReason()` tells the CLI to fall back to a fresh
+ * process per run.
  *
  * What a resident process cannot undo: module-level state in kept modules persists between runs (it does
  * within one run's `BeforeAll`/`AfterAll` too), the previous instances of re-evaluated ES modules stay in
@@ -36,13 +38,7 @@
 import type { ISupportCodeCoordinates } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { describeTranspiler } from '../utils/startup-progress';
-import {
-	bumpModuleVersions,
-	dependentProjectModules,
-	evictRequiredModules,
-	knownProjectModules,
-	notifyReload
-} from '../utils/module-graph';
+import { dependentProjectModules, knownProjectModules } from '../utils/module-graph';
 import { canonicalFromFrameFile, canonicalPath } from '../utils/paths';
 import { createLogger } from '../utils/tsflow-logger';
 import { BuilderFingerprint, builderFingerprint, registeredBeyondSteps } from './builder-fingerprint';
@@ -61,12 +57,14 @@ export interface SupportReloadSummary {
 	kept: number;
 	/** Project modules other than support files that will be evaluated again (changed files and their dependents). */
 	modules: number;
+	/** Everything that will be evaluated again, support files and other modules, as canonical paths: `getSupportCodeLibrary`'s `reevaluate`. */
+	files: ReadonlySet<string>;
 }
 
 /**
- * Observes what each support file registers, remembers it between runs, and before each rerun makes the
- * modules that have to load again do so. One instance per resident process, passed to `runCucumber` on
- * every run through its `session` argument.
+ * Observes what each support file registers, remembers it between runs, and before each rerun decides
+ * which modules have to load again. One instance per resident process, passed to `runCucumber` on every
+ * run through its `session` argument.
  */
 export class SupportReloader implements SupportLoadRecorder {
 	private generation = 0;
@@ -98,8 +96,9 @@ export class SupportReloader implements SupportLoadRecorder {
 
 	/**
 	 * Called by `runCucumber` once the paths are resolved and before any support file loads. On the first run
-	 * it only starts observing. On every later run it clears the registry, evicts or versions the modules
-	 * that have to evaluate again, and returns what it decided.
+	 * it only starts observing. On every later run it decides which modules have to evaluate again and
+	 * returns them with the counts; `runCucumber` passes the set to `getSupportCodeLibrary`, which evicts or
+	 * versions them and clears the registry before it loads.
 	 *
 	 * @param changedPaths - Files changed since the previous run, absolute or relative to the working directory
 	 * @param sourcePaths - Resolved feature files (remembered for `watchedFiles()`)
@@ -139,25 +138,20 @@ export class SupportReloader implements SupportLoadRecorder {
 			if (registered === undefined || registered) set.add(key);
 		}
 		for (const module of this.bindingModules) set.add(module);
-
-		const evicted = evictRequiredModules(set);
-		bumpModuleVersions(set, this.generation);
-		BindingRegistry.instance.clear();
-		notifyReload();
 		this.reevaluate = set;
 
 		const entryKeySet = new Set(entryKeys);
 		const reevaluated = entryKeys.filter(key => set.has(key)).length;
 		let modules = 0;
 		for (const key of set) if (!entryKeySet.has(key)) modules++;
-		const summary = {
+		const counts = {
 			generation: this.generation,
 			reevaluated,
 			kept: entryKeys.length - reevaluated,
 			modules
 		};
-		logger.checkpoint('Prepared support reload', { ...summary, evicted, changed: changed.size });
-		return summary;
+		logger.checkpoint('Prepared support reload', { ...counts, changed: changed.size });
+		return { ...counts, files: set };
 	}
 
 	/** `SupportLoadRecorder`: a support file is about to be required or imported. */

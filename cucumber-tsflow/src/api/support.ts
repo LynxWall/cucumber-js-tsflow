@@ -1,14 +1,19 @@
 import { messageOf } from '../utils/tsflow-logger';
 import { pathToFileURL } from 'node:url';
 import { IdGenerator } from '@cucumber/messages';
-import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
+import { CanonicalSupportCodeIds, SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import tryRequire from '@cucumber/cucumber/lib/try_require';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
 import { resetStepPatternRegistrations } from '../bindings/binding-decorator';
+import { BindingRegistry } from '../bindings/binding-registry';
 import { startTimer, recordPhase, recordFile } from '../utils/tsflow-timing';
-import { versionedUrl } from '../utils/module-graph';
+import { bumpModuleVersions, evictRequiredModules, notifyReload, versionedUrl } from '../utils/module-graph';
+import { canonicalPath } from '../utils/paths';
 import { registerLoader } from './register-loaders';
+
+/** Support loads this process has begun. Every load after the first has to make its modules evaluate again. */
+let loads = 0;
 
 /** How a support file is loaded: a `require` path or an `import` path. */
 export type SupportFileKind = 'require' | 'import';
@@ -38,6 +43,19 @@ export function composeRecorders(
 	};
 }
 
+/**
+ * Build the CucumberJS support code library by evaluating the support files. The builder and the
+ * `BindingRegistry` start empty, each file registers what it defines while it evaluates, and the library is
+ * what they registered. A process that has loaded support code before holds the files in Node's module
+ * caches, where a cached module evaluates nothing, so every load after the first makes its modules load
+ * again before evaluating them: CommonJS modules are evicted from `require.cache`, ES modules are versioned
+ * so that their next import is a URL Node has not seen (see `utils/module-graph.ts`), and the reload
+ * listeners run. Which modules is `reevaluate`; by default, every support file being loaded.
+ *
+ * Every context that loads support code goes through here: `runCucumber`, `loadSupport` / `reloadSupport`,
+ * the parallel child processes (with the coordinator's `supportCodeIds`) and watch mode (with the set its
+ * `SupportReloader` decided).
+ */
 export async function getSupportCodeLibrary({
 	logger,
 	cwd,
@@ -46,23 +64,44 @@ export async function getSupportCodeLibrary({
 	requirePaths,
 	importPaths,
 	loaders,
+	supportCodeIds,
+	reevaluate,
 	onFileLoaded,
 	recorder
 }: {
-	logger: ILogger;
+	/** Receives one debug line per module loaded; a context without a CucumberJS logger leaves it out */
+	logger?: ILogger;
 	cwd: string;
 	newId: IdGenerator.NewId;
 	requireModules: string[];
 	requirePaths: string[];
 	importPaths: string[];
 	loaders: string[];
+	/** Ids the definitions must carry, when a parallel child has to match the coordinator's library */
+	supportCodeIds?: CanonicalSupportCodeIds;
+	/**
+	 * Modules that have to evaluate again for this load, as canonical paths, in a process that has loaded
+	 * support code before. By default every support file being loaded, which builds the library a fresh
+	 * process would; watch mode passes the smaller set its `SupportReloader` decided (the files that
+	 * registered something last time, the changed modules and their dependents) and keeps the rest loaded.
+	 */
+	reevaluate?: ReadonlySet<string>;
 	/** Called after each support file (require or import path) has been loaded; used for startup progress */
 	onFileLoaded?: (path: string) => void;
 	/** Bracketed around each support file's load; used by selective loading to record what each file registers */
 	recorder?: SupportLoadRecorder;
 }): Promise<SupportCodeLibrary> {
-	// Clear the step pattern cache so decorators re-register with the fresh builder
+	// Every load starts from nothing: the step pattern cache, the registry and the builder mirror what the
+	// files about to load register, and nothing from an earlier load can shadow a re-registered binding
 	resetStepPatternRegistrations();
+	BindingRegistry.instance.clear();
+	if (loads > 0) {
+		const files = reevaluate ?? new Set([...requirePaths, ...importPaths].map(canonicalPath));
+		evictRequiredModules(files);
+		bumpModuleVersions(files, loads);
+		notifyReload();
+	}
+	loads++;
 
 	supportCodeLibraryBuilder.reset(cwd, newId, {
 		requireModules,
@@ -80,14 +119,14 @@ export async function getSupportCodeLibrary({
 
 	let phaseStart = startTimer();
 	requireModules.map(path => {
-		logger.debug(`Attempting to require code from "${path}"`);
+		logger?.debug(`Attempting to require code from "${path}"`);
 		tryRequire(path);
 	});
 	recordPhase('support:require-modules', phaseStart);
 
 	phaseStart = startTimer();
 	requirePaths.map(path => {
-		logger.debug(`Attempting to require code from "${path}"`);
+		logger?.debug(`Attempting to require code from "${path}"`);
 		const fileStart = startTimer();
 		recorder?.beginFile(path, 'require');
 		tryRequire(path);
@@ -99,15 +138,15 @@ export async function getSupportCodeLibrary({
 
 	phaseStart = startTimer();
 	for (const specifier of loaders) {
-		logger.debug(`Attempting to register loader "${specifier}"`);
+		logger?.debug(`Attempting to register loader "${specifier}"`);
 		const mode = await registerLoader(specifier);
-		logger.debug(`Registered loader "${specifier}" using ${mode} hooks`);
+		logger?.debug(`Registered loader "${specifier}" using ${mode} hooks`);
 	}
 	recordPhase('support:register-loaders', phaseStart);
 
 	phaseStart = startTimer();
 	for (const path of importPaths) {
-		logger.debug(`Attempting to import code from "${path}"`);
+		logger?.debug(`Attempting to import code from "${path}"`);
 		const fileStart = startTimer();
 		recorder?.beginFile(path, 'import');
 		// In a resident process (watch mode) a file to evaluate again carries a version query; see module-graph.ts
@@ -128,7 +167,7 @@ export async function getSupportCodeLibrary({
 	recordPhase('support:import', phaseStart);
 
 	phaseStart = startTimer();
-	const library = supportCodeLibraryBuilder.finalize();
+	const library = supportCodeLibraryBuilder.finalize(supportCodeIds);
 	recordPhase('support:finalize', phaseStart);
 	return library;
 }

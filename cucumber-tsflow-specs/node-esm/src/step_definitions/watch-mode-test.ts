@@ -37,7 +37,11 @@ class WatchSession {
 	/** Files this session edited, with their content and timestamps from before the first edit. */
 	private readonly originals = new Map<string, { content: Buffer; atime: Date; mtime: Date }>();
 
-	start(profile: string): void {
+	/**
+	 * Start `cucumber-tsflow -p <profile> <args>`. Watch mode comes from the profile (`watch: true`) unless
+	 * `args` turns it on, so a scenario exercises whichever of the two the profile is written for.
+	 */
+	start(profile: string, args: string[] = []): void {
 		const packageRoot = path.dirname(require.resolve('@lynxwall/cucumber-tsflow/package.json'));
 		const bin = path.join(packageRoot, 'bin', 'cucumber-tsflow.js');
 		// The progress lines carry the rerun note; without a TTY they are plain, append-only text
@@ -46,7 +50,7 @@ class WatchSession {
 		// In-process reruns need the ESM loader hooks on the main thread. The CI job that forces them onto
 		// Node's hooks thread would otherwise turn the in-process scenario into the child-process fallback
 		delete env.TSFLOW_ESM_HOOKS;
-		const child = spawn(process.execPath, [bin, '-p', profile, '--watch'], {
+		const child = spawn(process.execPath, [bin, '-p', profile, ...args], {
 			cwd: process.cwd(),
 			env,
 			stdio: ['pipe', 'pipe', 'pipe']
@@ -117,6 +121,12 @@ export default class WatchModeSteps {
 	@given('a watch session on the {string} profile has completed its first run', undefined, RUN_TIMEOUT_MS)
 	async startSession(profile: string): Promise<void> {
 		this.session.start(profile);
+		await this.session.waitForRuns(1);
+	}
+
+	@given('a watch session on the {string} profile with {string} has completed its first run', undefined, RUN_TIMEOUT_MS)
+	async startSessionWithArguments(profile: string, args: string): Promise<void> {
+		this.session.start(profile, args.split(' '));
 		await this.session.waitForRuns(1);
 	}
 

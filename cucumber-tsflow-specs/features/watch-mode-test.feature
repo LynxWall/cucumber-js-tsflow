@@ -1,10 +1,11 @@
 @watch @node
 Feature: Watch mode
 
-  With --watch the CLI stays running after the first run and runs again
+  In watch mode the CLI stays running after the first run and runs again
   when Enter is pressed, keeping the support code loaded between runs.
   These scenarios start the CLI as a child process on the "watch" profile
-  of this workspace and drive it through its stdin.
+  of this workspace, which turns watch mode on with "watch": true rather
+  than the --watch flag, and drive it through its stdin.
 
   Scenario: Enter reruns the suite in the same process
     Given a watch session on the "watch" profile has completed its first run

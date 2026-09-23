@@ -21,6 +21,7 @@
 		"tags": "@node-esm and not @reload"
 	},
 	"watch": {
+		"watch": true,
 		"transpiler": "es-node-esm",
 		"paths": ["../features/basic-test.feature"],
 		"import": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
@@ -29,6 +30,7 @@
 		"tags": "@node-esm"
 	},
 	"watch-tsnode": {
+		"watch": true,
 		"paths": ["../features/basic-test.feature"],
 		"import": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
 		"loader": ["ts-node-maintained/esm"],

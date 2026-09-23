@@ -308,7 +308,7 @@ covers the change; the full `yarn test:all` matrix at every group boundary and b
 chose this cadence over a full matrix per commit, 2026-09-23: same coverage, far less waiting); the UIS numbers
 within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look before touching anything else.
 
-**Status: in progress.** Group 1 (the 12b fixes: AA, Z, AB, AC, AD, AE, AF) landed 2026-09-23 as one squashed commit, `a29eb42`, with the boundary matrix green; see [Stage 12c hand-off](stage-12c-hand-off.md). Groups 2–6 next.
+**Status: in progress.** Group 1 (the 12b fixes: AA, Z, AB, AC, AD, AE, AF) landed 2026-09-23 as one squashed commit, `a29eb42`, with the boundary matrix green; group 2 (A, B, C, K/V, L) landed the same day as `7a7af28`, boundary matrix green, with one deviation for the owner (A keeps the published `--parallel-load` flag; see the hand-off). See [Stage 12c hand-off](stage-12c-hand-off.md). Groups 3–6 next.
 
 #### 12d: Housekeeping sweeps
 

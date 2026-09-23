@@ -1,8 +1,11 @@
 import { ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { after, binding, given, then, when } from '@lynxwall/cucumber-tsflow';
 import { expect } from 'chai';
+
+const require = createRequire(import.meta.url);
 
 /** The first run of a fresh process on a busy machine can take a while; the reruns are quick. */
 const RUN_TIMEOUT_MS = 120000;

@@ -19,5 +19,33 @@
 		"parallel": 0,
 		"selectiveLoad": true,
 		"tags": "@node-esm and not @reload"
+	},
+	"watch": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/basic-test.feature"],
+		"import": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
+	},
+	"watch-tsnode": {
+		"paths": ["../features/basic-test.feature"],
+		"import": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
+		"loader": ["ts-node-maintained/esm"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
+	},
+	"missing-import": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/basic-test.feature"],
+		"import": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/missing-import.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm"
 	}
 }

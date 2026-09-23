@@ -23,5 +23,40 @@
 		"format": ["progress"],
 		"parallel": 0,
 		"tags": "@node"
+	},
+	"selective": {
+		"transpiler": "es-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/background-test.ts",
+			"./src/step_definitions/scenario-outline-test.ts",
+			"./src/step_definitions/tag-test.ts",
+			"./src/step_definitions/world-context.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"selectiveLoad": true,
+		"tags": "@node"
+	},
+	"broken": {
+		"transpiler": "es-node",
+		"paths": ["./src/fixtures/broken/*.feature"],
+		"require": ["./src/step_definitions/basic-test.ts", "./src/step_definitions/world-context.ts"],
+		"format": ["progress", "message:../reports/parse-error.ndjson"],
+		"parallel": 0,
+		"tags": "@node"
+	},
+	"missing-import": {
+		"transpiler": "es-node",
+		"paths": ["../features/basic-test.feature"],
+		"require": [
+			"./src/step_definitions/basic-test.ts",
+			"./src/step_definitions/world-context.ts",
+			"./src/fixtures/failing/missing-import.ts"
+		],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node"
 	}
 }

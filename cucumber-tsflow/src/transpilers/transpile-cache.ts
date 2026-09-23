@@ -93,32 +93,39 @@ export function resetTranspileCacheStats(): void {
 	stats.writes = 0;
 }
 
-let cacheRoot: string | undefined;
+/** Results of `getCacheRootDirectory()` by the working directory they were resolved from. */
+const cacheRoots = new Map<string, string>();
 
 /**
  * The directory every cucumber-tsflow on-disk store lives under: `.cache/cucumber-tsflow` inside the
  * nearest `node_modules` at or above the working directory, else that path under the nearest
- * `package.json`'s directory, else `cucumber-tsflow` under the OS temp directory. Resolved once per thread.
+ * `package.json`'s directory, else `cucumber-tsflow` under the OS temp directory. Resolved once per thread
+ * and working directory.
+ *
+ * @param cwd - Where the walk starts; the process's working directory by default
  */
-export function getCacheRootDirectory(): string {
-	if (cacheRoot) return cacheRoot;
+export function getCacheRootDirectory(cwd: string = process.cwd()): string {
+	const known = cacheRoots.get(cwd);
+	if (known) return known;
+	const root = findCacheRoot(cwd);
+	cacheRoots.set(cwd, root);
+	return root;
+}
+
+function findCacheRoot(cwd: string): string {
 	const suffix = ['.cache', 'cucumber-tsflow'];
 	let firstPackageRoot: string | undefined;
-	let dir = process.cwd();
+	let dir = path.resolve(cwd);
 	for (;;) {
-		if (existsSync(path.join(dir, 'node_modules'))) {
-			cacheRoot = path.join(dir, 'node_modules', ...suffix);
-			return cacheRoot;
-		}
+		if (existsSync(path.join(dir, 'node_modules'))) return path.join(dir, 'node_modules', ...suffix);
 		if (!firstPackageRoot && existsSync(path.join(dir, 'package.json'))) firstPackageRoot = dir;
 		const parent = path.dirname(dir);
 		if (parent === dir) break;
 		dir = parent;
 	}
-	cacheRoot = firstPackageRoot
+	return firstPackageRoot
 		? path.join(firstPackageRoot, 'node_modules', ...suffix)
 		: path.join(tmpdir(), 'cucumber-tsflow');
-	return cacheRoot;
 }
 
 /**
@@ -130,6 +137,16 @@ export function getTranspileCacheDirectory(): string {
 	const override = process.env.TSFLOW_TRANSPILE_CACHE_DIR;
 	directory = override ? path.resolve(override) : path.join(getCacheRootDirectory(), 'transpile');
 	return directory;
+}
+
+/**
+ * Forget the resolved directories, so the next lookup reads `TSFLOW_TRANSPILE_CACHE_DIR` and walks from the
+ * working directory again. For tests that move the cache between cases; a run never needs it.
+ */
+export function resetTranspileCacheDirectory(): void {
+	directory = undefined;
+	directoryEnsured = false;
+	cacheRoots.clear();
 }
 
 function entryPath(key: string): string {

@@ -4,24 +4,42 @@ on:
     branches: [master, release/**]
   pull_request:
     branches: [master, release/**]
+  workflow_dispatch:
 
 jobs:
-  # Build and Test the 'cucumber-tsflow' package
+  # Build and test the 'cucumber-tsflow' package on every supported platform: the two operating systems the
+  # library is developed and consumed on, the declared Node floor (22) and the current line (24), plus one
+  # job with the ESM loaders forced onto Node's hooks thread (the module.register() fallback that older Node
+  # versions and third-party loaders take, where selective loading and in-process watch reruns are unavailable).
   build:
-    name: Build and Test
-    runs-on: ubuntu-latest
+    name: Build and Test (${{ matrix.os }}, Node ${{ matrix.node }}${{ matrix.hooks == 'async' && ', async ESM hooks' || '' }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['22', '24']
+        hooks: [default]
+        include:
+          - os: ubuntu-latest
+            node: '24'
+            hooks: async
+    env:
+      TSFLOW_ESM_HOOKS: ${{ matrix.hooks == 'async' && 'async' || '' }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # avoid shallow clone (required by Nerbank GitVersioning)
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node }}
           registry-url: 'https://registry.npmjs.org'
       - name: Install packages
         run: yarn
       - name: Build
         run: yarn build
+      - name: Run unit tests
+        run: yarn test:unit
       - name: Run specification tests
         run: yarn test:all

@@ -16,9 +16,6 @@ export const given = bindings.given;
 export const when = bindings.when;
 export const then = bindings.then;
 
-export const StartTestCaseInfo = bindings.StartTestCaseInfo;
-export const EndTestCaseInfo = bindings.EndTestCaseInfo;
-export const ScenarioContext = bindings.ScenarioContext;
 export const ScenarioInfo = bindings.ScenarioInfo;
 
 export const defineParameterType = bindings.defineParameterType;

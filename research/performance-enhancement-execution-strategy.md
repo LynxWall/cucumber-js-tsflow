@@ -2708,6 +2708,15 @@ Recorded before anything changes, one line each, for pruning with the owner. Let
 - **Q.** The root `lint` script runs the whole test matrix; make it a lint gate and add `typecheck` beside it.
 - **R.** ESLint `no-undef` cannot see the Node global types; `cli/index.ts` and `vue-jsdom-setup.mjs` carry disables. Turn `no-undef` off for TypeScript files and let `tsc` own the check.
 
+Added by the 12a test work (see [Stage 12a hand-off](#stage-12a-hand-off)); S and T were fixed there because the tests that found them could not otherwise be green:
+
+- **S.** *(fixed in 12a)* `bindings.mjs` and `wrapper.mjs` exported `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext`, which are interfaces, as runtime values equal to `undefined`; the export-parity test found the three names present in the ESM twins and absent from the CommonJS builds. The lines were removed; a consumer whose tsconfig preserves value imports of these types would now fail at link time instead of receiving `undefined`.
+- **T.** *(fixed in 12a)* `patternKey()` in `api/selective-load.ts` keyed a flagless regular expression and a Cucumber expression with the same source identically (`flags ?? ''`), so the second one registered was matched with the first one's compiled expression and its file could be skipped although a selected step matched it. The key now carries the pattern kind.
+- **U.** `getSupportCodeLibrary()` leaves eviction to its callers: a second call in one process finds the CommonJS support files cached and builds a library with no step definitions. `reloadSupport()`, `SupportReloader` and the parallel children each handle it in their own way; this is the mechanism behind finding D and a candidate to resolve with it. The unit test `support.test.ts` records the current contract.
+- **V.** `SupportLoadRecorder.endFile(path, kind)` declares two parameters that neither implementation accepts (finding K); the unit tests had to call `endFile()` on the classes with no arguments to type-check. Resolving K settles which signature is meant.
+- **W.** The fixture support files under `test/fixtures/support/` need a `package.json` with `"type": "commonjs"` (ts-node classifies a `.ts` file's module type from the nearest package scope, and the test tree is `"type": "module"`) and are excluded from `test/tsconfig.json` (their ES import syntax in a CommonJS scope is what the transpiler under test handles); ESLint's project service therefore reports them as not found. The 12d lint pass needs an ESLint configuration for `cucumber-tsflow/test/` that either ignores the fixtures or gives them a project.
+- **X.** In the `TSFLOW_TIMING` file-totals table the `main` family counts the main process and its `esm-hooks` scope as two contexts, so `contexts` reads 2 for a serial run with an in-thread loader that reported hook timings. Cosmetic; note whether that is the intended reading when the report layout is next touched.
+
 ### Stages and gates
 
 Phase 12 was too large for one gate, so the owner split it into six stages. "Phase 12" stays the umbrella name;
@@ -2737,6 +2746,8 @@ additions are marked **(added)** below.
 
 **Gate:** `test:unit` and `test:all` green on the full matrix; every risk 1–6 has a test. **Pause:** the review
 findings A–R are pruned with the owner, with the tests open beside them; nothing in 12c is decided before this.
+
+**Status: landed 2026-09-22, awaiting the owner's review and the pause.** See [Stage 12a hand-off](#stage-12a-hand-off).
 
 #### 12b: Behavior discovery
 
@@ -2825,3 +2836,131 @@ paragraph that links to it; `cucumber-tsflow/README.md` byte-identical to the ro
 Architecture.md, README, CHANGELOG, CONTRIBUTE.md and CLAUDE.md describe the product as it ships; the packed
 tarball runs a feature in a fresh CJS and a fresh ESM project; the startup output verified on a real console; the
 release checklist complete.
+
+## Stage 12a hand-off
+
+Written at the end of the 12a session (2026-09-22) so that the pause and 12b can start cold. Stage 12a is the test
+foundation described under [Stages and gates](#stages-and-gates): the unit-test runner, the seams, the unit tests for
+the risk list, and the CI matrix.
+
+### State of the tree
+
+- Branch `2026-09-speed-enhancements`. The Phase 12 baseline written in the previous session (decisions, coverage
+  inventory, findings A–R, the six stages) is committed as `4604940`. The 12a work itself is **uncommitted** in the
+  working tree for the owner's review, as Phase 10's was before its commit: `yarn build` clean, no stray `.js` under
+  `src/`; `yarn test:unit` green (218 tests in 16 files, about 1.6 s on this machine); `yarn test:all` green on all
+  sixteen variants on the same build, with the scenario counts unchanged since Phase 10 (18, 18, 20, 20, 18, 18, 15,
+  15, 30, 30, 30, 30, 31, 31, 27, 27).
+- `npx tsc -p test/tsconfig.json` (from `cucumber-tsflow/`) is clean with `strict`, `verbatimModuleSyntax` and
+  `erasableSyntaxOnly` on. `npx tsc --noEmit -p tsconfig.node.json --strictNullChecks` reports nothing in the touched
+  source files (the pre-existing 21 errors stand). `npx eslint cucumber-tsflow/src` is unchanged (0 errors, the
+  generated `version.ts` warning); `npx eslint cucumber-tsflow/test` passes every test file and fails only on the two
+  fixture support files (finding W). Prettier is clean on every file added or touched, all CRLF.
+- Files added: `cucumber-tsflow/test/` — `package.json` (`"type": "module"`), `tsconfig.json`, `helpers/temp.ts`,
+  `fixtures/timing-worker.mjs`, `fixtures/support/{package.json,steps-a.ts,steps-b.ts}`, and the test files
+  `cli/argv-parser`, `utils/module-graph`, `utils/tsflow-timing`, `utils/startup-progress`, `api/builder-fingerprint`,
+  `api/selective-load`, `api/support-reloader`, `api/support`, `api/run-cucumber`, `api/register-loaders`,
+  `api/load-configuration`, `transpilers/transpile-cache`, `transpilers/cache-keys`, `transpilers/esm/loader-utils`,
+  `bindings-exports` and `bindings-light` (all `*.test.ts`; about 2700 lines with the fixtures).
+- Files changed: `src/transpilers/transpile-cache.ts` (`getCacheRootDirectory(cwd)`, memoized per working directory;
+  `resetTranspileCacheDirectory()`), `src/api/selective-load.ts` (`storedPattern`, `patternKey`, `literalPrefix` and
+  `StoredPattern` exported; an optional `indexDirectory` constructor parameter; the finding T fix),
+  `src/utils/startup-progress.ts` (a `now` clock on `PhaseRenderer`; `StartupProgressOptions` with `now`,
+  `createWorker` and `handshakeTimeoutMs`; `SpinnerWorkerHandle`, the part of a `Worker` the class uses),
+  `src/api/register-loaders.ts` (`registeredLoaders()`, read-only), `src/bindings.mjs` and `src/wrapper.mjs` (finding
+  S), `cucumber-tsflow/package.json` (`chai` and `@types/chai` as devDependencies at the spec workspaces' versions;
+  the `test:unit` script), `cucumber-tsflow/tsconfig.json` (`./test` excluded so the base configuration keeps
+  describing `src`), the root `package.json` (`test:unit`), `yarn.lock`, `.github/workflows/ci.yml` (the matrix),
+  `CLAUDE.md` (the command table and the note on where the tests are), `CHANGELOG.md` (two `Fixed` entries for S and
+  T) and this document.
+
+### What 12a landed
+
+- **The runner.** `yarn test:unit` runs `node --test "test/**/*.test.ts"` in the `cucumber-tsflow` workspace: Node's
+  built-in runner over TypeScript test files that Node strips itself, one process per file, importing the built
+  `lib/` (so `yarn build` first, as for every other test script) and asserting with `chai`. The test tree is an ES
+  module scope of its own (`test/package.json`), which is why the fixtures that must load as CommonJS carry a
+  `package.json` of their own. `test/tsconfig.json` type-checks the tests as the editor sees them: `strict`,
+  `nodenext`, `allowJs` so the `.mjs` twins have types, `verbatimModuleSyntax` and `erasableSyntaxOnly` so nothing
+  Node cannot strip gets in. CJS modules are imported by their default (the module object) and destructured, which is
+  what Node's interop gives and what TypeScript types; types come from `lib/*.d.ts`, never from CucumberJS's deep
+  paths, which `nodenext` refuses to resolve from an ESM file.
+- **The seams**, kept to what the tests needed: the cache root takes a working directory and can be reset, so the
+  `node_modules` → `package.json` → temp directory walk is tested on temp trees; the selective-load session takes an
+  index directory, so a test never touches the project's index; the renderer and the progress class take a clock, so
+  the 30-second heartbeat, the stall and the five-unit relief streak are tested in milliseconds; the progress class
+  takes a worker factory and a handshake timeout, so the end handshake and its fallback are tested without a thread;
+  `register-loaders` exposes what it has attached. Not added, and why: an injectable `require.cache` for the
+  module-graph walkers and a stubbed module graph for `SupportReloader`, because real temporary CommonJS files
+  required through `createRequire` and real recorded ESM edges test the same code paths with nothing faked; the
+  `childArgs()` / `isWatchableEvent()` extractions from `WatchSession`, because `cli/watch.ts` is 12b's end-to-end
+  ground and its unit seams can wait for what 12b finds.
+- **The tests against the risk list.** (1) `selective-load.test.ts` drives `SelectiveLoadSession` through eleven
+  consecutive runs over one index: first run, matching by Cucumber expression and by global regular expression, a step
+  registered straight with CucumberJS, hooks and set-up files always loading, every-file-needed, no-match full plan
+  with the step text in the reason, a new file, a pattern that does not compile, a changed import graph and the
+  rewritten record afterwards, a skipped file's record surviving, parameter types recorded and used, a corrupt index,
+  `abort()` writing nothing, plus a `literalPrefix` table and the "never excludes a matching text" check.
+  (2) `transpile-cache.test.ts` covers hit, miss on each input, field boundaries in the key, entries of another format
+  or without a value, an unwritable directory, the `TSFLOW_TRANSPILE_CACHE=false` bypass, pruning order with a stray
+  temp file, and the directory walk; `cache-keys.test.ts` checks that each of the three transpilers' key strings
+  changes with every input it promises to cover, including the decorator mode read three different ways (finding J,
+  now with a test on each way). (3) Watch mode's versioning, eviction and reverse closure are covered in
+  `module-graph.test.ts` and `support-reloader.test.ts`; the second and third run end to end, on ESM, stay with 12b as
+  planned, with the existing CommonJS watch spec covering the CJS side. (4) `support-reloader.test.ts` runs one
+  reloader through ten generations: observe-only first run, re-evaluate what registered, a changed module and its
+  requirers, a new file, registration seen through the builder alone, a file dropping back to kept, a
+  decorator-applying helper re-evaluated every run, a late registration noticed at the next `prepare()`, `abort()`
+  forgetting a changed file, and `watchedFiles()`; plus the ESM `?tsflow=<n>` versioning and `unsupportedReason`.
+  (5) `run-cucumber.test.ts` runs `runCucumber` in-process on the es-node transpiler with the fixture support files
+  and checks the envelope order (`meta`, `source`, `gherkinDocument`, `pickle`, then the support code, then the run)
+  and the parse-error path (support loaded, `parseError` emitted, nothing run, `success: false`). (6) `support.test.ts`
+  loads the decorated fixtures through ts-node twice with eviction in between and asserts an equal library, records
+  the no-eviction behavior (finding U), and checks the registry's callsite patching through real source maps;
+  `register-loaders.test.ts` covers the `loaderHooksMode` truth table and attaches a loader twice.
+- **The zero-seam tests.** `argv-parser` (the paired `--x` / `--no-x` declarations, collectors, tag merging, JSON
+  merging and its errors, count validation, the hidden `--parallel-load`), `module-graph` (canonical paths on both
+  platforms, `isProjectModule` including the library-root and sibling cases, recorded edges with cycles, the reverse
+  closure over both module systems on real temp files, versioning with foreign and stale queries, edge forgetting,
+  reload listeners), `builder-fingerprint` (each of the six fields), `tsflow-timing` (accumulation, nested scopes,
+  snapshot copies, the report layout, file identity folding across URL, separator and case, and the loader-port
+  contract against a real worker thread including the drain and the timeout), `startup-progress` (both renderer modes,
+  the heartbeat and relief state machine, message self-clear, row counting with emoji and escapes, the width used for
+  the cursor-up count, `describeTranspiler` for all eight names, themes, `plural`), `load-configuration`
+  (environment-versus-option precedence for both options, the `parallelLoad` notice from either source, decorator
+  mode publication, the transpiler switch, format aliases, path clearing), `loader-utils` (`isRequire`, extension
+  probing and its cache reset, common file types, `loadTypeScript` keeping its map, the hooks' require passthrough,
+  edge recording and version application), and the two export-parity files (twins equal by name and value, the root a
+  superset of `bindings`, the CLI not loaded by the root, nothing heavy loaded by `bindings` alone).
+- **The CI matrix.** `ci.yml` now runs Ubuntu and Windows × Node 22 and 24, plus one Ubuntu/Node 24 job with
+  `TSFLOW_ESM_HOOKS=async` (declared through a `hooks` matrix dimension so the `include` entry is a fifth job rather
+  than a merge into an existing one), on `actions/checkout@v4` and `actions/setup-node@v4`, with `yarn test:unit`
+  between the build and the spec matrix and `fail-fast: false`. A `workflow_dispatch` trigger was added so the
+  matrix can be run by hand on this branch: the workflow's push and pull-request triggers are still `master` and
+  `release/**` only, so **the matrix has been written but not yet executed**; nothing in this session ran on GitHub.
+  Two things to watch when it first runs: the unit tests need Node's default type stripping, which arrived in 22.18,
+  so `node-version: '22'` must keep resolving to a current 22.x (it does today); and the async job sets the variable
+  to an empty string on the other jobs, which every reader compares with `=== 'async'`.
+- **Found on the way, fixed, with tests as the net:** findings S and T above, both in the `CHANGELOG` under `Fixed`.
+  Found and recorded for the pause: U, V, W, X.
+
+### Notes specific to the pause and 12b
+
+- The gate is met as far as this machine can tell: `test:unit` and `test:all` green here, every item on the risk
+  list has a test, with 3 (ESM watch reruns end to end) and 5's end-to-end form deliberately left to 12b's scenarios.
+  The owner's review of the uncommitted tree and the pruning of findings A–X come next; nothing in 12c is decided
+  before that.
+- Running one test file: `node --test test/api/selective-load.test.ts` from `cucumber-tsflow/` after `yarn build`.
+  Each file is its own process, so module-level state (the timing store, the module graph, the transpile-cache
+  directory, the binding registry) is isolated between files but shared within one; the files that depend on order
+  say so in comments. Temp directories come from `test/helpers/temp.ts` and are removed when the file ends.
+- Two files use the project's real transpile cache under `node_modules/.cache/cucumber-tsflow/transpile`, because
+  they load the fixtures through the es-node transpiler like a real run: `api/support.test.ts` and
+  `api/run-cucumber.test.ts`. Every other transpile in the tests is redirected with `TSFLOW_TRANSPILE_CACHE_DIR`.
+- `register-loaders.test.ts` really attaches the esnode loader to its process (in-thread here, on the hooks thread
+  under the async CI job), which is why that test is last in its file.
+- For 12b's scenarios: `run-cucumber.test.ts` shows how to drive a whole run in-process with a captured stdout and
+  the envelope stream, which may be a quicker vehicle for the parse-error ordering check than a spec workspace; the
+  stage text asks for a spec scenario in a workspace no other profile globs, and that remains the plan for the
+  user-visible form.
+- Build with `yarn build`, never bare `tsc`; run `yarn test:unit` and `yarn test:all` before calling a stage done.

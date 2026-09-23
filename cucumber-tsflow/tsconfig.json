@@ -13,5 +13,5 @@
 		"target": "es2022",
 		"typeRoots": ["../node_modules/@types", "./src/types"],
 	},
-	"exclude": ["./src/transpilers/esm/*"]
+	"exclude": ["./src/transpilers/esm/*", "./test"]
 }

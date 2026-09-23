@@ -26,9 +26,10 @@ All commands run from the repo root unless noted.
 | Build in watch mode | `yarn build:watch` |
 | Lint (auto-fix) | `yarn lint` |
 | Format | `yarn format` |
+| Unit tests (`node --test` over [cucumber-tsflow/test/](cucumber-tsflow/test/), against the built `lib/`) | `yarn test:unit` |
 | Full test matrix (what CI runs) | `yarn test:all` |
 
-There is **no root `yarn test` script** — CONTRIBUTE.md is out of date on this point. Tests are the spec workspaces, run through the built CLI, so **`yarn build` must succeed before any test command**.
+There is **no root `yarn test` script** — CONTRIBUTE.md is out of date on this point. The tests are the unit tests under `cucumber-tsflow/test/` (Node's built-in runner with chai, importing the built `lib/`) and the spec workspaces, run through the built CLI, so **`yarn build` must succeed before any test command**.
 
 ### Running a subset of tests
 

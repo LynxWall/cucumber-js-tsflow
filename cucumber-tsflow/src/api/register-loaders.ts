@@ -36,6 +36,11 @@ const SYNC_CAPABLE_LOADERS = new Set(['esnode-loader', 'esvue-loader']);
 const registeredSync = new Set<string>();
 const registeredAsync = new Set<string>();
 
+/** The loaders attached so far in this process: loader files under `registerHooks()` and specifiers under `register()`. */
+export function registeredLoaders(): { sync: string[]; async: string[] } {
+	return { sync: Array.from(registeredSync), async: Array.from(registeredAsync) };
+}
+
 function syncLoaderFile(specifier: string): string | undefined {
 	const match = /\/transpilers\/esm\/([^/]+?)(\.mjs)?$/.exec(specifier.replace(/\\/g, '/'));
 	if (!match || !SYNC_CAPABLE_LOADERS.has(match[1])) {

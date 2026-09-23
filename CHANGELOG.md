@@ -48,6 +48,8 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 ### Fixed
 
 - **Step definitions loaded by the esbuild ESM loaders report their TypeScript line and a working-directory-relative `uri`.** Under `es-node-esm` and `es-vue-esm` the location of a `@given`/`@when`/`@then` or hook in reports, messages and ambiguity errors was the line in esbuild's transpiled output and the module's `file:` URL: the transpiled code (with its inline map) exists only in memory, so `source-map-support`, which reads the file on disk, found no map for it. The `load` hook now keeps each module's source map (`sourcemap: 'both'`) on the thread that will resolve callsites, and `Callsite` traces positions through it with `@jridgewell/trace-mapping` (new dependency) before falling back to `source-map-support`. The ts-node ESM loaders, whose hooks run on a separate thread, are unchanged.
+- Selective loading keyed a regular-expression step pattern without flags and a Cucumber-expression pattern with the same text under one entry, so whichever a support file registered second was matched with the other's compiled expression and its file could be skipped although a selected step matched it. The two are now distinct keys.
+- The ES module entry points (`@lynxwall/cucumber-tsflow` and `@lynxwall/cucumber-tsflow/bindings` when imported from ESM) no longer export `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext` as runtime values. They are TypeScript interfaces and their values were `undefined`; the types are unchanged and `import type` of them works as before.
 
 ### Deprecated
 

@@ -63,7 +63,7 @@ const { ExpressionFactory, ParameterType, ParameterTypeRegistry }: ExpressionsMo
 const INDEX_FORMAT = 1;
 
 /** A step pattern as stored: `[source, flags]` for a regular expression, `[expression, null]` for a Cucumber expression. */
-type StoredPattern = [string, string | null];
+export type StoredPattern = [string, string | null];
 
 /** `[mtimeMs, size]` of a file, or `[-1, -1]` when it could not be stat'd. */
 type Stamp = [number, number];
@@ -127,12 +127,13 @@ export interface SelectiveLoadPlan {
 	reason?: string;
 }
 
-function storedPattern(pattern: string | RegExp): StoredPattern {
+export function storedPattern(pattern: string | RegExp): StoredPattern {
 	return typeof pattern === 'string' ? [pattern, null] : [pattern.source, pattern.flags];
 }
 
-function patternKey([source, flags]: StoredPattern): string {
-	return `${flags ?? ''}\0${source}`;
+export function patternKey([source, flags]: StoredPattern): string {
+	// A regular expression without flags and a Cucumber expression with the same text are different patterns
+	return `${flags === null ? 'e' : `r${flags}`}\0${source}`;
 }
 
 /**
@@ -146,7 +147,7 @@ function patternKey([source, flags]: StoredPattern): string {
  * quantifier may make it optional. Case-insensitive regexps and any source containing `|` (alternation,
  * which may apply to the whole pattern) yield ''.
  */
-function literalPrefix([source, flags]: StoredPattern): string {
+export function literalPrefix([source, flags]: StoredPattern): string {
 	if (flags === null) {
 		const end = source.search(/[{(/\\]/);
 		if (end === -1) return source;
@@ -193,19 +194,21 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 	 * @param experimentalDecorators - Decorator mode, part of the index key
 	 * @param requirePaths - Every resolved `require` path of the run
 	 * @param importPaths - Every resolved `import` path of the run
+	 * @param indexDirectory - Where the index files live; `selective-load` under the cache root by default
 	 */
 	constructor(
 		cwd: string,
 		coordinates: ISupportCodeCoordinates,
 		experimentalDecorators: boolean,
 		private readonly requirePaths: string[],
-		private readonly importPaths: string[]
+		private readonly importPaths: string[],
+		indexDirectory: string = path.join(getCacheRootDirectory(), 'selective-load')
 	) {
 		const key = createHash('sha256')
 			.update(`${INDEX_FORMAT}\0${tsflowVersion}\0${cwd}\0${experimentalDecorators}\0`)
 			.update(JSON.stringify(coordinates))
 			.digest('hex');
-		this.indexFile = path.join(getCacheRootDirectory(), 'selective-load', `${key}.json`);
+		this.indexFile = path.join(indexDirectory, `${key}.json`);
 		this.all = [
 			...requirePaths.map(p => ({ path: p, key: canonicalPath(p), kind: 'require' as const })),
 			...importPaths.map(p => ({ path: p, key: canonicalPath(p), kind: 'import' as const }))

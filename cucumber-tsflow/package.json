@@ -88,10 +88,12 @@
 		"typescript": "~5.9.2"
 	},
 	"devDependencies": {
+		"@types/chai": "~4.3.20",
 		"@types/debug": "~4.1.12",
 		"@types/hash-sum": "~1.0.2",
 		"@types/lodash.merge": "~4.6.9",
 		"@types/source-map-support": "~0.5.10",
+		"chai": "~5.2.0",
 		"genversion": "~3.2.0",
 		"shx": "0.4.0"
 	},
@@ -102,7 +104,8 @@
 		"copy:api-mjs": "shx cp src/api/*.mjs lib/api/",
 		"copy:transpiler-mjs": "shx mkdir -p lib/transpilers/esm && shx cp src/transpilers/esm/*.mjs lib/transpilers/esm/",
 		"copy:utils-mjs": "shx cp src/utils/*.mjs lib/utils/",
-		"build:watch": "tsc --build tsconfig.node.json --watch"
+		"build:watch": "tsc --build tsconfig.node.json --watch",
+		"test:unit": "node --test \"test/**/*.test.ts\""
 	},
 	"bin": "bin/cucumber-tsflow.js",
 	"files": [

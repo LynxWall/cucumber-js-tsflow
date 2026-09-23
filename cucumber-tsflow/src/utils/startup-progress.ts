@@ -329,12 +329,14 @@ export class PhaseRenderer {
 	 * @param theme - Active theme
 	 * @param mode - `tty` redraws in place; `plain` appends
 	 * @param columns - Current terminal width, consulted on every redraw; only used in `tty` mode
+	 * @param now - Clock in milliseconds, for the heartbeat, the stall detection and the spinner interval
 	 */
 	constructor(
 		private readonly write: (text: string) => void,
 		private readonly theme: StartupTheme,
 		private readonly mode: 'tty' | 'plain',
-		private readonly columns: () => number = () => DEFAULT_COLUMNS
+		private readonly columns: () => number = () => DEFAULT_COLUMNS,
+		private readonly now: () => number = () => performance.now()
 	) {}
 
 	/**
@@ -370,7 +372,7 @@ export class PhaseRenderer {
 	 * at column 0 of the row after that line.
 	 */
 	start(id: StartupPhaseId, detail: string | undefined, total: number | undefined): void {
-		const now = performance.now();
+		const now = this.now();
 		const opening = PhaseRenderer.openingLine(this.theme, id, detail, total, this.mode === 'tty');
 		this.current = {
 			drawnRows: PhaseRenderer.rows(opening, this.columns()),
@@ -402,7 +404,7 @@ export class PhaseRenderer {
 	 */
 	tick(): void {
 		if (!this.current) return;
-		const now = performance.now();
+		const now = this.now();
 		const gap = now - this.current.lastTick;
 		this.current.ticks++;
 		if (gap >= STALL_MS) {
@@ -429,7 +431,7 @@ export class PhaseRenderer {
 	 */
 	pump(): void {
 		if (!this.current) return;
-		const now = performance.now();
+		const now = this.now();
 		if (now - this.current.lastMessage >= HEARTBEAT_MS) {
 			this.beat(now);
 		} else if (this.current.messageClearAt !== undefined && now >= this.current.messageClearAt) {
@@ -579,6 +581,38 @@ export interface SpinnerWorkerData {
 /** How long `end()` waits for the worker to write the closing line before giving up. */
 const END_HANDSHAKE_TIMEOUT_MS = 2000;
 
+/** The part of a `worker_threads.Worker` that `StartupProgress` uses, so a test can stand in for the thread. */
+export interface SpinnerWorkerHandle {
+	postMessage(command: SpinnerWorkerCommand): void;
+	on(event: 'error', listener: (error: Error) => void): unknown;
+	unref(): void;
+	terminate(): unknown;
+}
+
+/** Seams for tests; a run leaves every one at its default. */
+export interface StartupProgressOptions {
+	/** Clock in milliseconds; `performance.now` by default */
+	now?: () => number;
+	/**
+	 * Starts the spinner worker for the compiled `script`; `new Worker(...)` by default. Returning undefined
+	 * keeps the in-thread renderer.
+	 */
+	createWorker?: (script: string, data: SpinnerWorkerData) => SpinnerWorkerHandle | undefined;
+	/** How long `end()` waits for the worker to write the closing line; two seconds by default */
+	handshakeTimeoutMs?: number;
+}
+
+/** The real spinner worker: a `worker_threads.Worker` running the compiled `startup-progress-worker.js`. */
+function startSpinnerWorker(script: string, data: SpinnerWorkerData): SpinnerWorkerHandle {
+	return new Worker(script, {
+		workerData: data,
+		// A worker thread has no TTY of its own, so tell its ansis instance the color depth this thread detected.
+		env: { ...process.env, FORCE_COLOR: String(detectColorLevel()) },
+		stdout: false,
+		stderr: false
+	});
+}
+
 /**
  * Prints themed startup progress. One instance per `runCucumber` call, in the main process only.
  *
@@ -601,17 +635,26 @@ export class StartupProgress {
 		| undefined;
 	/** In-thread renderer and its timer, used when there is no spinner worker */
 	private local: { renderer: PhaseRenderer; timer: ReturnType<typeof setInterval> } | undefined;
-	private worker: Worker | undefined;
+	private worker: SpinnerWorkerHandle | undefined;
 	private readonly signal = new Int32Array(new SharedArrayBuffer(4));
+	private readonly now: () => number;
+	private readonly createWorker: (script: string, data: SpinnerWorkerData) => SpinnerWorkerHandle | undefined;
+	private readonly handshakeTimeoutMs: number;
 
 	/**
 	 * @param stream - Where progress is written (the run environment's stdout)
 	 * @param theme - Theme from `resolveStartupTheme()`; undefined turns every method into a no-op
+	 * @param options - The clock, the worker factory and the handshake timeout; the defaults are the real ones
 	 */
 	constructor(
 		private readonly stream: ProgressOutputStream,
-		private readonly theme: StartupTheme | undefined
-	) {}
+		private readonly theme: StartupTheme | undefined,
+		options: StartupProgressOptions = {}
+	) {
+		this.now = options.now ?? (() => performance.now());
+		this.createWorker = options.createWorker ?? startSpinnerWorker;
+		this.handshakeTimeoutMs = options.handshakeTimeoutMs ?? END_HANDSHAKE_TIMEOUT_MS;
+	}
 
 	/** Whether anything will be printed. */
 	get enabled(): boolean {
@@ -632,7 +675,7 @@ export class StartupProgress {
 		const tty = Boolean(this.stream.isTTY);
 		const opening = PhaseRenderer.openingLine(this.theme, id, detail, total, tty);
 		this.stream.write(tty ? opening + NEW_LINE : opening);
-		this.current = { id, detail, total, start: performance.now() };
+		this.current = { id, detail, total, start: this.now() };
 
 		const worker = this.spinnerWorker();
 		if (worker) {
@@ -643,7 +686,8 @@ export class StartupProgress {
 			chunk => this.stream.write(chunk),
 			this.theme,
 			tty ? 'tty' : 'plain',
-			() => this.width()
+			() => this.width(),
+			this.now
 		);
 		const timer = setInterval(() => renderer.pump(), SPINNER_INTERVAL_MS);
 		timer.unref();
@@ -665,7 +709,7 @@ export class StartupProgress {
 	end(summary?: string): void {
 		if (!this.theme || !this.current) return;
 		const { id, detail, total, start } = this.current;
-		const elapsed = formatDuration(performance.now() - start);
+		const elapsed = formatDuration(this.now() - start);
 		const text = summary ? `${summary}, ${elapsed}` : elapsed;
 		this.current = undefined;
 
@@ -680,7 +724,7 @@ export class StartupProgress {
 			// phase line, a formatter's first output) lands after it.
 			Atomics.store(this.signal, 0, 0);
 			this.worker.postMessage({ type: 'end', text } satisfies SpinnerWorkerCommand);
-			const outcome = Atomics.wait(this.signal, 0, 0, END_HANDSHAKE_TIMEOUT_MS);
+			const outcome = Atomics.wait(this.signal, 0, 0, this.handshakeTimeoutMs);
 			if (outcome === 'timed-out') {
 				// Write the closing line the worker did not: the cursor rests on the row after the block, which is
 				// assumed to be the phase line alone (a message line open at this moment is left on screen).
@@ -716,7 +760,7 @@ export class StartupProgress {
 	 * backed by a file descriptor, or the compiled worker script is not present (the in-thread renderer is
 	 * used instead).
 	 */
-	private spinnerWorker(): Worker | undefined {
+	private spinnerWorker(): SpinnerWorkerHandle | undefined {
 		if (this.worker) return this.worker;
 		if (!this.theme || !this.stream.isTTY || typeof this.stream.fd !== 'number') return undefined;
 		const script = path.join(__dirname, 'startup-progress-worker.js');
@@ -726,16 +770,12 @@ export class StartupProgress {
 			theme: this.theme.name,
 			signal: this.signal.buffer as SharedArrayBuffer
 		};
-		this.worker = new Worker(script, {
-			workerData: data,
-			// A worker thread has no TTY of its own, so tell its ansis instance the colour depth this thread detected.
-			env: { ...process.env, FORCE_COLOR: String(detectColorLevel()) },
-			stdout: false,
-			stderr: false
-		});
-		this.worker.unref();
-		this.worker.on('error', () => this.disposeWorker());
-		return this.worker;
+		const worker = this.createWorker(script, data);
+		if (!worker) return undefined;
+		worker.unref();
+		worker.on('error', () => this.disposeWorker());
+		this.worker = worker;
+		return worker;
 	}
 
 	private disposeWorker(): void {

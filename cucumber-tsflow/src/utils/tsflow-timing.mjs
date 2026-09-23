@@ -32,13 +32,6 @@ function getStore() {
 }
 
 /**
- * Check if timing instrumentation is enabled
- */
-export function isTimingEnabled() {
-	return getStore().enabled;
-}
-
-/**
  * Start a timer. Returns 0 when timing is disabled so that the matching
  * `recordPhase` / `recordFile` call is a no-op.
  */

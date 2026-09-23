@@ -28,7 +28,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 	p.tick();
 	await sleep(300);
 	p.end('1620 step definitions, 254 hooks');
-	p.begin('assemble', 'initializing formatters and parsing 212 feature files into scenarios', 212);
+	p.begin('parse', 'parsing 212 feature files into scenarios', 212);
 	await sleep(400);
 	p.finish();
 	process.stdout.write('DONE\n');

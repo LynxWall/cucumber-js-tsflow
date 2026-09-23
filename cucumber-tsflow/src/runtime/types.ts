@@ -5,7 +5,7 @@ import {
 	RunCommand,
 	WorkerToCoordinatorEvent
 } from '@cucumber/cucumber/lib/runtime/parallel/types';
-import { IRunConfiguration, IRunOptionsRuntime, ISourcesCoordinates } from '@cucumber/cucumber/api';
+import { IRunConfiguration, IRunOptionsRuntime } from '@cucumber/cucumber/api';
 import { RuntimeOptions } from '@cucumber/cucumber/lib/runtime/types';
 import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
 import type { TimingSnapshot } from '../utils/tsflow-timing';
@@ -14,13 +14,10 @@ export interface IMessageData {
 	gherkinDocumentMap: Record<string, messages.GherkinDocument>;
 	pickleMap: Record<string, messages.Pickle>;
 	testCaseMap: Record<string, messages.TestCase>;
-	coordinates: ISourcesCoordinates;
 }
 
 export interface ITsFlowRunOptionsRuntime extends IRunOptionsRuntime {
 	experimentalDecorators: boolean;
-	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
-	parallelLoad?: boolean | number;
 	/** Load only the support files the selected scenarios need, from an index written by earlier runs. Default false. */
 	selectiveLoad?: boolean;
 }
@@ -30,8 +27,6 @@ export interface ITsFlowRunConfiguration extends IRunConfiguration {
 
 export interface TsFlowRuntimeOptions extends RuntimeOptions {
 	experimentalDecorators: boolean;
-	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
-	parallelLoad?: boolean | number;
 }
 
 export interface InitializeTsflowCommand extends InitializeCommand {

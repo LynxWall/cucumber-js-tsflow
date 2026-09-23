@@ -5,7 +5,6 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
-import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
 import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
 import { FinalizeCommand, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
@@ -50,7 +49,6 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly options: ITsFlowRunOptionsRuntime,
 		private readonly snippetOptions: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>,
 		private readonly supportCodeLibrary: SupportCodeLibrary,
-		private readonly coordinates: ISourcesCoordinates,
 		private readonly resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>,
 		private readonly onWorkerReady?: (workerId: string) => void
 	) {}
@@ -118,7 +116,6 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		});
 
 		const messageData = global.messageCollector.getMessageData();
-		messageData.coordinates = this.coordinates;
 
 		worker.process.send({
 			type: 'INITIALIZE',

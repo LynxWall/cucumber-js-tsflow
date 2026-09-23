@@ -8,8 +8,6 @@ const logger = createLogger('convert');
 
 export interface IConfigurationExt extends IConfiguration {
 	experimentalDecorators: boolean;
-	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
-	parallelLoad?: boolean | number;
 	/** Load only the support files the selected scenarios need (see `selective-load.ts`) */
 	selectiveLoad?: boolean;
 }

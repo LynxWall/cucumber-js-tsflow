@@ -60,7 +60,7 @@ describe('withTranspileCache', () => {
 		const second = lookup();
 		expect(second.produced).to.equal(false);
 		expect(second.value).to.deep.equal(first.value);
-		expect(getTranspileCacheStats()).to.include({ enabled: true, directory: store, hits: 1, misses: 1, writes: 1 });
+		expect(getTranspileCacheStats()).to.deep.equal({ hits: 1, misses: 1, writes: 1 });
 	});
 
 	it('misses when any one input changes, and still finds the original', () => {
@@ -114,7 +114,7 @@ describe('withTranspileCache', () => {
 		expect(lookup({ source: 'cached earlier' }).produced).to.equal(true);
 		expect(lookup({ source: 'never written' }).produced).to.equal(true);
 		expect(entries()).to.have.length(count);
-		expect(getTranspileCacheStats()).to.include({ enabled: false, hits: 0, misses: 0, writes: 0 });
+		expect(getTranspileCacheStats()).to.deep.equal({ hits: 0, misses: 0, writes: 0 });
 		delete process.env.TSFLOW_TRANSPILE_CACHE;
 		expect(isTranspileCacheEnabled()).to.equal(true);
 		expect(lookup({ source: 'cached earlier' }).produced).to.equal(false);

@@ -90,9 +90,13 @@ describe('getSupportCodeLibrary', () => {
 
 	it('brackets every support file with the recorder', async () => {
 		const events: string[] = [];
+		let open = '';
 		const recorder = {
-			beginFile: (file: string, kind: string) => void events.push(`begin ${kind} ${path.basename(file)}`),
-			endFile: (file: string, kind: string) => void events.push(`end ${kind} ${path.basename(file)}`)
+			beginFile: (file: string, kind: string) => {
+				open = `${kind} ${path.basename(file)}`;
+				events.push(`begin ${open}`);
+			},
+			endFile: () => void events.push(`end ${open}`)
 		};
 		await load(recorder);
 		expect(events).to.deep.equal([
@@ -116,11 +120,11 @@ describe('composeRecorders', () => {
 		const calls: string[] = [];
 		const make = (name: string) => ({
 			beginFile: (file: string) => void calls.push(`${name} begin ${file}`),
-			endFile: (file: string) => void calls.push(`${name} end ${file}`)
+			endFile: () => void calls.push(`${name} end`)
 		});
 		const composed = composeRecorders(make('x'), undefined, make('y'))!;
 		composed.beginFile('f', 'require');
-		composed.endFile('f', 'require');
-		expect(calls).to.deep.equal(['x begin f', 'y begin f', 'x end f', 'y end f']);
+		composed.endFile();
+		expect(calls).to.deep.equal(['x begin f', 'y begin f', 'x end', 'y end']);
 	});
 });

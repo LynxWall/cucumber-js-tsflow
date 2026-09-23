@@ -18,7 +18,10 @@ export interface ITsflowConfiguration extends IConfiguration {
 	transpiler: string;
 	enableVueStyle: boolean;
 	experimentalDecorators: boolean;
-	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
+	/**
+	 * @deprecated Parallel preloading was removed in 7.8; the value is accepted (the flag shipped in 7.7.0) and
+	 * read only by the deprecation notice in `loadConfiguration`. It goes with the next major version.
+	 */
 	parallelLoad?: boolean | number;
 	transpileCache: boolean;
 	selectiveLoad: boolean;

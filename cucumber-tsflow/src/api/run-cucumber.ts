@@ -133,7 +133,7 @@ Running from: ${__dirname}
 	let filteredPickles: ReadonlyArray<IFilterablePickle> = [];
 	let parseErrors: ParseError[] = [];
 	progress.begin(
-		'assemble',
+		'parse',
 		`parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`,
 		sourcePaths.length
 	);
@@ -361,7 +361,6 @@ Running from: ${__dirname}
 		newId,
 		supportCodeLibrary,
 		options: options.runtime,
-		coordinates: options.sources,
 		resolvedSupportPaths: { requirePaths: loadRequirePaths, importPaths: loadImportPaths },
 		onWorkerReady: () => progress.tick()
 	});

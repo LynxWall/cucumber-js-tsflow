@@ -15,8 +15,6 @@ const logger = createLogger('load-support');
  * Options extending the standard load-support options with the decorator mode.
  */
 export interface ITsFlowLoadSupportOptions extends ILoadSupportOptions {
-	/** @deprecated Parallel preloading was removed; the value is accepted and ignored. */
-	parallelLoad?: boolean | number;
 	/** Whether experimental decorators are enabled */
 	experimentalDecorators?: boolean;
 }

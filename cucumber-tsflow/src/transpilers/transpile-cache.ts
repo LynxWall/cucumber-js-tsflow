@@ -57,10 +57,6 @@ interface EntryFile<T> {
 }
 
 export interface TranspileCacheStats {
-	/** Whether this thread is reading and writing the cache. */
-	enabled: boolean;
-	/** The directory in use, once the first lookup has resolved it. */
-	directory?: string;
 	/** Lookups answered from disk in this thread. */
 	hits: number;
 	/** Lookups that ran the transpiler in this thread. */
@@ -83,7 +79,7 @@ export function isTranspileCacheEnabled(): boolean {
 
 /** Counters for this thread; parallel children keep their own. */
 export function getTranspileCacheStats(): TranspileCacheStats {
-	return { enabled: isTranspileCacheEnabled(), directory, ...stats };
+	return { ...stats };
 }
 
 /** Zero this thread's counters. Watch mode calls it before each run so the load-phase summary is per run. */

@@ -18,8 +18,7 @@ const {
 	resetTimings,
 	printTimingReport,
 	timingRegisterOptions,
-	collectLoaderTimings,
-	isTimingEnabled
+	collectLoaderTimings
 } = timing;
 
 function report(): string {
@@ -34,7 +33,7 @@ function phase(snapshot: TimingSnapshot | undefined, name: string) {
 
 describe('recording', () => {
 	it('is enabled by TSFLOW_TIMING=true and hands out real timers', () => {
-		expect(isTimingEnabled()).to.equal(true);
+		expect(getTimingSnapshot(), 'a snapshot exists only while timing is on').to.not.equal(undefined);
 		expect(startTimer()).to.be.greaterThan(0);
 	});
 
@@ -74,7 +73,7 @@ describe('recording', () => {
 		expect(snapshot?.phases).to.deep.equal([]);
 		expect(snapshot?.files).to.deep.equal([]);
 		expect(snapshot?.remote).to.deep.equal([]);
-		expect(isTimingEnabled()).to.equal(true);
+		expect(startTimer(), 'still recording after the reset').to.be.greaterThan(0);
 	});
 });
 

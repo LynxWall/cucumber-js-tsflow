@@ -31,7 +31,7 @@ import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
 /** The startup phases in the order `runCucumber` executes them: resolve globs, parse features, load support, launch. */
-export type StartupPhaseId = 'resolve' | 'assemble' | 'load' | 'launch';
+export type StartupPhaseId = 'resolve' | 'parse' | 'load' | 'launch';
 
 interface PhaseText {
 	/** Themed label printed at the start of the phase */
@@ -152,7 +152,7 @@ const PICKLE_THEME: StartupTheme = {
 	],
 	phases: {
 		resolve: { title: 'Prepping the cucumbers' },
-		assemble: {
+		parse: {
 			title: 'Making the brine',
 			quips: ['{done} of {total} feature files stirred in. Mind the hot brine']
 		},
@@ -193,7 +193,7 @@ const LOTR_THEME: StartupTheme = {
 		// The nine walkers: Gandalf, Aragorn, Boromir (and his horn), Legolas, Gimli, Frodo, Sam (po-ta-toes), Merry and Pippin
 		resolve: { title: 'Assembling the Fellowship 🧙👑📯🧝🪓💍🥔🍄🍄' },
 		// The Ents march on Isengard before the beacons are lit, as the features are parsed before the support code loads
-		assemble: {
+		parse: {
 			title: 'Gathering the Ents of Fangorn 🌳🌲🌳🌲🌳',
 			waiting: 'the Entmoot has not begun 🌳 nothing is hasty in Old Entish, {elapsed} so far',
 			quips: [

@@ -289,7 +289,7 @@ describe('StartupProgress', () => {
 		time.advance(250);
 		progress.end('2 files');
 		expect(s.writes.map(strip)).to.deep.equal(['Prepping the cucumbers — globs', ' 2 files, 250ms\n']);
-		progress.begin('assemble', 'parsing', 3);
+		progress.begin('parse', 'parsing', 3);
 		progress.finish();
 		expect(s.writes.map(strip).slice(2)).to.deep.equal(['Making the brine — parsing', ' 0ms\n', '\n']);
 		progress.finish();
@@ -300,7 +300,7 @@ describe('StartupProgress', () => {
 		const s = stream(false);
 		const progress = new StartupProgress(s, theme, { now: () => 0 });
 		progress.begin('resolve');
-		progress.begin('assemble');
+		progress.begin('parse');
 		expect(s.writes.map(strip)).to.deep.equal(['Prepping the cucumbers', ' 0ms\n', 'Making the brine']);
 	});
 

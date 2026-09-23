@@ -164,6 +164,9 @@ export const loadConfiguration = async (
 	logger.checkpoint('Transpile cache configured', { transpileCache: original.transpileCache });
 
 	// Selective support loading is opt-in; `TSFLOW_SELECTIVE_LOAD=true` is the default when the option is unset.
+	// Unlike `transpileCache`, the value is not written back to the environment: nothing reads it there. It travels
+	// in the run configuration (`runtime.selectiveLoad`), and parallel children are sent the chosen subset of
+	// support files by the coordinator rather than deciding it themselves.
 	if (original.selectiveLoad === undefined) {
 		original.selectiveLoad = process.env.TSFLOW_SELECTIVE_LOAD === 'true';
 	}

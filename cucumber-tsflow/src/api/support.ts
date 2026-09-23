@@ -19,8 +19,10 @@ export type SupportFileKind = 'require' | 'import';
  * loading relies on to attribute bindings to files.
  */
 export interface SupportLoadRecorder {
+	/** A support file is about to be required or imported. Calls come in begin/end pairs and never nest. */
 	beginFile(path: string, kind: SupportFileKind): void;
-	endFile(path: string, kind: SupportFileKind): void;
+	/** The file the preceding `beginFile()` named has finished evaluating. */
+	endFile(): void;
 }
 
 /** One recorder that forwards to every given one, in order; undefined when none is given. */
@@ -32,7 +34,7 @@ export function composeRecorders(
 	if (present.length === 1) return present[0];
 	return {
 		beginFile: (path, kind) => present.forEach(recorder => recorder.beginFile(path, kind)),
-		endFile: (path, kind) => present.forEach(recorder => recorder.endFile(path, kind))
+		endFile: () => present.forEach(recorder => recorder.endFile())
 	};
 }
 
@@ -89,7 +91,7 @@ export async function getSupportCodeLibrary({
 		const fileStart = startTimer();
 		recorder?.beginFile(path, 'require');
 		tryRequire(path);
-		recorder?.endFile(path, 'require');
+		recorder?.endFile();
 		recordFile('require', path, fileStart);
 		onFileLoaded?.(path);
 	});
@@ -119,7 +121,7 @@ export async function getSupportCodeLibrary({
 			}
 			throw error;
 		}
-		recorder?.endFile(path, 'import');
+		recorder?.endFile();
 		recordFile('import', path, fileStart);
 		onFileLoaded?.(path);
 	}

@@ -3069,9 +3069,13 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
   URL", which fed `canonicalFromUrl('file:')` expecting `undefined`: `fileURLToPath('file:')` throws on Windows
   (no drive letter) but names the root directory `/` on POSIX, so the input was malformed only where the test was
   written. The input is now `file:///a%2Fb.js`, which Node rejects on every platform. Nothing else differed on
-  Ubuntu: the spec matrix did not run there because the unit-test step comes first, so its Ubuntu result arrives
-  with the rerun. In a `node --test` log the failing tests are listed at the end under `✖ failing tests:`, and
-  `ℹ fail` gives the count.
+  Ubuntu: the spec matrix did not run there because the unit-test step comes first. **Rerun after `e5ef8d7`: all
+  five jobs green**, the first time the spec matrix has run on Linux and on Node 22; the longest job (Ubuntu, Node
+  22) spent about two minutes in `yarn test:all`, the others 23 seconds or less. The 12b gate is closed. The run
+  carried one annotation, "Node 20 is deprecated … actions/checkout@v4, actions/setup-node@v4 are being forced
+  to run on Node 24": the Node version an action's own code runs on, unrelated to the Node the matrix installs;
+  both actions were moved to their v5 majors, which declare Node 24. In a `node --test` log the failing tests are
+  listed at the end under `✖ failing tests:`, and `ℹ fail` gives the count.
 - `npx tsc --noEmit -p cucumber-tsflow-specs/node/tsconfig.json` and the same for `node-esm` are clean (the
   spec workspaces have no type-check script; this is what the editor and the ts-node ESM loader see). ESLint and
   Prettier are clean on every step file added or changed.

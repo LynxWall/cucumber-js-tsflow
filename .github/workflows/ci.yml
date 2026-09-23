@@ -28,10 +28,10 @@ jobs:
       TSFLOW_ESM_HOOKS: ${{ matrix.hooks == 'async' && 'async' || '' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # avoid shallow clone (required by Nerbank GitVersioning)
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           registry-url: 'https://registry.npmjs.org'

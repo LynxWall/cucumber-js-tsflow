@@ -377,10 +377,14 @@ serial and `--parallel 1` under both hook modes.
 - Leftovers noticed in group 5, none in the triage, for the owner: `BindingRegistry.removeBindingsForFile()` and
   `hasBindingForKey()` (`bindings/binding-registry.ts`) are called nowhere; they were written for the old
   delta-aware reload that D replaced and are reachable only through the `./lib/*` wildcard export, which this
-  branch treats as internal, so they can go in 12d. `tsc --noEmit -p test/tsconfig.json`, part of the cadence
-  since group 2, reports four `TS7017` errors (`globalThis` indexed without a signature) in
+  branch treats as internal; the owner has put them on 12d's dead-code list. `tsc --noEmit -p test/tsconfig.json`,
+  part of the cadence since group 2, reported four `TS7017` errors (`globalThis` indexed without a signature) in
   `test/transpilers/esm/source-map-relay.test.ts` and `test/utils/loader-source-maps.test.ts`, both from the Z
-  fix `fec46e9`; `node --test` strips types without checking, so the tests run green. One cast each fixes them.
+  fix `fec46e9` (`node --test` strips types without checking, so the tests ran green). Fixed at the owner's
+  request after the group 5 hand-off, in the commit following it: `test/globals.d.ts` declares
+  `__CUCUMBER_TSFLOW_SOURCE_MAPS` for the test program, because the library's own `src/types/global.d.ts`
+  imports a runtime module and including it would pull the 21 known strict errors into the strict test build.
+  The declaration is a copy and must follow the library's if the shape changes.
 - Nothing is open from group 4: all three findings landed as triaged. H's look answered its question (the
   `.ts` rejection was a leftover of the pre-Phase-5 ts-node routing, and nothing called either `supports()`).
 - **Two sessions worked in this tree at once during the group 4 session**, this one on group 4 and a second on

@@ -152,7 +152,7 @@ Every decorator function checks `global.experimentalDecorators` to return the ap
 ### Transpiler Impact
 
 - `ts-node`/`ts-vue` have `-exp` variants that set `experimentalDecorators: true` in compiler options
-- The esbuild transpiler reads `global.experimentalDecorators` to configure `tsconfigRaw`
+- The esbuild transpilers and the Vue SFC compiler read the mode through `experimentalDecorators()` in `src/utils/decorator-mode.ts` (backed by `CUCUMBER_EXPERIMENTAL_DECORATORS`) to configure `tsconfigRaw`; `ts-vue-esm` alone compiles `.ts` files with the project's `tsconfig.json`, through ts-node's own ESM loader
 - TC39 mode uses `lib: ['es2022', 'esnext.decorators']`; legacy mode uses `lib: ['es2022']`
 
 ## Diagnostics

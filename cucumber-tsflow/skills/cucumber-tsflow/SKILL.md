@@ -32,7 +32,7 @@ Read the reference files only when the task needs them:
 ## Rules for step files
 
 - **One `@binding()` class per file**, exported. Every step and hook is a decorated **method** of that class.
-  Arrow-function properties and free functions are never registered.
+  Decorate methods only: arrow-function properties are not supported, and free functions are never registered.
 - **Import from `@lynxwall/cucumber-tsflow/bindings`** (lighter) or the package root. Never import from
   `@cucumber/cucumber`: it is a transitive dependency, not resolvable under pnpm's strict layout, and a copy
   installed separately is not the one cucumber-tsflow registers with. `World`, `DataTable`, `setDefaultTimeout`,
@@ -84,8 +84,9 @@ export default class CartSteps {
 ## Context classes
 
 A context class is a plain class. cucumber-tsflow constructs it once per scenario with the CucumberJS `World`
-as the only constructor argument, calls `initialize()` before the first hook or step that uses it runs, and
-calls `dispose()` when the scenario ends. Both may be `async`. A context cannot inject another context.
+as the only constructor argument, calls `initialize()` before the first `@before`/`@after` hook or step of a
+class that lists it (`@beforeStep`/`@afterStep` do not trigger it), and calls `dispose()` when the scenario ends.
+Both may be `async`. A context cannot inject another context.
 
 ```ts
 import type { EndTestCaseInfo, StartTestCaseInfo, World } from '@lynxwall/cucumber-tsflow/bindings';
@@ -136,8 +137,9 @@ tag-scoped step rules are in [references/bindings-and-context.md](references/bin
 - **CommonJS profiles list support files under `require`; ESM profiles list them under `import`.**
 - **Decorator mode must agree in two places.** Official (TC39) decorators are the default: `tsconfig.json` has
   `"experimentalDecorators": false` and `"esnext.decorators"` in `lib`. Legacy decorators need
-  `"experimentalDecorators": true` in **both** the profile and `tsconfig.json`; the esbuild transpilers read it
-  only from the profile.
+  `"experimentalDecorators": true` in **both** the profile and `tsconfig.json`: every transpiler except
+  `ts-vue-esm` compiles with the profile's value, `ts-vue-esm` compiles `.ts` files with `tsconfig.json`, and the
+  editor and `tsc --noEmit` read only `tsconfig.json`.
 
 Everything else, including the full transpiler matrix, is in
 [references/configuration.md](references/configuration.md).
@@ -155,17 +157,19 @@ npx cucumber-tsflow -p default --tags "@cart and not @slow"   # by tag expressio
 
 - An undefined step prints a ready-to-paste method in tsflow syntax. Run the feature before writing the step and
   paste the snippet into the right class.
-- Exit codes: `0` passed, `1` configuration error or crash, `2` pending or undefined steps, `3` a step failed.
-  `npm run`/`pnpm` scripts collapse every non-zero code to `1`; call `npx cucumber-tsflow` to see the real one.
+- Exit codes: `0` passed, `1` configuration error or crash, `2` pending, undefined or ambiguous steps but nothing
+  failed, `3` a step failed. A package-manager script may report its own code; call `npx cucumber-tsflow`
+  directly to see the real one.
 - For an edit-and-rerun loop, add `--watch`; for a large suite, `--selective-load` skips the step files the
   selected scenarios do not use. Both have caveats: see
   [references/running-and-debugging.md](references/running-and-debugging.md).
 
 ## Common mistakes
 
-- Writing `Given('...', function () { this.x = 1; })` or `Before(...)`. The runner cannot execute steps or hooks
-  registered that way: the whole run aborts with `Unable to find StepBinding!` and exit code `1`. Write a `@binding()` class, and keep state
-  in a context class rather than a `setWorldConstructor` World.
+- Writing `Given('...', function () { this.x = 1; })` or `Before(...)`. The runner cannot execute a step registered
+  with `Given`/`When`/`Then` or a hook registered with `Before`/`After`: the run aborts with
+  `Unable to find StepBinding!` (exit code `1` in serial mode). Write a `@binding()` class, and keep state in a
+  context class rather than a `setWorldConstructor` World.
 - Importing anything from `@cucumber/cucumber`, including `World` for a type annotation. Use
   `import type { World } from '@lynxwall/cucumber-tsflow/bindings'`.
 - Adding `@cucumber/cucumber` to the project's dependencies. cucumber-tsflow brings its own; remove it.
@@ -176,7 +180,8 @@ npx cucumber-tsflow -p default --tags "@cart and not @slow"   # by tag expressio
 - Using `this.context`, an injected object or the World inside `@beforeAll`/`@afterAll`. None exist there.
 - Declaring constructor parameters in a different order from the `@binding([...])` array. Injection is
   positional; the types are not checked at runtime.
-- Setting `experimentalDecorators` in `tsconfig.json` but not in the profile, or the reverse. The symptom is
+- Setting `experimentalDecorators` in `tsconfig.json` but not in the profile, or the reverse. The editor and
+  `tsc --noEmit` then disagree with the run; with `ts-vue-esm`, which compiles with `tsconfig.json`, the symptom is
   decorators that throw at load time or steps that are reported undefined although the file loaded.
 - Using `require` for support globs in an ESM project, or `import` with a CommonJS transpiler.
 - Running the whole suite to check one step, or running through `cucumber-js`.

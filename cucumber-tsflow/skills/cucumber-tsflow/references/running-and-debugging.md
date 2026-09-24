@@ -18,8 +18,9 @@ npx cucumber-tsflow -p default --debug-file features/step_definitions/cart-steps
 `--debug-file` runs every feature that uses a step defined in the given step file, which is handy from an
 editor's "current file" variable.
 
-Exit codes: `0` all passed; `1` invalid configuration or an unhandled error; `2` pending, undefined or unknown
-steps but nothing failed; `3` at least one step failed. Package-manager scripts report any non-zero code as `1`.
+Exit codes: `0` all passed; `1` invalid configuration or an unhandled error; `2` pending, undefined, unknown or
+ambiguous steps but nothing failed; `3` at least one step failed. A package-manager script may report its own
+code; call `npx cucumber-tsflow` directly to see the real one.
 
 ## Watch mode
 
@@ -37,8 +38,8 @@ npx cucumber-tsflow -p default --name "checks out" --watch
   - Anything a run leaves behind (mounted components, registered spies, store contents) accumulates. The status
     line after each run shows the heap; if it climbs, add clean-up to an `@after` hook.
 - Use watch mode for a filtered inner loop. Run the full suite in a fresh process.
-- With `ts-node-esm`, `ts-vue-esm`, a third-party loader or `TSFLOW_ESM_HOOKS=async`, each rerun is a fresh
-  process; the first line printed says so.
+- With `ts-node-esm`, `ts-vue-esm`, a third-party loader, `TSFLOW_ESM_HOOKS=async`, or `es-*-esm` on Node older
+  than 22.15, every run is a fresh child process; the line under the `Watch mode:` banner says so.
 
 ## Selective loading
 
@@ -48,8 +49,10 @@ parameter types, a World, a default timeout) and every file that is new or whose
 run with it on loads everything and writes an index.
 
 It assumes a file that defines only steps has no other effect when imported. Keep side effects (global patches,
-plugin registration) in files without step definitions, or in hooks. It is off for `ts-node-esm`, `ts-vue-esm`
-and third-party loaders. The load-phase progress line reports how many files were skipped.
+plugin registration) in files without step definitions, or in hooks. It is off for `ts-node-esm`, `ts-vue-esm`,
+third-party loaders, `TSFLOW_ESM_HOOKS=async`, and `es-*-esm` on Node older than 22.15 (the loader then runs on
+Node's hooks thread, where imports cannot be tracked). The load-phase progress line reports how many files were
+skipped.
 
 ## Caches
 

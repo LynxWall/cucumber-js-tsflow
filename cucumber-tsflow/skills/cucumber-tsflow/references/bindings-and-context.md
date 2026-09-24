@@ -12,7 +12,7 @@ Detail behind the rules in [SKILL.md](../SKILL.md). Everything here is imported 
   instance.
 - The decorators run while the file is being evaluated. Nothing registers until the file is imported, which is
   what the profile's `require` or `import` globs do. A step file outside those globs is silently not loaded.
-- Default export, named export and `export =` all work. Follow the project's convention.
+- Default export and named export both work. Follow the project's convention.
 
 ## Step definitions
 
@@ -104,8 +104,10 @@ export default class Lifecycle {
   class prototype as `this`, which has none of the instance's fields; make these methods `static` so that is
   obvious.
 - Order within a scenario: `@before` hooks; for each step `@beforeStep`, the step, `@afterStep`; `@after` hooks;
-  then every context's `dispose()`. A context's `initialize()` runs immediately before the first of those that
-  belongs to a class using the context.
+  then `dispose()` on every context and binding class instance that defines it. A context's `initialize()` runs
+  immediately before the first `@before`/`@after` hook or step that belongs to a class listing the context;
+  `@beforeStep`/`@afterStep` do not trigger it, so a context used first by a step hook is used before it is
+  initialized.
 
 ## Context classes
 
@@ -114,8 +116,9 @@ export default class Lifecycle {
 - The constructor receives the CucumberJS World and nothing else. Store it if you need `attach`, `log` or
   `parameters`. A context cannot receive another context; compose by passing one to the other from a step, or
   merge them.
-- `initialize(info: StartTestCaseInfo)`, optional and sync or async, runs once per scenario before the first hook
-  or step of a class that uses the context. `info` has `pickle`, `gherkinDocument` and `testCaseStartedId`.
+- `initialize(info: StartTestCaseInfo)`, optional and sync or async, runs once per scenario before the first
+  `@before`/`@after` hook or step of a class that uses the context (not before a step hook). `info` has
+  `pickle`, `gherkinDocument` and `testCaseStartedId`.
 - `dispose(info: EndTestCaseInfo)`, optional and sync or async, runs when the scenario ends, whatever its result.
   `info` adds `result` and `willBeRetried`. Release resources and unmount components here or in an `@after` hook.
 - Injection is positional and unchecked at runtime: the constructor's parameters must be in the order of the

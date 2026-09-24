@@ -41,8 +41,9 @@ Choosing:
    `document`) before support code loads, so component tests need no DOM set-up of their own.
 1. Prefer `es-*`. esbuild is much faster and its output is cached on disk. Use `ts-*` only when the project
    depends on ts-node behavior. `ts-node-esm` and `ts-vue-esm` also run on Node's loader hooks thread, where
-   selective loading is disabled and each `--watch` rerun is a fresh process; every other transpiler supports
-   both fully.
+   selective loading is disabled and each `--watch` rerun is a fresh process; so do `es-node-esm` and
+   `es-vue-esm` on Node older than 22.15 or with `TSFLOW_ESM_HOOKS=async`. The CommonJS transpilers and the
+   in-thread `es-*-esm` loaders support both.
 
 esbuild strips types without type-checking, and `ts-node`, `ts-vue` and `ts-node-esm` run ts-node
 transpile-only; `ts-vue-esm` follows the project's own `ts-node` settings in `tsconfig.json`. Do not rely on a
@@ -111,10 +112,12 @@ The profile leaves `experimentalDecorators` unset or `false`.
 }
 ```
 
-The profile sets `"experimentalDecorators": true`. The esbuild transpilers do not read `compilerOptions` from
-`tsconfig.json`; they take the decorator mode from the profile alone. ts-node and the editor read `tsconfig.json`.
-So a project that sets only one of the two gets decorators compiled one way and invoked the other, which fails
-while the step files load.
+The profile sets `"experimentalDecorators": true`. Every transpiler except `ts-vue-esm` compiles the step files
+with the profile's value (the ts-node ones pass it as a compiler option; the esbuild ones and the Vue SFC compiler
+read it from the profile alone); `ts-vue-esm` hands `.ts` files to ts-node's own ESM loader, which reads
+`tsconfig.json`. The editor and `tsc --noEmit` read only `tsconfig.json`. Keep the two equal so what the editor
+accepts is what the run compiles; under `ts-vue-esm` a mismatch compiles decorators one way and invokes them the
+other, which fails while the step files load.
 
 ## Vue
 

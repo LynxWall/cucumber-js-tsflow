@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
-## [Unreleased]
+## [7.8.0]
 
 ### Added
 
@@ -63,7 +63,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 - The package ships `CHANGELOG.md` and `LICENSE`. Both were in the `files` list but lived at the repository root, outside the package directory, so no published version carried them; the build now copies them, with the README, from the root into the package.
 - **A re-evaluated CommonJS support file reports its current lines.** After `reloadSupport()` or a watch-mode rerun re-evaluated a changed support file under `es-node`, `es-vue`, `ts-node` or `ts-vue`, the step definitions it registered again were reported (in messages, reports and ambiguity errors) at the lines of the version the process had first loaded: ts-node's `source-map-support` keeps the parsed map of every file for the life of the process and nothing invalidated it when the file was compiled again. Evicting a module from `require.cache` now forgets its cached map as well. The ESM loaders were not affected, since their maps are keyed by the module's versioned URL.
 - **`es-node-esm` runs in a project that does not have `vue` installed.** The ESM loaders share one utilities module, and it required the Vue SFC compiler, and through it `vue/compiler-sfc`, as it initialized, so a Node-only ESM project using `es-node-esm` failed at startup with `Cannot find module 'vue/compiler-sfc'` unless `vue` happened to be present (which the spec workspaces, sharing one `node_modules` with the Vue workspaces, always had). The compiler is now required on the first `.vue` file. Found by the new packed-tarball smoke test.
-- The `--transpiler` help text lists `ts-node-esm`, which the option accepted but the text left out, and the `Unable to find StepBinding!` error no longer carries a `===268 test-case-runner.ts` debugging prefix.
+- The `--transpiler` help text lists `ts-node-esm`, which the option accepted but the text left out, and no longer claims a default of `ESNODE` (there is none: without the option no built-in transpiler is registered), and the `Unable to find StepBinding!` error no longer carries a `===268 test-case-runner.ts` debugging prefix.
 
 ### Deprecated
 

@@ -119,22 +119,22 @@ on the format tuples, each with a comment.
 - A Node script applied 169 replacements in 32 files, on the file text as a whole so line endings were untouched
   (`git diff --numstat` shows only the affected lines). The forms: color, behavior, serialize, recognize,
   normalize, initialize, summarize, gray, favor, honor, defense, artifact, analyzed, judgment, neighbor, with
-  their capitalized, upper-case and inflected forms (`colours`, `behavioural`, `honoured`, `unrecognised`,
-  `colourless`, …). Three stems that look British were checked and left alone: "specialist", "optimistic" and
-  "analysis"/"analyses".
-- Identifiers renamed: `wheelColour` → `wheelColor` and `FRAMES_PER_COLOUR` → `FRAMES_PER_COLOR` in
-  `utils/startup-progress.ts` (module-private, not exported); `keepColours` → `keepColors` and the environment
-  variable `TSFLOW_TRACE_COLOURS` → `TSFLOW_TRACE_COLORS` in the contributor console skill's `trace-writes.js`,
-  with its `SKILL.md` updated in the same pass. Grep of `test/`, `skills/` and the spec workspaces found no
-  consumer of any of them. Nothing on the CucumberJS boundary changed (`colorFns` was already American).
+  their capitalized, upper-case and inflected forms (plurals, past tenses, "-al" and "-less" derivatives). Three
+  stems that look British were checked and left alone: "specialist", "optimistic" and "analysis"/"analyses".
+- Identifiers renamed to their American spellings: `wheelColor` and `FRAMES_PER_COLOR` in
+  `utils/startup-progress.ts` (module-private, not exported); `keepColors` and the environment variable
+  `TSFLOW_TRACE_COLORS` in the contributor console skill's `trace-writes.js`, with its `SKILL.md` updated in the
+  same pass. Grep of `test/`, `skills/` and the spec workspaces found no consumer of any of them under the old
+  names. Nothing on the CucumberJS boundary changed (`colorFns` was already American).
 - Every distinct old-to-new word pair in the diff was read (`git diff --word-diff`), and two sentences that
   described the inventory by quoting the British words (the Strand 3 bullet in `phase-12-plan.md`, a leftover
   note in the 12c hand-off) were reworded so they do not now quote American words as British ones. One heading
   changed (`### \`transformSync\` serializes all transpilation` in `research/analysis-3.md`); nothing links to
   it.
 - Files covered: `*.md`, `*.ts`, `*.mjs`, `*.js`, `*.feature`, `*.json` and `*.yml` under version control, minus
-  `cucumber-tsflow/lib`. A final `git grep` over the same set with a wider word list (whilst, centre, licence,
-  organis-, customis-, catalogue, programme, …) finds nothing. The real-console check of the spinner after the
+  `cucumber-tsflow/lib`. A final `git grep` over the same set with a wider word list (the British forms of while,
+  center, license, organize, customize, catalog, program, and some twenty more) finds nothing. The real-console
+  check of the spinner after the
   color renames stays in 12f as the plan has it; the renames are identifier-only and `startup-progress.test.ts`
   is green.
 

@@ -180,16 +180,22 @@ while reading the old one correctly.
 ## Findings this stage surfaced
 
 Fixed here: `es-node-esm` in a project without `vue`; the missing CHANGELOG and LICENSE in the package; stale
-`lib/` output shipping; the `--transpiler` help text; the `StepBinding` error prefixes. Recorded for the owner, not done:
+`lib/` output shipping; the `--transpiler` help text; the `StepBinding` error prefixes; and, in the follow-up,
+stale source maps after a CommonJS re-evaluation. Recorded for the owner, not done:
 
-- **`source-map-support` caches parsed source maps per file path for the life of the process** (its
-  `sourceMapCache`, cleared only under an option ts-node does not set). Callsites under the CommonJS transpilers
-  resolve through it (Architecture.md, Registration Flow), so in a **watch-mode rerun of a changed CommonJS
-  support file** the re-evaluated decorators' `filename`/`lineNumber` may map through the previous version's map
-  and report the old lines until the process restarts. Not reproduced: found while writing the cache rule; the
-  watch specs do not assert on line numbers after an edit. To confirm, edit a step file's line structure during a
-  `--watch` session with the `es-node` transpiler and compare the `uri`/`line` in the message stream with a fresh
-  run. Left out of Architecture.md because it is unverified.
+- **Stale source maps after a CommonJS re-evaluation: reproduced and fixed** (follow-up commit `cbd9b45`,
+  at the owner's request on reading this hand-off). A scripted `--watch` session on the `node` workspace with three
+  lines inserted above the step class reported every one of the nine definitions at its old line after the rerun,
+  while a fresh process and the ESM workspace reported the new ones. The cause: the CommonJS transpilers run under
+  ts-node, which installs `@cspotcode/source-map-support` with a `retrieveFile` that reads its in-memory output;
+  that library keeps the parsed map of every file in a store on `globalThis`
+  (`Symbol.for('source-map-support/sharedData')`, keyed by the file's URL) for the life of the process, and
+  `Callsite` maps CommonJS frames through its `wrapCallSite`, so a re-evaluated file's decorators mapped through
+  the previous version's map. `reloadSupport()` had the same defect. `evictRequiredModules()` now forgets the
+  store's entries for each module it evicts (`forgetSourceMap()`, best-effort against the store's shape). A unit
+  test covers the eviction and a scenario in both watch features (`Reported step locations follow an edit`)
+  asserts that every reported line points at its decorator before and after a three-line shift. The
+  Architecture.md cache rule gained the entry.
 - The tarball also carries `src/transpilers/esm/README.md` (Yarn packs every `README*`) and
   `lib/tsconfig.node.tsbuildinfo`; both harmless, both for Phase 13's package-size pass, where a `files`
   negation pattern would drop the second.
@@ -222,4 +228,7 @@ Fixed here: `es-node-esm` in a project without `vue`; the missing CHANGELOG and 
   pnpm dlx skills-npm@1.2.0` works from the UIS workspace root without installing anything there; a `yarn pack
   --dry-run` lists the tarball without producing it and is the quickest packaging check.
 - The commit workflow from 12c was followed: working commits inside the stage, one squashed commit before this
-  document, this document's commit, then the push. Nothing already pushed was rewritten.
+  document, this document's commit, then the push. Nothing already pushed was rewritten. The source-map follow-up
+  (`cbd9b45`) came after the push, at the owner's request, and is its own commit; the cadence held after it
+  (`yarn build`, `yarn typecheck`, `yarn lint`, 262 unit tests, `yarn test:node:cjs-esbuild` and
+  `yarn test:node:esm-esbuild` with the new scenario).

@@ -52,7 +52,9 @@ Updated at every hand-off, so that this block is always current.
   hooks), `972d5b9` (the unit-test source-map global), `6920b17` (the shipped agent skill, a 12e draft) and
   `1d33fa7` (group 6, the closing measurement) among them. 12d is one squashed commit, `0dcbff3`, followed
   by its documentation commits, then the dependency follow-up `808df53` and its documentation commit.
-  12e is one squashed commit, `7d48a3d`, followed by its documentation commit. Everything is pushed. The
+  12e is one squashed commit, `7d48a3d`, followed by its documentation commit and by `cbd9b45`, the
+  source-map follow-up the owner asked for on reading the hand-off (a watch-mode rerun of a changed CommonJS
+  support file reported the old lines). Everything is pushed. The
   commit workflow (small commits inside a stage, one squashed commit before the hand-off and before any push) is
   recorded at the end of the 12c hand-off.
 - **First act of the next session:** the owner reads the guide, the README's performance paragraph and 7.8.0

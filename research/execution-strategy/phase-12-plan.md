@@ -367,6 +367,17 @@ every dependency decided.
 guide, the README paragraph and the skill; the skill matches the shipped behavior and skills-npm links it in the
 UIS testbed; CONTRIBUTE.md and CLAUDE.md match the scripts.
 
+**Status: COMPLETE (2026-09-24) except the owner's reading, committed as `7d48a3d`.** The guide written with
+the cache-operations section (the selective-load index is not bounded; the transpile cache is); the README reduced
+to a paragraph, given a `Release Updates (7.8.0)` section and CRLF, and copied into the package by the build along
+with `CHANGELOG.md` and `LICENSE`, which the `files` list named but no published version had carried; the build
+cleans `lib/` first, because stale output from before the 7.6.0 and 7.7.0 renames was shipping; Architecture.md
+and the CHANGELOG read as one product, with finding G's cache rule written up; CONTRIBUTE.md rewritten and
+CLAUDE.md updated; `yarn bench` with reference numbers in the guide; `yarn smoke:tarball`, whose first run found
+`es-node-esm` failing in a project without `vue` (fixed: the Vue SFC compiler loads on the first `.vue` file);
+the skill re-read against the tree, two strings it quotes fixed in the source, linked into the UIS testbed with
+skills-npm and loaded by an agent through the link. See [Stage 12e hand-off](stage-12e-hand-off.md).
+
 #### 12f: Release
 
 - **(added) Release checklist**, written before this stage starts: the version decision (the `[Unreleased]`

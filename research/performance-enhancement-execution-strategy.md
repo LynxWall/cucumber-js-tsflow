@@ -37,29 +37,32 @@ this" and "what did that measure", not "what do I do next".
 
 Updated at every hand-off, so that this block is always current.
 
-- **Stage:** 12d, housekeeping sweeps, of Phase 12 (the release gate) is **complete (2026-09-24)**: the library
-  compiles under `strict: true`, `yarn typecheck` and `yarn lint` are gates that CI runs (findings Q and R), the
-  source and the documents are in American English, the 12c leftovers landed, every dependency on the audit list
-  is decided (`import-sync` and `tslib` removed), and a follow-up the owner asked for declared the five packages
-  the library imported without declaring, dropped `short-uuid` for `crypto.randomUUID()` and cleared every
-  `yarn npm audit` advisory. The boundary matrix was green on all sixteen variants, before and after the follow-up.
-  **12e, documentation and packaging, is next.** The rule from 12c group 2 stands for the rest of the phase: the
-  branch ships as a minor release (7.8), so no published option, flag or export is removed.
+- **Stage:** 12e, documentation and packaging, of Phase 12 (the release gate) is **complete (2026-09-24)** except
+  for the owner's reading: `docs/performance-and-diagnostics.md` holds the README's performance block plus cache
+  operations, every environment variable and a benchmark reference table; the README is one linking paragraph, a
+  `Release Updates (7.8.0)` section and CRLF; the build produces the package's README, CHANGELOG and LICENSE copies
+  (the last two had never shipped) from a clean `lib/` (stale pre-7.7.0 output had shipped); Architecture.md has
+  finding G's cache rule and the CHANGELOG reads as one release; CONTRIBUTE.md and CLAUDE.md match the scripts;
+  `yarn bench` and `yarn smoke:tarball` exist, and the smoke test found and fixed `es-node-esm` failing without
+  `vue`; the shipped skill is checked against the tree and linked into the UIS testbed with skills-npm. **12f,
+  release, is next.** The rule from 12c group 2 stands: the branch ships as a minor release (7.8), so no published
+  option, flag or export is removed.
 - **Branch:** 12c is `a29eb42`, `7a7af28`, `c57ca3f`, `1c4299b` and `85dc327` (one squashed commit per group,
   each with its documentation commit) on top of the triage commit `1c842e6`, with `fec46e9` (Z's spec under async
   hooks), `972d5b9` (the unit-test source-map global), `6920b17` (the shipped agent skill, a 12e draft) and
   `1d33fa7` (group 6, the closing measurement) among them. 12d is one squashed commit, `0dcbff3`, followed
   by its documentation commits, then the dependency follow-up `808df53` and its documentation commit.
-  Everything is pushed. The commit workflow (small commits inside a stage, one squashed commit before the
-  hand-off and before any push) is recorded at the end of the 12c hand-off.
-- **First act of the next session:** 12e, documentation and packaging, in the order the stage definition gives,
-  starting with `docs/performance-and-diagnostics.md` from the README's performance block. Take the items the
-  earlier stages left for 12e from the closing notes of the 12c and 12d hand-offs (both READMEs still list
-  **Parallel preload**; CONTRIBUTE.md still says `yarn test`; the shipped agent skill is re-read against the tree;
-  finding G's cache-participation rule goes into Architecture.md). Check `ListAgents` for a peer session before
-  editing.
-- **Read next:** [stage-12d-hand-off.md](execution-strategy/stage-12d-hand-off.md) (its closing notes first), then
-  the 12e definition in [phase-12-plan.md](execution-strategy/phase-12-plan.md#12e-documentation-and-packaging).
+  12e is one squashed commit, `7d48a3d`, followed by its documentation commit. Everything is pushed. The
+  commit workflow (small commits inside a stage, one squashed commit before the hand-off and before any push) is
+  recorded at the end of the 12c hand-off.
+- **First act of the next session:** the owner reads the guide, the README's performance paragraph and 7.8.0
+  section, and the skill (the one open box of the 12e gate), then 12f: write the release checklist before anything
+  else, as its definition says, taking the boxes the 12e hand-off's closing notes list (`yarn smoke:tarball`,
+  `yarn build` before pack or publish, the version decision that the README already assumes is 7.8.0, the skill
+  re-read, the uis-tools working-tree changes skills-npm made), then the real-console verification of the startup
+  output, then `test:all` on the matrix, tag and publish. Check `ListAgents` for a peer session before editing.
+- **Read next:** [stage-12e-hand-off.md](execution-strategy/stage-12e-hand-off.md) (its closing notes first), then
+  the 12f definition in [phase-12-plan.md](execution-strategy/phase-12-plan.md#12f-release).
 
 ## Phased plan
 
@@ -199,7 +202,8 @@ All documents live under [execution-strategy/](execution-strategy/). Each begins
 | [stage-12a-hand-off.md](execution-strategy/stage-12a-hand-off.md) | Test foundation: `node:test` runner, seams, unit tests, CI matrix | The unit-test layout and seams |
 | [stage-12b-hand-off.md](execution-strategy/stage-12b-hand-off.md) | Behavior discovery: end-to-end specs, failure-path pass, findings Y to AH classified | A 12b finding's origin |
 | [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md) | Review refactors: groups 1 to 5 and the Z fix, the closing measurement (group 6) with finding P's compile-cache A/B, the commit workflow, the two-session working agreement, leftovers for 12d | The UIS numbers 12c closed on; why a 12c refactor is shaped as it is |
-| [stage-12d-hand-off.md](execution-strategy/stage-12d-hand-off.md) | Housekeeping sweeps: the strict fixes, the `typecheck` and `lint` gates, the spelling pass, the dependency audit with its open decisions, the 12c leftovers, what is left for 12e and the owner | Continuing Phase 12 from 12e; a dependency or audit question |
+| [stage-12d-hand-off.md](execution-strategy/stage-12d-hand-off.md) | Housekeeping sweeps: the strict fixes, the `typecheck` and `lint` gates, the spelling pass, the dependency audit with its open decisions, the 12c leftovers, what is left for 12e and the owner | A dependency or audit question |
+| [stage-12e-hand-off.md](execution-strategy/stage-12e-hand-off.md) | Documentation and packaging: the guide, the README, the package copies and the clean build, the two scripts, the skill check and the UIS link, the packaging findings (`es-node-esm` without `vue`, CHANGELOG and LICENSE, stale `lib/`), boxes for the 12f checklist | Starting 12f; a packaging or documentation question |
 
 Related documents outside this folder: [local-consumer-testing.md](local-consumer-testing.md) (the UIS Tools
 testbed and how it is linked in), [phase-4-callsite-resolution-and-jsdom.md](phase-4-callsite-resolution-and-jsdom.md)

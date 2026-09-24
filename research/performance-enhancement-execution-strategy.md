@@ -37,16 +37,16 @@ this" and "what did that measure", not "what do I do next".
 
 Updated at every hand-off, so that this block is always current.
 
-- **Stage:** 12e, documentation and packaging, of Phase 12 (the release gate) is **complete (2026-09-24)** except
-  for the owner's reading: `docs/performance-and-diagnostics.md` holds the README's performance block plus cache
-  operations, every environment variable and a benchmark reference table; the README is one linking paragraph, a
-  `Release Updates (7.8.0)` section and CRLF; the build produces the package's README, CHANGELOG and LICENSE copies
-  (the last two had never shipped) from a clean `lib/` (stale pre-7.7.0 output had shipped); Architecture.md has
-  finding G's cache rule and the CHANGELOG reads as one release; CONTRIBUTE.md and CLAUDE.md match the scripts;
-  `yarn bench` and `yarn smoke:tarball` exist, and the smoke test found and fixed `es-node-esm` failing without
-  `vue`; the shipped skill is checked against the tree and linked into the UIS testbed with skills-npm. **12f,
-  release, is next.** The rule from 12c group 2 stands: the branch ships as a minor release (7.8), so no published
-  option, flag or export is removed.
+- **Stage:** 12f, release, of Phase 12 (the release gate) is **in progress (2026-09-24)**. The release checklist
+  is written, before anything else as the stage definition requires, as the opening form of the 12f hand-off:
+  `publish.yml` (a pushed `v*` tag, then `yarn test:all` and `npm publish --provenance`), which is how 7.7.0 to
+  7.7.2 went out, is the release path and `release.yml` is not; the boxes are assigned to the session (the
+  real-console verification, the bump to 7.8.0, build, cadence, smoke test, skill re-read, squash and push), to
+  the owner (the 12e reading, the version decision with the entries to weigh, the pull request description, the
+  UIS testbed's skills-npm changes) and to the maintainer (merge, tag, publish). Pull request #68 to `master`
+  exists as an empty draft and already runs the five-job matrix green on every push, including the current head.
+  The rule from 12c group 2 stands: the branch ships as a minor release (7.8), so no published option, flag or
+  export is removed.
 - **Branch:** 12c is `a29eb42`, `7a7af28`, `c57ca3f`, `1c4299b` and `85dc327` (one squashed commit per group,
   each with its documentation commit) on top of the triage commit `1c842e6`, with `fec46e9` (Z's spec under async
   hooks), `972d5b9` (the unit-test source-map global), `6920b17` (the shipped agent skill, a 12e draft) and
@@ -54,17 +54,17 @@ Updated at every hand-off, so that this block is always current.
   by its documentation commits, then the dependency follow-up `808df53` and its documentation commit.
   12e is one squashed commit, `7d48a3d`, followed by its documentation commit and by `cbd9b45`, the
   source-map follow-up the owner asked for on reading the hand-off (a watch-mode rerun of a changed CommonJS
-  support file reported the old lines). Everything is pushed. The
+  support file reported the old lines). Everything is pushed; 12f has no commit yet beyond its hand-off
+  document, the checklist. The
   commit workflow (small commits inside a stage, one squashed commit before the hand-off and before any push) is
   recorded at the end of the 12c hand-off.
-- **First act of the next session:** the owner reads the guide, the README's performance paragraph and 7.8.0
-  section, and the skill (the one open box of the 12e gate), then 12f: write the release checklist before anything
-  else, as its definition says, taking the boxes the 12e hand-off's closing notes list (`yarn smoke:tarball`,
-  `yarn build` before pack or publish, the version decision that the README already assumes is 7.8.0, the skill
-  re-read, the uis-tools working-tree changes skills-npm made), then the real-console verification of the startup
-  output, then `test:all` on the matrix, tag and publish. Check `ListAgents` for a peer session before editing.
-- **Read next:** [stage-12e-hand-off.md](execution-strategy/stage-12e-hand-off.md) (its closing notes first), then
-  the 12f definition in [phase-12-plan.md](execution-strategy/phase-12-plan.md#12f-release).
+- **First act of the next session:** continue the checklist from its first open box, in order: the real-console
+  verification of the startup output (the `verify-console-output` skill), then, once the owner has confirmed
+  7.8.0, section C (the bump, `yarn build`, the cadence, `yarn smoke:tarball`, the skill re-read), then section D
+  (squash and push, CI on pull request #68, close the hand-off, draft the pull request description for the owner
+  to post). Check `ListAgents` for a peer session before editing.
+- **Read next:** [stage-12f-hand-off.md](execution-strategy/stage-12f-hand-off.md) (the checklist; its first open
+  box is the next act), then the 12e hand-off's closing notes only if a packaging question comes up.
 
 ## Phased plan
 
@@ -178,7 +178,11 @@ consumer loads for `import { binding }` and for the CLI, and the runtime depende
 with candidates such as declaration-only files, unused exports, and dependencies that could be optional; (3)
 **dependency health as a standing check**, which 12d started: `yarn npm audit` clean, `yarn install` without
 warnings (ESLint 9 is deprecated on the registry; the ESLint 10 migration is the first item), no undeclared
-imports, no unused declared dependencies, each re-checked with a script that can run in CI. Runs after 12f
+imports, no unused declared dependencies, the GitHub workflows on current action versions (`release.yml`, the
+publish path 12f did not use, still runs `actions/checkout@v2` and `actions/setup-node@v3`, whose runtime GitHub
+has retired; update it to the `v4` actions or delete it), and the package's committed `README.md`, `CHANGELOG.md`
+and `LICENSE` copies identical to the root files after `yarn build` (12f found the CHANGELOG copy one entry behind
+after a follow-up commit edited the root without rebuilding), each re-checked with a script that can run in CI. Runs after 12f
 because it changes what is measured and shipped, and the release should go out first from a tree the matrix and
 the UIS measurement have already judged.
 
@@ -205,7 +209,8 @@ All documents live under [execution-strategy/](execution-strategy/). Each begins
 | [stage-12b-hand-off.md](execution-strategy/stage-12b-hand-off.md) | Behavior discovery: end-to-end specs, failure-path pass, findings Y to AH classified | A 12b finding's origin |
 | [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md) | Review refactors: groups 1 to 5 and the Z fix, the closing measurement (group 6) with finding P's compile-cache A/B, the commit workflow, the two-session working agreement, leftovers for 12d | The UIS numbers 12c closed on; why a 12c refactor is shaped as it is |
 | [stage-12d-hand-off.md](execution-strategy/stage-12d-hand-off.md) | Housekeeping sweeps: the strict fixes, the `typecheck` and `lint` gates, the spelling pass, the dependency audit with its open decisions, the 12c leftovers, what is left for 12e and the owner | A dependency or audit question |
-| [stage-12e-hand-off.md](execution-strategy/stage-12e-hand-off.md) | Documentation and packaging: the guide, the README, the package copies and the clean build, the two scripts, the skill check and the UIS link, the packaging findings (`es-node-esm` without `vue`, CHANGELOG and LICENSE, stale `lib/`), boxes for the 12f checklist | Starting 12f; a packaging or documentation question |
+| [stage-12e-hand-off.md](execution-strategy/stage-12e-hand-off.md) | Documentation and packaging: the guide, the README, the package copies and the clean build, the two scripts, the skill check and the UIS link, the packaging findings (`es-node-esm` without `vue`, CHANGELOG and LICENSE, stale `lib/`), boxes for the 12f checklist | A packaging or documentation question |
+| [stage-12f-hand-off.md](execution-strategy/stage-12f-hand-off.md) | Release: the release path (`publish.yml` on a `v*` tag; why not `release.yml`), the checklist with its boxes assigned to the session, the owner and the maintainer, the version-decision inputs, the state of pull request #68 | Continuing 12f; how 7.8.0 is tagged and published; what the owner and Lonnie each do |
 
 Related documents outside this folder: [local-consumer-testing.md](local-consumer-testing.md) (the UIS Tools
 testbed and how it is linked in), [phase-4-callsite-resolution-and-jsdom.md](phase-4-callsite-resolution-and-jsdom.md)

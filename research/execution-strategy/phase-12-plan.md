@@ -393,6 +393,12 @@ skills-npm and loaded by an agent through the link. See [Stage 12e hand-off](sta
 
 **Gate:** the checklist has no open box.
 
+**Status: IN PROGRESS (2026-09-24).** The release checklist is written as the opening form of
+[Stage 12f hand-off](stage-12f-hand-off.md): `publish.yml` (a pushed `v*` tag, `yarn test:all`,
+`npm publish --provenance`, the path 7.7.0 to 7.7.2 took) is the release path and `release.yml` is not; the boxes
+are assigned to the session, the owner and the maintainer; the version-decision inputs are listed for the owner;
+pull request #68 already exists as an empty draft and runs the five-job matrix green on every push.
+
 ### Exit criteria, amended
 
 The [exit criteria](#exit-criteria) above stand, gathered here with the additions: `yarn build` clean; `yarn

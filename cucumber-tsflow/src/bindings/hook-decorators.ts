@@ -1,10 +1,7 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
-import shortUuid from 'short-uuid';
+import { randomUUID } from 'node:crypto';
 import { collectStepBinding, addStepBindingExp } from './binding-context';
-
-// One translator for every binding registered in this module (a new one per call is needless allocation).
-const uuidTranslator = shortUuid();
 
 /**
  * A method decorator that marks the associated function as a 'Before All Scenario' step. The function is
@@ -92,7 +89,7 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 				tags: tag,
 				timeout: timeout,
 				callsite: callSite,
-				cucumberKey: uuidTranslator.new()
+				cucumberKey: randomUUID()
 			};
 
 			if (tag) {
@@ -115,7 +112,7 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 				tags: tag,
 				timeout: timeout,
 				callsite: callSite,
-				cucumberKey: uuidTranslator.new()
+				cucumberKey: randomUUID()
 			};
 
 			if (tag) {

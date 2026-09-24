@@ -65,6 +65,9 @@
 	},
 	"dependencies": {
 		"@cucumber/cucumber": "~12.7.0",
+		"@cucumber/cucumber-expressions": "19.0.0",
+		"@cucumber/gherkin": "38.0.0",
+		"@cucumber/messages": "32.0.1",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
 		"@jridgewell/trace-mapping": "~0.3.31",
 		"@types/node": "~22.13.10",
@@ -79,11 +82,19 @@
 		"lodash.merge": "~4.6.2",
 		"polyfill-symbol-metadata": "^0.0.2",
 		"require-extension-hooks": "~0.3.3",
-		"short-uuid": "~5.2.0",
 		"source-map-support": "~0.5.21",
 		"ts-node-maintained": "~10.9.6",
 		"tsconfig-paths": "~4.2.0",
-		"typescript": "~5.9.2"
+		"typescript": "~5.9.2",
+		"xmlbuilder": "~15.1.1"
+	},
+	"peerDependencies": {
+		"vue": ">=3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vue": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@types/chai": "~4.3.20",

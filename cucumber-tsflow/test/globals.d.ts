@@ -5,7 +5,6 @@
  */
 declare global {
 	/** Source maps of the modules the esbuild ESM loader transpiled on this thread, by module URL. */
-	// eslint-disable-next-line no-var
 	var __CUCUMBER_TSFLOW_SOURCE_MAPS: Map<string, string> | undefined;
 }
 

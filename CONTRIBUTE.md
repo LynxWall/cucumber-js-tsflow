@@ -31,3 +31,7 @@ If everything passes, you're ready to hack! ⛏
   * [chai](https://www.chaijs.com/)
   * [sinon](https://sinonjs.org/)
 
+## Agent skill
+
+The package ships an agent skill in `cucumber-tsflow/skills/cucumber-tsflow/`, which coding agents in consumer projects read (via [skills-npm](https://github.com/antfu/skills-npm)) to learn how to use cucumber-tsflow. If your change alters anything a consumer can see (decorators, configuration options, CLI flags, transpilers, environment variables, error messages or documented behavior), update the skill in the same pull request. Reviewers check it along with the README and CHANGELOG.
+

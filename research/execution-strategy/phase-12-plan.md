@@ -315,7 +315,8 @@ within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look
 - The 21 strict errors, then `strict: true` in `tsconfig.json`; a `typecheck` script covering `src` and `test`;
   the root `lint` script made a lint gate (finding Q); `no-undef` off for TypeScript files (finding R).
 - The spelling pass over `src` and the 15 documents: scripted, then read. Identifiers renamed only after checking
-  the `exports` map and the spec workspaces. Placed after 12c so renames do not churn under review.
+  the `exports` map and the spec workspaces. Placed after 12c so renames do not churn under review. A rename of
+  anything the shipped agent skill quotes (see 12e) updates the skill in the same commit.
 - **(added) Dependency audit.** `import-sync` and `tslib` are imported nowhere under `src` or `bin`; `@types/node`
   is a runtime dependency; `jsdom` is reached only through `jsdom-global`. Decide each: remove, move to
   devDependencies, or keep with a stated reason. `yarn npm audit` in the same pass.
@@ -341,17 +342,35 @@ every dependency decided.
 - **(added) Packed-tarball smoke test.** `npm pack` the workspace, install the tarball into a temporary CJS
   project and a temporary ESM project, run one feature in each: the only check of the `exports` map, the
   `bindings/index.d.ts` stub and type resolution as a consumer sees them, and of the `files` list leaking nothing
-  dev-only.
+  dev-only and including `skills/`.
+- **(added, 2026-09-24) Shipped agent skill.** `cucumber-tsflow/skills/cucumber-tsflow/`, a `SKILL.md` with four
+  reference files (bindings and context, configuration, running and debugging, migrating from CucumberJS),
+  published through the `files` list in the [skills-npm](https://github.com/antfu/skills-npm) convention that
+  uis-building-blocks already uses: a consumer's `skills-npm` run links it into each agent's skill folder as
+  `npm-lynxwall-cucumber-tsflow-cucumber-tsflow`. One skill with references rather than several because
+  skills-npm 1.2.0 in `--recursive` mode, as uis-building-blocks runs it, keeps only the first skill of each
+  package (its scan results are a map keyed by package name). A draft landed ahead of the stage, checked against
+  the source as of `972d5b9`. In this stage: re-read it against the tree after 12d's renames and beside the
+  performance guide; check every option, flag, environment variable, cache path and error message it quotes;
+  add one README sentence that points to it; link it into the UIS testbed with `skills-npm` and confirm the
+  symlink appears and an agent loads it for a step-definition task; and put the maintenance rule to the owner
+  and Lonnie (the skill changes in the same pull request as the behavior it describes, now in CLAUDE.md,
+  CONTRIBUTE.md and `.github/copilot-instructions.md`). Found while drafting, for this stage: the README's
+  selective-loading section lists "the CucumberJS functions" among the hooks that always load, which reads as
+  though functional `Before()`/`Given()` work, but the test case runner throws `Unable to find StepBinding!` for
+  any step or hook without a tsflow binding; either the README sentence goes or the limitation is documented.
 
-**Gate:** the tarball runs a feature in fresh CJS and ESM projects; the owner has read the guide and the README
-paragraph; CONTRIBUTE.md and CLAUDE.md match the scripts.
+**Gate:** the tarball runs a feature in fresh CJS and ESM projects and contains `skills/`; the owner has read the
+guide, the README paragraph and the skill; the skill matches the shipped behavior and skills-npm links it in the
+UIS testbed; CONTRIBUTE.md and CLAUDE.md match the scripts.
 
 #### 12f: Release
 
 - **(added) Release checklist**, written before this stage starts: the version decision (the `[Unreleased]`
   section deprecates but removes nothing, which reads as a minor release, but the scenario-context lookup change
   under "Changed" is a behavior change the owner should weigh), the CHANGELOG date and heading, the tag, and how
-  publish runs (`@jsdevtools/npm-publish` is in the root devDependencies; check for a publish workflow).
+  publish runs (`@jsdevtools/npm-publish` is in the root devDependencies; check for a publish workflow). One box
+  is the shipped agent skill, read once more against the tree that is tagged.
 - **(added)** Real-console verification of the startup output with the `verify-console-output` skill, after the
   `colour` → `color` renames in `utils/startup-progress.ts`.
 - A final `test:all` on the matrix, then tag and publish.
@@ -367,6 +386,6 @@ British spellings in `cucumber-tsflow/src` or the root and research documents; t
 resolved; the failure-path pass with no open finding; the UIS closing measurement within noise of the Phase 10
 reference; `docs/performance-and-diagnostics.md` exists and the root README's only performance content is the
 paragraph that links to it; `cucumber-tsflow/README.md` byte-identical to the root README after `yarn build`;
-Architecture.md, README, CHANGELOG, CONTRIBUTE.md and CLAUDE.md describe the product as it ships; the packed
-tarball runs a feature in a fresh CJS and a fresh ESM project; the startup output verified on a real console; the
-release checklist complete.
+Architecture.md, README, CHANGELOG, CONTRIBUTE.md, CLAUDE.md and the shipped agent skill describe the product as
+it ships; the packed tarball runs a feature in a fresh CJS and a fresh ESM project and contains the skill; the
+startup output verified on a real console; the release checklist complete.

@@ -60,6 +60,15 @@ Profiles live in each workspace's `cucumber.json` (e.g. `esnode`/`tsnode` in [cu
 - After building, verify no stray `.js`/`.js.map` appeared under `src/` (legitimate exception: `src/wrapper.mjs`).
 - New public entry points need a matching key in the `exports` map of [cucumber-tsflow/package.json](cucumber-tsflow/package.json).
 
+## Shipped agent skill (keep it in sync)
+
+[cucumber-tsflow/skills/cucumber-tsflow/](cucumber-tsflow/skills/cucumber-tsflow/) is published with the package (it is in the `files` list) and follows the [skills-npm](https://github.com/antfu/skills-npm) convention: a consumer running `skills-npm` gets it linked into their agents' skill folders, so it is what an agent in a consumer project reads about how to use cucumber-tsflow. It is user documentation, versioned with the code.
+
+- **Any change a consumer can see updates the skill in the same commit:** a decorator or its arguments, a configuration option or its default, a CLI flag, a transpiler, an environment variable, an error message the skill quotes, or a behavior it describes (context lifetime, selective loading, watch mode, caches).
+- **Every review checks the skill against the diff,** the same way it checks README, CHANGELOG and Architecture.md: a code review, a pull request review, and each Phase 12 stage gate. A stale skill is a review finding.
+- **Keep it one skill.** skills-npm 1.2.0 links only the first skill of a package in `--recursive` mode, which is how uis-building-blocks runs it. Put detail in `references/` and keep `SKILL.md` short: rules, then short examples that compile, then "Common mistakes". Only state what was checked against the source.
+- Do not confuse it with [.claude/skills/](.claude/skills/), which holds contributor skills for working on this repository and is not published.
+
 ## Code style
 
 Enforced by [.prettierrc](.prettierrc) and [eslint.config.mjs](eslint.config.mjs); the fuller written standards are in [.github/instructions/ts-standards.instructions.md](.github/instructions/ts-standards.instructions.md) and [.github/instructions/md-standards.instructions.md](.github/instructions/md-standards.instructions.md).

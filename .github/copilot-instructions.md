@@ -99,3 +99,10 @@
 * Use `tsc --noEmit` (with the base `tsconfig.json`) for type-checking only
 * Use `tsc --build tsconfig.node.json` when you need to emit compiled output
 * After building, verify no `.js` or `.js.map` files exist in `src/` (except `src/wrapper.mjs`)
+
+## Shipped Agent Skill
+
+* `cucumber-tsflow/skills/cucumber-tsflow/` is published with the package and is what coding agents in consumer projects read to use cucumber-tsflow (the [skills-npm](https://github.com/antfu/skills-npm) convention)
+* Any change a consumer can see (a decorator signature, a configuration option or default, a CLI flag, a transpiler, an environment variable, a quoted error message, a described behavior) updates the skill in the same change
+* Every review checks the skill against the diff, the same way it checks the README and CHANGELOG
+* Keep it one skill with detail in `references/`: skills-npm links only the first skill of a package in `--recursive` mode

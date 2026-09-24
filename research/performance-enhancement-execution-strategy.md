@@ -46,7 +46,12 @@ Updated at every hand-off, so that this block is always current.
 - **Branch:** one squashed commit per group, `a29eb42` (group 1), `7a7af28` (group 2), `c57ca3f` (group 3),
   `1c4299b` (group 4) and `85dc327` (group 5), each followed by its documentation commit, on top of the triage
   commit `1c842e6`; after group 4, `fec46e9` is a fix to Z's spec under async ESM hooks made by a second session
-  working in the same tree (its working agreement is in the hand-off). Everything is pushed. The commit
+  working in the same tree (its working agreement is in the hand-off). After group 5, `972d5b9` declares the
+  source-map global for the unit-test program, and the next commit adds the shipped agent skill
+  (`cucumber-tsflow/skills/cucumber-tsflow/`, published through the `files` list in the skills-npm convention),
+  its maintenance rule in CLAUDE.md, CONTRIBUTE.md and `.github/copilot-instructions.md`, and its 12e item in
+  [phase-12-plan.md](execution-strategy/phase-12-plan.md#12e-documentation-and-packaging); it is a draft that 12e
+  finishes, independent of group 6. Everything up to `972d5b9` is pushed. The commit
   workflow (small commits inside a group, one squashed commit per group before the hand-off and before any
   push) is recorded at the end of the 12c hand-off.
 - **First act of the next session:** group 6, the closing measurement: link the local build into the UIS
@@ -176,7 +181,7 @@ All documents live under [execution-strategy/](execution-strategy/). Each begins
 | [phase-09-hand-off.md](execution-strategy/phase-09-hand-off.md) | Items 19, 24: parse before load, selective loading and its fallbacks; re-rating | Selective loading, the module graph |
 | [phase-10-hand-off.md](execution-strategy/phase-10-hand-off.md) | Item 23: `--watch`, the resident process, eviction and `?tsflow=<n>` re-import; the clean reference numbers | Watch mode, the Phase 10 reference the closing measurement is compared to |
 | [phase-11-hand-off.md](execution-strategy/phase-11-hand-off.md) | Item 25 closed without a prototype: the bundling ceiling and feasibility findings | A future bundling attempt |
-| [phase-12-plan.md](execution-strategy/phase-12-plan.md) | Phase 12 scope; baseline: decisions with the owner, coverage inventory, review findings A to AH, 12c triage, stages 12a to 12f with gates, amended exit criteria | Starting any Phase 12 stage |
+| [phase-12-plan.md](execution-strategy/phase-12-plan.md) | Phase 12 scope; baseline: decisions with the owner, coverage inventory, review findings A to AH, 12c triage, stages 12a to 12f with gates (12e includes the shipped agent skill), amended exit criteria | Starting any Phase 12 stage |
 | [stage-12a-hand-off.md](execution-strategy/stage-12a-hand-off.md) | Test foundation: `node:test` runner, seams, unit tests, CI matrix | The unit-test layout and seams |
 | [stage-12b-hand-off.md](execution-strategy/stage-12b-hand-off.md) | Behavior discovery: end-to-end specs, failure-path pass, findings Y to AH classified | A 12b finding's origin |
 | [stage-12c-hand-off.md](execution-strategy/stage-12c-hand-off.md) | Review refactors, written as the groups land; groups 1 to 5 and the Z fix, the commit workflow, the two-session working agreement, what group 6 (the closing measurement) starts with | Continuing 12c |

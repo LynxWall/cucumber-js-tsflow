@@ -115,6 +115,7 @@
 		"api/",
 		"bin/",
 		"bindings/",
-		"lib/"
+		"lib/",
+		"skills/"
 	]
 }

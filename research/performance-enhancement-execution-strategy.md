@@ -37,16 +37,18 @@ this" and "what did that measure", not "what do I do next".
 
 Updated at every hand-off, so that this block is always current.
 
-- **Stage:** 12f, release, of Phase 12 (the release gate) is **in progress (2026-09-24)**. The release checklist
-  is written, before anything else as the stage definition requires, as the opening form of the 12f hand-off:
-  `publish.yml` (a pushed `v*` tag, then `yarn test:all` and `npm publish --provenance`), which is how 7.7.0 to
-  7.7.2 went out, is the release path and `release.yml` is not; the boxes are assigned to the session (the
-  real-console verification, the bump to 7.8.0, build, cadence, smoke test, skill re-read, squash and push), to
-  the owner (the 12e reading, the version decision with the entries to weigh, the pull request description, the
-  UIS testbed's skills-npm changes) and to the maintainer (merge, tag, publish). Pull request #68 to `master`
-  exists as an empty draft and already runs the five-job matrix green on every push, including the current head.
-  The rule from 12c group 2 stands: the branch ships as a minor release (7.8), so no published option, flag or
-  export is removed.
+- **Stage:** 12f, release, of Phase 12 (the release gate) is **complete on the branch (2026-09-24)**; the
+  release itself is the maintainer's. The release checklist in the 12f hand-off names `publish.yml` (a pushed
+  `v*` tag, then `yarn test:all` and `npm publish --provenance`, how 7.7.0 to 7.7.2 went out) as the release
+  path. Done on the branch: the startup output verified on a real console at four widths, in both themes and on
+  the real CLI; the version bumped to 7.8.0 in all ten manifests with the CHANGELOG heading and the package copies
+  (the CHANGELOG copy had been one entry behind); `yarn build`, `yarn typecheck`, `yarn lint`, 262 unit tests,
+  `yarn test:all` (16 variants, 424 scenarios) and `yarn smoke:tarball` green; the shipped skill re-read against
+  the source with four wrong claims corrected and two stale strings fixed outside it; pull request #68's
+  five-job matrix green on the pushed head. Left for the owner: confirm 7.8.0, read the guide, the README's
+  7.8.0 section and the skill, post the drafted pull request description and take #68 out of draft, decide the
+  UIS testbed's skills-npm changes. Left for Lonnie: merge, annotated `v7.8.0` tag, `publish.yml`. The rule from
+  12c group 2 stands: a minor release, nothing published removed.
 - **Branch:** 12c is `a29eb42`, `7a7af28`, `c57ca3f`, `1c4299b` and `85dc327` (one squashed commit per group,
   each with its documentation commit) on top of the triage commit `1c842e6`, with `fec46e9` (Z's spec under async
   hooks), `972d5b9` (the unit-test source-map global), `6920b17` (the shipped agent skill, a 12e draft) and
@@ -54,17 +56,17 @@ Updated at every hand-off, so that this block is always current.
   by its documentation commits, then the dependency follow-up `808df53` and its documentation commit.
   12e is one squashed commit, `7d48a3d`, followed by its documentation commit and by `cbd9b45`, the
   source-map follow-up the owner asked for on reading the hand-off (a watch-mode rerun of a changed CommonJS
-  support file reported the old lines). Everything is pushed; 12f has no commit yet beyond its hand-off
-  document, the checklist. The
+  support file reported the old lines). 12f is one commit, `9e99c0e` (`12f: release 7.8.0`), followed by its
+  hand-off commits. Everything is pushed. The
   commit workflow (small commits inside a stage, one squashed commit before the hand-off and before any push) is
   recorded at the end of the 12c hand-off.
-- **First act of the next session:** continue the checklist from its first open box, in order: the real-console
-  verification of the startup output (the `verify-console-output` skill), then, once the owner has confirmed
-  7.8.0, section C (the bump, `yarn build`, the cadence, `yarn smoke:tarball`, the skill re-read), then section D
-  (squash and push, CI on pull request #68, close the hand-off, draft the pull request description for the owner
-  to post). Check `ListAgents` for a peer session before editing.
-- **Read next:** [stage-12f-hand-off.md](execution-strategy/stage-12f-hand-off.md) (the checklist; its first open
-  box is the next act), then the 12e hand-off's closing notes only if a packaging question comes up.
+- **First act of the next session:** if the owner has not yet done their part, it is theirs (the 12f hand-off's
+  closing notes list it in order). Otherwise, when 7.8.0 is tagged and published, tick section E of the checklist
+  with the registry check, switch the UIS testbed from `link:` to `7.8.0`, then start Phase 13 by defining its
+  scope properly (build time, package size, dependency health as a standing check, with the items 12e and 12f
+  collected). Check `ListAgents` for a peer session before editing.
+- **Read next:** [stage-12f-hand-off.md](execution-strategy/stage-12f-hand-off.md) (its closing notes first, then
+  the open boxes in sections A, B, D and E), then the Phase 13 paragraph below.
 
 ## Phased plan
 

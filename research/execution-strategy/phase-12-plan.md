@@ -393,11 +393,15 @@ skills-npm and loaded by an agent through the link. See [Stage 12e hand-off](sta
 
 **Gate:** the checklist has no open box.
 
-**Status: IN PROGRESS (2026-09-24).** The release checklist is written as the opening form of
-[Stage 12f hand-off](stage-12f-hand-off.md): `publish.yml` (a pushed `v*` tag, `yarn test:all`,
-`npm publish --provenance`, the path 7.7.0 to 7.7.2 took) is the release path and `release.yml` is not; the boxes
-are assigned to the session, the owner and the maintainer; the version-decision inputs are listed for the owner;
-pull request #68 already exists as an empty draft and runs the five-job matrix green on every push.
+**Status: COMPLETE ON THE BRANCH (2026-09-24), committed as `9e99c0e`; the tag and publish are the maintainer's.**
+The release checklist is [Stage 12f hand-off](stage-12f-hand-off.md): `publish.yml` (a pushed `v*` tag,
+`yarn test:all`, `npm publish --provenance`, the path 7.7.0 to 7.7.2 took) is the release path and `release.yml`
+is not (its stale action versions go to Phase 13). Closed by the session: the real-console verification (four
+widths, both themes, the real CLI), the bump to 7.8.0 in the ten manifests with the CHANGELOG heading and the
+package copies, the cadence (`build`, `typecheck`, `lint`, 262 unit tests, `test:all` on 16 variants,
+`smoke:tarball`), the skill re-read with four corrections, and the five-job matrix green on pull request #68's
+pushed head. Open for the owner: confirm 7.8.0, the reading, posting the drafted pull request description, the
+UIS testbed's skills-npm changes. Open for the maintainer: merge, `v7.8.0`, publish.
 
 ### Exit criteria, amended
 

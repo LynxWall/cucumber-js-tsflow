@@ -5,8 +5,11 @@ Part of the [Performance Enhancement Execution Strategy](../performance-enhancem
 Opened at the start of the stage (2026-09-24). Stage 12f is [Release](phase-12-plan.md#12f-release): the release
 checklist, written before anything else as the stage's definition says, the real-console verification of the
 startup output, the version bump, the final matrix run, and the hand-over to the maintainer who tags and
-publishes. **The stage is in progress.** This document is the checklist while the stage runs and becomes the
-hand-off when it closes: boxes are ticked here as they close, with the commit or the evidence beside them.
+publishes. **Every box the session owns is closed (2026-09-24); the stage is complete on this branch.** What
+remains is the owner's (the version confirmation, the reading, posting the pull request description, the UIS
+testbed decision) and the maintainer's (merge, tag, publish), listed in sections A, B, D and E. This document was
+the checklist while the stage ran and is the hand-off now: each box carries the commit or the evidence that
+closed it.
 
 ## State of the tree at the start
 
@@ -179,13 +182,17 @@ reading), **maintainer** (Lonnie, after the merge). A box is ticked with its evi
 
 ### D. Branch, hand-off and pull request
 
-- [ ] **Squash and push per the 12c workflow:** the stage's working commits become one commit (`12f: release
-  7.8.0`) on top of `81b7de0`, then this document's commit; nothing already pushed is rewritten; push. [session]
-- [ ] **CI green on the pushed head:** pull request #68 runs the five-job matrix on the push; all five jobs
-  succeed (checked through the GitHub API, since `gh` is not installed here). This is the "final `test:all` on
-  the matrix" of the stage definition, on the tree that will be tagged. [session]
-- [ ] **This document closed as the hand-off** (boxes ticked with evidence, the notes for Phase 13), the map's
-  "Where the work stands" and document-map row updated, the plan's 12f status line written. [session]
+- [x] **Squash and push per the 12c workflow:** the stage is one commit, `9e99c0e` (`12f: release 7.8.0`), on top
+  of `81b7de0`, followed by this document's commit `a55b5dd`; no working commit needed squashing, nothing already
+  pushed was rewritten, and both are pushed (2026-09-24). [session]
+- [x] **CI green on the pushed head:** pull request #68 ran the five-job matrix on `a55b5dd` (run 36039476476,
+  2026-09-24 18:11 to 18:14 UTC): Ubuntu Node 22, Ubuntu Node 24, Ubuntu Node 24 with async ESM hooks, Windows
+  Node 22 and Windows Node 24 all succeeded (checked through the GitHub API, since `gh` is not installed here).
+  This is the "final `test:all` on the matrix" of the stage definition, on the tree that will be tagged; the
+  documentation commit that closes this hand-off follows it and changes nothing under `cucumber-tsflow/`. [session]
+- [x] **This document closed as the hand-off** (boxes ticked with evidence, the notes for Phase 13 and the owner
+  below), the map's "Where the work stands" and document-map row updated, the plan's 12f status line written.
+  [session]
 - [ ] **Pull request #68 description written and the draft flag removed.** The description is what Lonnie reads
   first: what the release is (a performance release, 7.8.0, minor, nothing published removed), where to read
   (the aggregate diff, the CHANGELOG's 7.8.0 section, Architecture.md, `docs/performance-and-diagnostics.md`,
@@ -300,4 +307,29 @@ merge commit, pushed. `publish.yml` runs on the tag: install, `yarn build`, `yar
 
 ## Notes specific to Phase 13 and the owner
 
-Written when the stage closes.
+- **For the owner, in order:** confirm 7.8.0 (section B lists what to weigh; the bump is on the branch and can be
+  changed in one commit); read the guide, the README paragraph and its 7.8.0 section, and the skill (section A's
+  open box); post the description above on pull request #68, take it out of draft and request Lonnie's review;
+  decide the UIS testbed's skills-npm changes (section D). Everything else in sections A to D is done.
+- **For Lonnie**, section E: merge, annotated `v7.8.0` tag on the merge commit, `publish.yml` publishes. The
+  version, the CHANGELOG heading and the package copies are already on the branch, so the tag is the only act.
+- **Dependabot on `master`.** The push printed GitHub's notice that the default branch has 55 open Dependabot
+  alerts (40 high, 14 moderate, 1 low). They are `master`'s lockfile, which 12d's audit work on this branch
+  replaced (`yarn npm audit` reports nothing here). Most should close when pull request #68 merges; the ones that
+  remain are Phase 13's first dependency-health item to look at, and the alert list is worth reading before the
+  tag in case one names a runtime dependency the branch still carries.
+- **Phase 13 items collected in this stage** (added to the map's Phase 13 paragraph): `release.yml` on
+  `actions/checkout@v2` and `actions/setup-node@v3`; the package copies (`README.md`, `CHANGELOG.md`, `LICENSE`)
+  checked against the root after `yarn build`, since a follow-up commit had left the CHANGELOG copy one entry
+  behind; the tarball's `src/transpilers/esm/README.md` and `lib/tsconfig.node.tsbuildinfo` from 12e.
+- **Two behaviors the skill re-read surfaced that are documented, not changed** (a minor release changes no
+  behavior at this point; both are candidates for the owner's list after the release): a context used first by a
+  `@beforeStep`/`@afterStep` hook is used before its `initialize()` runs, because only steps and `@before`/`@after`
+  hooks trigger initialization; and a step hook or `BeforeAll`/`AfterAll` registered with CucumberJS's own
+  functions is not caught by the `Unable to find StepBinding!` check that stops a plain `Given` or `Before`
+  (what such a hook then does was not tested).
+- **Working notes:** `gh` is not installed on this machine, so pull request and workflow state came from the
+  public GitHub API with `curl` and a small Node filter; the console harness runs from Claude's PowerShell tool
+  with `pwsh -File launch.ps1` and one window per width; the CRLF files (Architecture.md, `argv-parser.ts`) and
+  the LF skill files were edited with a two-pass exact-replacement Node script that keeps each file's line
+  endings, in the scratchpad, since the file tools had not read them.

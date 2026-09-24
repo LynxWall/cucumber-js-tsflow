@@ -24,7 +24,9 @@ All commands run from the repo root unless noted.
 | Install | `yarn` |
 | Build the library | `yarn build` |
 | Build in watch mode | `yarn build:watch` |
-| Lint (auto-fix) | `yarn lint` |
+| Type-check without emitting (`strict`; the library and the unit-test program) | `yarn typecheck` |
+| Lint (a gate: reports, does not fix) | `yarn lint` |
+| Lint with ESLint's auto-fix | `yarn lint:fix` |
 | Format | `yarn format` |
 | Unit tests (`node --test` over [cucumber-tsflow/test/](cucumber-tsflow/test/), against the built `lib/`) | `yarn test:unit` |
 | Full test matrix (what CI runs) | `yarn test:all` |
@@ -85,6 +87,6 @@ Working preferences from [.github/copilot-instructions.md](.github/copilot-instr
 - **Support code loads more than once per process in watch mode.** `--watch` calls `runCucumber` → `getSupportCodeLibrary` repeatedly in one process with a `SupportReloader` deciding what is evicted (`require.cache`) or re-imported under a `?tsflow=<n>` query (ESM). Anything registered or cached on the load path must be idempotent or deduplicated (loader registration, the `BindingRegistry`, resolution caches), and `runCucumber` replaces `options.support` with the loaded library, so callers running twice pass a copy.
 - **Both decorator modes must keep working.** Every decorator branches on `global.experimentalDecorators` between the legacy `(target, propertyKey, descriptor)` signature and TC39 Stage 3 `(target, context)` with `context.metadata`. A change to one path needs the other checked, and the `*-exp*` spec workspaces are what catch regressions.
 - **The full matrix is the real test suite.** A change to loading, transpilation, or registration can pass CJS+esbuild and fail ESM+ts-node. Run `yarn test:all` before considering such a change done.
-- Node **>= 22** is required; CI runs Node 24 on ubuntu-latest ([.github/workflows/ci.yml](.github/workflows/ci.yml): install → `yarn build` → `yarn test:all`).
+- Node **>= 22** is required; CI runs a matrix of Ubuntu and Windows on Node 22 and 24, plus one Ubuntu job with `TSFLOW_ESM_HOOKS=async` ([.github/workflows/ci.yml](.github/workflows/ci.yml): install → `yarn build` → `yarn typecheck` → `yarn lint` → `yarn test:unit` → `yarn test:all`).
 - Reports written to `cucumber-tsflow-specs/reports/` are gitignored build output.
 - **Terminal output is only verified on a real console.** Claude's shells capture stdout (`isTTY` is false), so spinners, in-place redraws, colors and non-ASCII glyphs cannot be checked there or with a simulated screen. Use the `verify-console-output` skill ([.claude/skills/verify-console-output/SKILL.md](.claude/skills/verify-console-output/SKILL.md)), which runs the built code in a fresh console window at several widths and reads the screen buffer back, before saying such output works.

@@ -325,6 +325,8 @@ within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look
 **Gate:** `typecheck` and `lint` clean with no new disables; zero British spellings in `src` and the documents;
 every dependency decided.
 
+**Status: COMPLETE (2026-09-24), committed as `0dcbff3`.** The 21 strict errors fixed and `strict: true` on; `typecheck` (library and unit-test program) and `lint` (no `--fix`; `lint:fix` beside it) added and run by CI after the build; `no-undef` off for TypeScript files and the one disable it caused removed; 169 spelling replacements in 32 files with the three renamed identifiers checked for consumers; `import-sync` and `tslib` removed, `@types/node`, `typescript` and `jsdom` kept with reasons, five packages found imported but undeclared and left for the owner with the audit's nineteen advisories; the 12c leftovers landed. Boundary matrix green on all sixteen variants. See [Stage 12d hand-off](stage-12d-hand-off.md).
+
 #### 12e: Documentation and packaging
 
 - `docs/performance-and-diagnostics.md` from the 94-line README block, including **(added) cache operations**:

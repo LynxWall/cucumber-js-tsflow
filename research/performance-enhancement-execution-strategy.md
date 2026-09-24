@@ -45,10 +45,12 @@ Updated at every hand-off, so that this block is always current.
   (the CHANGELOG copy had been one entry behind); `yarn build`, `yarn typecheck`, `yarn lint`, 262 unit tests,
   `yarn test:all` (16 variants, 424 scenarios) and `yarn smoke:tarball` green; the shipped skill re-read against
   the source with four wrong claims corrected and two stale strings fixed outside it; pull request #68's
-  five-job matrix green on the pushed head. Left for the owner: confirm 7.8.0, read the guide, the README's
-  7.8.0 section and the skill, post the drafted pull request description and take #68 out of draft, decide the
-  UIS testbed's skills-npm changes. Left for Lonnie: merge, annotated `v7.8.0` tag, `publish.yml`. The rule from
-  12c group 2 stands: a minor release, nothing published removed.
+  five-job matrix green on the pushed head. The owner asked whether 7.8 skips 7.6 and 7.7 (UIS Tools runs 7.5.5): it does not, 7.6.0 and
+  7.7.0 to 7.7.2 were published in March 2026 and the branch was cut at 7.7.2; the question is also put to Lonnie
+  in the pull request description. The owner took the UIS testbed out of scope for this release. Left for the
+  owner: read the guide, the README's 7.8.0 section and the skill, post the drafted pull request description and
+  take #68 out of draft. Left for Lonnie: confirm the number, merge, annotated `v7.8.0` tag, `publish.yml`. The
+  rule from 12c group 2 stands: a minor release, nothing published removed.
 - **Branch:** 12c is `a29eb42`, `7a7af28`, `c57ca3f`, `1c4299b` and `85dc327` (one squashed commit per group,
   each with its documentation commit) on top of the triage commit `1c842e6`, with `fec46e9` (Z's spec under async
   hooks), `972d5b9` (the unit-test source-map global), `6920b17` (the shipped agent skill, a 12e draft) and
@@ -62,8 +64,7 @@ Updated at every hand-off, so that this block is always current.
   recorded at the end of the 12c hand-off.
 - **First act of the next session:** if the owner has not yet done their part, it is theirs (the 12f hand-off's
   closing notes list it in order). Otherwise, when 7.8.0 is tagged and published, tick section E of the checklist
-  with the registry check, switch the UIS testbed from `link:` to `7.8.0`, then start Phase 13 by defining its
-  scope properly (build time, package size, dependency health as a standing check, with the items 12e and 12f
+  with the registry check, then start Phase 13 by defining its scope properly (build time, package size, dependency health as a standing check, with the items 12e and 12f
   collected). Check `ListAgents` for a peer session before editing.
 - **Read next:** [stage-12f-hand-off.md](execution-strategy/stage-12f-hand-off.md) (its closing notes first, then
   the open boxes in sections A, B, D and E), then the Phase 13 paragraph below.

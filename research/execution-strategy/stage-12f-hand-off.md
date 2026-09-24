@@ -200,7 +200,7 @@ reading), **maintainer** (Lonnie, after the merge). A box is ticked with its evi
   consumer-visible change updates `skills/cucumber-tsflow/` in the same commit; every review checks it against
   the diff; it stays one skill with references), and the release steps in section E. The session drafts it;
   the owner posts it and requests Lonnie's review. [session drafts, owner posts]
-- [ ] **The UIS testbed's skills-npm changes decided:** keep the
+- [x] **Dropped by the owner (2026-09-24: "don't worry about the UIS testbed").** The box as written stood: keep the
   `.claude/skills/npm-lynxwall-cucumber-tsflow-cucumber-tsflow` symlink and the `**/skills/npm-*` `.gitignore`
   line (what a consumer that runs skills-npm ends up with; the symlink stays live once the registry 7.8.0 is
   installed, since the package carries `skills/`), or revert both (delete the symlink, revert the one
@@ -220,9 +220,9 @@ reading), **maintainer** (Lonnie, after the merge). A box is ticked with its evi
 - [ ] **Registry check:** `npm view @lynxwall/cucumber-tsflow version dist-tags dist.attestations` shows 7.8.0 as
   `latest` with a provenance attestation, and the published tarball contains `skills/`, `CHANGELOG.md` and
   `LICENSE`, which no earlier version carried. [owner or maintainer]
-- [ ] **The UIS testbed moves from `link:` to `7.8.0`** and a `skills-npm` run there links the skill from the
-  registry package; the first real consumer measurement of the published build is taken with the recipe in
-  [local-consumer-testing.md](../local-consumer-testing.md). [owner]
+- [x] **Dropped by the owner (2026-09-24).** The UIS testbed's move from `link:` to `7.8.0`, the `skills-npm` run
+  there and a consumer measurement of the published build are not part of this release; UIS Tools is pinned at
+  `~7.5.5` in production and upgrades on its own schedule (see the version note below). [owner]
 - [ ] **Phase 13 starts** from the tagged tree, with the `release.yml` item above added to its dependency-health
   list. [session, next]
 
@@ -292,6 +292,12 @@ coding agent's skill folder. Maintenance rule, also in CLAUDE.md, CONTRIBUTE.md 
 change a consumer can see updates the skill in the same commit, every review checks it against the diff, and it
 stays one skill with references (skills-npm 1.2.0 keeps only the first skill of a package in `--recursive` mode).
 
+**A question on the version number.** We are on 7.5.5 in production and have not taken 7.6 or 7.7, so it
+looked at first as though 7.8 skipped two versions. The registry says otherwise: 7.6.0 (2026-03-27), 7.7.0 and
+7.7.1 (2026-03-29) and 7.7.2 (2026-03-30) are all published, and this branch was cut from `master` at 7.7.2, so
+7.8.0 is the next minor after the last published version. Please confirm that reading, or say if you would rather
+number it differently; the bump is one commit.
+
 **Release steps**, the same as 7.7.2: merge (a squash-merge is fine), then an annotated `v7.8.0` tag on the
 merge commit, pushed. `publish.yml` runs on the tag: install, `yarn build`, `yarn test:all`,
 `npm publish --provenance --access public ./cucumber-tsflow/`. `release.yml` was not used for 7.7.x and still runs
@@ -307,10 +313,18 @@ merge commit, pushed. `publish.yml` runs on the tag: install, `yarn build`, `yar
 
 ## Notes specific to Phase 13 and the owner
 
-- **For the owner, in order:** confirm 7.8.0 (section B lists what to weigh; the bump is on the branch and can be
-  changed in one commit); read the guide, the README paragraph and its 7.8.0 section, and the skill (section A's
-  open box); post the description above on pull request #68, take it out of draft and request Lonnie's review;
-  decide the UIS testbed's skills-npm changes (section D). Everything else in sections A to D is done.
+- **The owner's reading of the hand-off (2026-09-24)** raised one question and took one decision. The question:
+  UIS Tools runs `~7.5.5` in production, nothing of this work has reached production, so is 7.8 skipping 7.6 and
+  7.7? Answer, from the registry: 7.6.0 (2026-03-27), 7.7.0 and 7.7.1 (2026-03-29) and 7.7.2 (2026-03-30) are all
+  published, tagged by Lonnie; 7.6.0 was a duplicate-message fix and 7.7.x the parallel preload and worker shims,
+  his March work rather than this branch's; UIS simply never upgraded past 7.5.5. The branch was cut from
+  `master` at 7.7.2, so 7.8.0 is the next minor after the last published version and skips nothing. The same
+  question is put to Lonnie in the pull request description above, so he confirms the number. When UIS does move
+  off 7.5.5 it crosses 7.6 and 7.7 as well; nothing in them affects a project that never enabled `parallelLoad`.
+  The decision: the UIS testbed is out of scope for this release (its two boxes above are marked dropped).
+- **For the owner, in order:** read the guide, the README paragraph and its 7.8.0 section, and the skill (section
+  A's open box); post the description above on pull request #68, take it out of draft and request Lonnie's review.
+  Everything else in sections A to D is done.
 - **For Lonnie**, section E: merge, annotated `v7.8.0` tag on the merge commit, `publish.yml` publishes. The
   version, the CHANGELOG heading and the package copies are already on the branch, so the tag is the only act.
 - **Dependabot on `master`.** The push printed GitHub's notice that the default branch has 55 open Dependabot

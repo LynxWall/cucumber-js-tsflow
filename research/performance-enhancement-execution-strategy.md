@@ -39,23 +39,25 @@ Updated at every hand-off, so that this block is always current.
 
 - **Stage:** 12d, housekeeping sweeps, of Phase 12 (the release gate) is **complete (2026-09-24)**: the library
   compiles under `strict: true`, `yarn typecheck` and `yarn lint` are gates that CI runs (findings Q and R), the
-  source and the documents are in American English, the 12c leftovers landed, and every dependency on the audit
-  list is decided (`import-sync` and `tslib` removed). The boundary matrix was green on all sixteen variants.
+  source and the documents are in American English, the 12c leftovers landed, every dependency on the audit list
+  is decided (`import-sync` and `tslib` removed), and a follow-up the owner asked for declared the five packages
+  the library imported without declaring, dropped `short-uuid` for `crypto.randomUUID()` and cleared every
+  `yarn npm audit` advisory. The boundary matrix was green on all sixteen variants, before and after the follow-up.
   **12e, documentation and packaging, is next.** The rule from 12c group 2 stands for the rest of the phase: the
   branch ships as a minor release (7.8), so no published option, flag or export is removed.
 - **Branch:** 12c is `a29eb42`, `7a7af28`, `c57ca3f`, `1c4299b` and `85dc327` (one squashed commit per group,
   each with its documentation commit) on top of the triage commit `1c842e6`, with `fec46e9` (Z's spec under async
   hooks), `972d5b9` (the unit-test source-map global), `6920b17` (the shipped agent skill, a 12e draft) and
   `1d33fa7` (group 6, the closing measurement) among them. 12d is one squashed commit, `0dcbff3`, followed
-  by its documentation commit. Everything is pushed. The commit workflow (small commits inside a stage, one
-  squashed commit before the hand-off and before any push) is recorded at the end of the 12c hand-off.
+  by its documentation commits, then the dependency follow-up `808df53` and its documentation commit.
+  Everything is pushed. The commit workflow (small commits inside a stage, one squashed commit before the
+  hand-off and before any push) is recorded at the end of the 12c hand-off.
 - **First act of the next session:** 12e, documentation and packaging, in the order the stage definition gives,
   starting with `docs/performance-and-diagnostics.md` from the README's performance block. Take the items the
   earlier stages left for 12e from the closing notes of the 12c and 12d hand-offs (both READMEs still list
   **Parallel preload**; CONTRIBUTE.md still says `yarn test`; the shipped agent skill is re-read against the tree;
-  finding G's cache-participation rule goes into Architecture.md). The dependency findings 12d left for the owner
-  (five packages imported but not declared, the audit advisories) are decisions, not 12e work, and are listed in
-  the 12d hand-off. Check `ListAgents` for a peer session before editing.
+  finding G's cache-participation rule goes into Architecture.md). Check `ListAgents` for a peer session before
+  editing.
 - **Read next:** [stage-12d-hand-off.md](execution-strategy/stage-12d-hand-off.md) (its closing notes first), then
   the 12e definition in [phase-12-plan.md](execution-strategy/phase-12-plan.md#12e-documentation-and-packaging).
 
@@ -159,6 +161,21 @@ tests have to exist before the review's refactors land, not a phase after them. 
 [Phase 12 scope](execution-strategy/phase-12-plan.md#phase-12-scope) for the strands, the decisions to take, and the exit criteria. The decisions taken at the
 start of the phase, the coverage inventory, the review findings list and the split into stages 12a–12f, each with its
 own gate and hand-off, are in [Phase 12 baseline](execution-strategy/phase-12-plan.md#phase-12-baseline).
+
+**Phase 13: build time and package size — PLANNED (added 2026-09-24).** Added by the owner during 12d, after
+Phase 12 was already the release gate: "I want to look at the build time and the build size for cucumber-tsflow.
+I wonder if there's ways we can improve it." Not an item from the table, and not about a consumer's test run,
+which Phases 1 to 11 covered; this is about the package itself. Scope, to be defined properly when the phase
+starts: (1) **build time**, what `yarn build` costs (`genversion`, `tsc --build`, the `.mjs` copies) and what a
+watch build costs per change, measured before anything is changed; (2) **package size**, the packed tarball's
+bytes and file count (12e's packed-tarball smoke test produces the tarball), the module count and bytes a
+consumer loads for `import { binding }` and for the CLI, and the runtime dependency tree's install footprint,
+with candidates such as declaration-only files, unused exports, and dependencies that could be optional; (3)
+**dependency health as a standing check**, which 12d started: `yarn npm audit` clean, `yarn install` without
+warnings (ESLint 9 is deprecated on the registry; the ESLint 10 migration is the first item), no undeclared
+imports, no unused declared dependencies, each re-checked with a script that can run in CI. Runs after 12f
+because it changes what is measured and shipped, and the release should go out first from a tree the matrix and
+the UIS measurement have already judged.
 
 ## Document map
 

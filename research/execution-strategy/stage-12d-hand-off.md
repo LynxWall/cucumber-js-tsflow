@@ -12,7 +12,11 @@ complete and its gate is met.**
 - Branch `2026-09-speed-enhancements`. 12d is one commit, `0dcbff3`, squashed from four working commits
   (strict and the gates; the 12c leftovers; the spelling pass; the dependency audit) on top of `1d33fa7`, the 12c
   group 6 documentation commit. The tree of the squashed commit is byte-identical to the last working commit.
-  This documentation commit follows it.
+  Its documentation commits follow it (`b396a93`, `5bbaf95`). Then `808df53`, a follow-up the owner asked
+  for on reading the hand-off: the five undeclared packages declared, `short-uuid` and the unused
+  `@jsdevtools/npm-publish` removed, the audit advisories cleared (see "The dependency audit"); the same cadence
+  held after it (`yarn build`, `yarn typecheck`, `yarn lint`, 261 unit tests, `yarn test:node:cjs-esbuild` 31 of
+  31) and the full matrix ran again: green on all sixteen variants, counts unchanged (18, 18, 31, 31, 18, 18, 25, 25, 30, 30, 30, 30, 31, 31, 27, 27).
 - The cadence held after each working commit: `yarn build` with no stray `.js` under `src/`, `yarn typecheck`
   clean, `yarn lint` clean, `yarn test:unit` green at **261 tests**, and one spec variant: `yarn
   test:node:cjs-esbuild` (31 of 31) after each, `yarn test:node:exp-esbuild` (31 of 31) as well after the
@@ -153,21 +157,26 @@ declare it themselves).
 | `typescript` | kept | No direct import, but `ts-node-maintained` declares it a peer (`>=2.7`) and the `ts-node`, `ts-vue`, `ts-node-esm` and `ts-vue-esm` transpilers compile with it. |
 | `jsdom` | kept | Reached only through `jsdom-global`, which the three Vue transpilers and `vue-jsdom-setup.mjs` import and which declares `jsdom >=10.0.0` as its peer dependency. |
 
-**Found by the same check and left for the owner: five packages are imported but not declared.** They resolve
-today because Yarn hoists them into the root `node_modules` of this monorepo, and in a pnpm consumer because pnpm
-hoists transitive packages into `node_modules/.pnpm/node_modules`, where every package can see them. Declaring
-them is adding dependencies, which is the owner's call, so nothing was changed:
+**Found by the same check: five packages were imported but not declared.** They resolved only because Yarn hoists
+them into the root `node_modules` of this monorepo, and in a pnpm consumer because pnpm hoists transitive packages
+into `node_modules/.pnpm/node_modules`, where every package can see them; a strict layout would not resolve them.
+The hand-off first listed them as a decision for the owner (declaring a package is adding a dependency); the owner
+read it the same day and asked for them to be fixed, so the follow-up commit `808df53` declares them:
 
-| Package | Imported by | Arrives today through | Suggested |
+| Package | Imported by | Arrived through | Declared as |
 | --- | --- | --- | --- |
-| `@cucumber/messages` | 17 files (the runtime, the formatters, `api/`, `bindings.ts`) | `@cucumber/cucumber` 12.7.0 pins `32.0.1` | declare at `32.0.1` |
-| `@cucumber/gherkin` | `cli/argv-parser.ts`, `gherkin/gherkin-feature.ts` | `@cucumber/cucumber` pins `38.0.0` | declare at `38.0.0` |
-| `@cucumber/cucumber-expressions` | `api/selective-load.ts` | `@cucumber/cucumber` pins `19.0.0` | declare at `19.0.0` |
-| `xmlbuilder` | `formatter/junit-bamboo-formatter.ts` | `@cucumber/junit-xml-formatter` 0.9.0 (a dependency of `@cucumber/cucumber`) wants `^15.1.1` | declare at `~15.1.1` |
-| `vue` (`vue/compiler-sfc`, and a type import in `types/vue-shim.d.ts`) | `transpilers/vue-sfc-compiler.ts` | the Vue spec workspaces (3.5.13); a consumer's own `vue` | an optional peer dependency (`>=3`), since only the Vue transpilers need it and every Vue consumer has it |
+| `@cucumber/messages` | 17 files (the runtime, the formatters, `api/`, `bindings.ts`) | `@cucumber/cucumber` 12.7.0 pins `32.0.1` | dependency `32.0.1` |
+| `@cucumber/gherkin` | `cli/argv-parser.ts`, `gherkin/gherkin-feature.ts` | `@cucumber/cucumber` pins `38.0.0` | dependency `38.0.0` |
+| `@cucumber/cucumber-expressions` | `api/selective-load.ts` | `@cucumber/cucumber` pins `19.0.0` | dependency `19.0.0` |
+| `xmlbuilder` | `formatter/junit-bamboo-formatter.ts` | `@cucumber/junit-xml-formatter` 0.9.0 (a dependency of `@cucumber/cucumber`) wants `^15.1.1` | dependency `~15.1.1` |
+| `vue` (`vue/compiler-sfc`, and a type import in `types/vue-shim.d.ts`) | `transpilers/vue-sfc-compiler.ts` | the Vue spec workspaces (3.5.13); a consumer's own `vue` | optional peer dependency `>=3.0.0` (`peerDependenciesMeta`), since only the Vue transpilers need it and every Vue consumer has it; `yarn install` prints no peer warning |
 
-**`yarn npm audit --all --recursive`: 19 advisories, all in transitive packages; none is fixed here.** Grouped
-by how they reach the tree:
+The exact pins match `@cucumber/cucumber`'s so one copy of each is installed; when `@cucumber/cucumber` is next
+upgraded, these three move with it (a mismatch would install two copies of `@cucumber/messages` and the two
+would not share types).
+
+**`yarn npm audit --all --recursive`: 19 advisories before, none after the follow-up.** How each was cleared, by
+the path it took into the tree:
 
 | Package (installed) | Severity | Fixed in | Path |
 | --- | --- | --- | --- |
@@ -185,12 +194,30 @@ by how they reach the tree:
 | `js-cookie` 3.0.5 | high | >=3.0.7 | `@vue/test-utils` (spec workspaces) |
 | `validator` 13.15.0 | high | >=13.15.22 | `class-validator` (the `node-exp` and `node-exp-esm` spec workspaces) |
 
-What would clear them, for the owner to accept or decline: `short-uuid` 6.0.3 no longer depends on `uuid` at
-all (a major bump of a library dependency; its `generate()` and translator API should be checked before
-upgrading); the rest are resolvable inside their declared ranges, so a `yarn up -R <package>` per row would
-move only the lockfile, but it changes what the matrix installs and was not run unasked. Nothing in the list is
-reachable from the library's published code path except through `@cucumber/cucumber`, `jsdom`, `glob`,
-`ts-node-maintained` and `short-uuid`, and a consumer resolves those trees for itself.
+- Seventeen were resolvable inside their declared ranges and were moved with one `yarn up -R` over the package
+  names, which touches only `yarn.lock` (`brace-expansion`, `diff`, `form-data`, `semver`, `ws`, `yaml`,
+  `picomatch`, `ajv`, `flatted`, `js-yaml`, `@humanfs/node`, `postcss-selector-parser`, `nanoid`, `postcss`,
+  `js-cookie`, `validator`, and `uuid` as far as `short-uuid` allowed).
+- `uuid` 9 (moderate) reached the library through `short-uuid`, whose 6.0.3 drops `uuid` but also replaces the
+  translator API the decorators called (`createTranslator` / `generate` instead of a default export). The
+  decorators used it only to mint a unique `cucumberKey` per binding, a value that is never parsed and serves
+  only as a map key, so `short-uuid` is removed and the key is `crypto.randomUUID()` (Node 22 has it). The two
+  unit tests that build keys by hand (`selective-load.test.ts`, `support-reloader.test.ts`) never depended on
+  the format.
+- `tar` 6.2.0 (high) came only through the `@jsdevtools/npm-publish` devDependency, which nothing in the
+  repository runs: `release.yml` uses the `JS-DevTools/npm-publish@v3` GitHub Action and `publish.yml` runs `npm
+  publish --provenance` directly. The devDependency is removed. (Its current version, 4.1.5, still pins a
+  vulnerable `tar` 7.5.7, so upgrading would not have helped.)
+- `@eslint/plugin-kit` 0.2.8 (low) needed ESLint 9.39, which carries `^0.4.1`; the root devDependency moved
+  from `~9.22.0` to `~9.39.5`, inside `@vue/eslint-config-typescript`'s peer range (`^9.10.0`). ESLint 9 is
+  marked deprecated on the registry (ESLint 10 is current), which `yarn install` now says once; the ESLint 10
+  migration is a dev-tooling major and belongs to Phase 13. The newer ESLint also reports unused disable
+  directives: the six `no-var` ones in `src/types/global.d.ts` and `test/globals.d.ts` were unused (the rule no
+  longer fires there) and are removed, so `yarn lint` is clean with two fewer files carrying a disable.
+
+Nothing on the list was reachable from the library's published code path except through `@cucumber/cucumber`,
+`jsdom`, `glob`, `ts-node-maintained` and `short-uuid`; a consumer resolves those trees for itself, and only the
+`short-uuid` path is one the package controlled.
 
 ## Notes specific to 12e and the owner
 
@@ -206,8 +233,8 @@ reachable from the library's published code path except through `@cucumber/cucum
   both READMEs list **Parallel preload** as a feature, the root README's transpile-cache paragraph mentions
   `parallelLoad` preload threads, finding G's cache-participation rule goes into Architecture.md, and the shipped
   agent skill is re-read against the tree (unchanged by this stage, see above).
-- **For the owner, decisions this stage surfaced and did not take:** the five undeclared packages and the audit
-  table above; finding P from 12c (the compile cache, kept as shipped, may still be dropped); the 12c candidate
+- **For the owner, decisions this stage surfaced and did not take:** finding P from 12c (the compile cache,
+  kept as shipped, may still be dropped); the 12c candidate
   of a short retry on `EPERM`/`EBUSY` in `SelectiveLoadSession.writeIndex()` and `transpile-cache.ts`'s
   `writeEntry` for the Windows unit-test flake seen twice in 12c (not seen in this stage's eight `yarn test:unit`
   runs); the 12c observation that `esm/esbuild.mjs` and `esm/loader-utils.mjs` each call `tsconfig-paths`'
@@ -227,4 +254,8 @@ reachable from the library's published code path except through `@cucumber/cucum
 - The commit workflow decided in 12c (small commits inside a stage, one squashed commit before the hand-off and
   before any push, no push of working commits) was followed: four working commits, squashed to `0dcbff3`
   on top of `1d33fa7` with a byte-identical tree, then this documentation commit, then the push. Nothing already
-  pushed was rewritten.
+  pushed was rewritten. The follow-up (`808df53`) came after the push, at the owner's request, and is its
+  own commit rather than a rewrite of `0dcbff3`.
+- **Phase 13 was added to the rollout at the owner's request** while this stage's follow-up was in progress:
+  build time and package size for cucumber-tsflow, with dependency health (advisories, install warnings, the
+  ESLint 10 migration) folded in. It is defined in the strategy's phased plan and starts after 12f.

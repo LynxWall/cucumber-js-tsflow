@@ -325,7 +325,7 @@ within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look
 **Gate:** `typecheck` and `lint` clean with no new disables; zero British spellings in `src` and the documents;
 every dependency decided.
 
-**Status: COMPLETE (2026-09-24), committed as `0dcbff3`.** The 21 strict errors fixed and `strict: true` on; `typecheck` (library and unit-test program) and `lint` (no `--fix`; `lint:fix` beside it) added and run by CI after the build; `no-undef` off for TypeScript files and the one disable it caused removed; 169 spelling replacements in 32 files with the three renamed identifiers checked for consumers; `import-sync` and `tslib` removed, `@types/node`, `typescript` and `jsdom` kept with reasons, five packages found imported but undeclared and left for the owner with the audit's nineteen advisories; the 12c leftovers landed. Boundary matrix green on all sixteen variants. See [Stage 12d hand-off](stage-12d-hand-off.md).
+**Status: COMPLETE (2026-09-24), committed as `0dcbff3`.** The 21 strict errors fixed and `strict: true` on; `typecheck` (library and unit-test program) and `lint` (no `--fix`; `lint:fix` beside it) added and run by CI after the build; `no-undef` off for TypeScript files and the one disable it caused removed; 169 spelling replacements in 32 files with the three renamed identifiers checked for consumers; `import-sync` and `tslib` removed, `@types/node`, `typescript` and `jsdom` kept with reasons; five packages found imported but undeclared were declared in a follow-up commit the same day at the owner's request, and the audit's nineteen advisories were cleared with it (`short-uuid` replaced by `crypto.randomUUID()`, the unused `@jsdevtools/npm-publish` devDependency removed, ESLint to 9.39, the rest re-resolved inside their ranges; `yarn npm audit` reports none); the 12c leftovers landed. Boundary matrix green on all sixteen variants. See [Stage 12d hand-off](stage-12d-hand-off.md).
 
 #### 12e: Documentation and packaging
 
@@ -372,8 +372,10 @@ UIS testbed; CONTRIBUTE.md and CLAUDE.md match the scripts.
 - **(added) Release checklist**, written before this stage starts: the version decision (the `[Unreleased]`
   section deprecates but removes nothing, which reads as a minor release, but the scenario-context lookup change
   under "Changed" is a behavior change the owner should weigh), the CHANGELOG date and heading, the tag, and how
-  publish runs (`@jsdevtools/npm-publish` is in the root devDependencies; check for a publish workflow). One box
-  is the shipped agent skill, read once more against the tree that is tagged.
+  publish runs (12d found the `@jsdevtools/npm-publish` devDependency unused and removed it: `release.yml` uses
+  the `JS-DevTools/npm-publish@v3` GitHub Action and `publish.yml` runs `npm publish --provenance`; the checklist
+  decides which of the two is the release path). One box is the shipped agent skill, read once more against the
+  tree that is tagged.
 - **(added)** Real-console verification of the startup output with the `verify-console-output` skill, after the
   `color` → `color` renames in `utils/startup-progress.ts`.
 - A final `test:all` on the matrix, then tag and publish.

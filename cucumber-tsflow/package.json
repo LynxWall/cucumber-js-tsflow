@@ -107,7 +107,8 @@
 		"shx": "0.4.0"
 	},
 	"scripts": {
-		"build": "genversion --es6 --semi src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs",
+		"build": "shx rm -rf lib && genversion --es6 --semi src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs && yarn build:copy-docs",
+		"build:copy-docs": "shx cp ../README.md ../CHANGELOG.md ../LICENSE .",
 		"build:copy-mjs": "yarn copy:root-mjs && yarn copy:api-mjs && yarn copy:transpiler-mjs && yarn copy:utils-mjs",
 		"copy:root-mjs": "shx cp src/*.mjs lib/",
 		"copy:api-mjs": "shx cp src/api/*.mjs lib/api/",

@@ -63,6 +63,9 @@ The `node_modules` used is the nearest one at or above the working directory. Th
 source, the options and every tool version, so a stale entry is never served; clearing it is only needed to
 reclaim disk space or to rule the cache out while investigating. `TSFLOW_TRANSPILE_CACHE_DIR` moves it.
 
+The package's [performance and diagnostics guide](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md)
+describes the caches, the timing report, selective loading and watch mode in full.
+
 ## Environment variables
 
 | Variable | Effect |

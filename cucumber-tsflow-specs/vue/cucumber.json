@@ -1,4 +1,12 @@
 {
+	"bench": {
+		"transpiler": "es-vue",
+		"paths": ["../features/**/*.feature"],
+		"require": ["./src/step_definitions/**/*.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@vue"
+	},
 	"esvue": {
 		"transpiler": "es-vue",
 		"paths": ["../features/**/*.feature"],

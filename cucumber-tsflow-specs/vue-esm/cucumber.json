@@ -1,4 +1,12 @@
 {
+	"bench": {
+		"transpiler": "es-vue-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@vue"
+	},
 	"vue-esm": {
 		"transpiler": "ts-vue-esm",
 		"paths": ["../features/**/*.feature"],

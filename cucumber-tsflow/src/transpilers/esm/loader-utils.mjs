@@ -15,8 +15,13 @@ const { recordImportEdge, versionedUrl, withoutQuery, addReloadListener } = requ
 const { toPosixPath } = require('../../utils/paths.js');
 // The Vue SFC compiler and the transpile cache are the CJS build's too, so every transpiler in a thread shares
 // one compiler instance and one set of cache counters; `loadVue` caches the compiled component together with
-// its import transform, which is why it takes the uncached compile and the key and wraps them itself.
-const { compileVueSFCUncached, resolveVueSFCOptions, vueSfcCacheKey } = require('../vue-sfc-compiler.js');
+// its import transform, which is why it takes the uncached compile and the key and wraps them itself. The
+// compiler is required on the first `.vue` load rather than here: it imports `vue/compiler-sfc`, and `vue` is an
+// optional peer dependency that a Node-only project running `es-node-esm` does not have.
+let vueSfcCompiler;
+function getVueSfcCompiler() {
+	return (vueSfcCompiler ??= require('../vue-sfc-compiler.js'));
+}
 const { withTranspileCache } = require('../transpile-cache.js');
 
 // Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
@@ -324,6 +329,7 @@ function transformImports(code, parentURL) {
 
 export function loadVue(url) {
 	if (verbose) loggerLoad.checkpoint('loadVue', { url });
+	const { compileVueSFCUncached, resolveVueSFCOptions, vueSfcCacheKey } = getVueSfcCompiler();
 
 	let code;
 	try {

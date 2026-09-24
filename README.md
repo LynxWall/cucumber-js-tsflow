@@ -12,6 +12,39 @@ This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. 
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
 
+## Release Updates (7.8.0)
+
+A performance release. Startup on a large suite is the target: nothing about writing step definitions changes, and every published option, flag and export still works. The detail is in the [CHANGELOG](CHANGELOG.md) and in the new [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide.
+
+### Faster startup
+
+- **The esbuild ESM loaders run in-thread** with `module.registerHooks()` on Node 22.15 or later, and they call esbuild directly, without a `ts-node` service or a loader-thread round trip per module.
+- **On-disk transpile cache** for the esbuild transpilers and the Vue SFC compiler (`transpileCache`, on by default): an unchanged tree reads its transpiled code back instead of transpiling it, and parallel workers share one transpile per file.
+- **Callsite capture is lazy**, and callsite resolution no longer issues a synchronous XMLHttpRequest per support file under jsdom, which was the largest single startup cost in Vue suites.
+- Feature files are parsed and filtered before the support code loads; parallel workers receive the resolved support-file lists instead of expanding the globs again; the `cucumber-tsflow` command enables Node's compile cache.
+
+### New features
+
+- **Selective loading** (`selectiveLoad`, off by default): a filtered run loads only the support files its scenarios use.
+- **Watch mode** (`--watch`): one resident process that reruns on file changes or Enter, keeping the loaded modules between runs.
+- **Startup progress**: one line per startup phase with a spinner, a bootstrap notice, and `TSFLOW_THEME` to pick the labels or turn them off.
+- **Startup timing report** with `TSFLOW_TIMING=true`.
+- **`@lynxwall/cucumber-tsflow/bindings`** entry point: the decorators, the context types and the CucumberJS helpers without the formatters and the CLI.
+- **An agent skill** ships with the package (see [Install](#install-lynxwallcucumber-tsflow)).
+
+### Fixed
+
+- A `BeforeAll` or `AfterAll` hook that throws fails the run, as it does in CucumberJS.
+- Steps always receive the running scenario's context; the previous lookup could resolve another scenario's context when a step pattern also matched text in another pickle.
+- Step locations in reports and ambiguity errors under the esbuild ESM loaders map to the TypeScript line; a support file that fails to load is reported once; `reloadSupport()` builds a complete library.
+- Every package the library imports is declared, so strict `node_modules` layouts such as pnpm's resolve them.
+- `es-node-esm` starts in a project that does not have `vue` installed; the Vue SFC compiler now loads on the first `.vue` file.
+
+### Deprecated and removed
+
+- `parallelLoad` / `--parallel-load` is accepted and ignored, with a deprecation notice: the parallel preload it enabled cost more than it saved once the transpile cache existed, and it was removed. The option goes in the next major version.
+- The internal `lib/transpilers/esm/esbuild-transpiler` export, used only by the removed ts-node routing of the esbuild ESM loaders, is gone; use `es-node-esm` or `es-vue-esm`.
+
 ## Release Updates (7.7.0)
 
 This release focuses on correctness, performance, and code quality improvements across the codebase.
@@ -26,7 +59,7 @@ This release focuses on correctness, performance, and code quality improvements 
 
 ### New Features
 
-- **Parallel preload** (`parallelLoad` configuration option) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
+- **Parallel preload** (`parallelLoad` configuration option; removed in 7.8.0, see above) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
 
 ### Performance and Efficiency
 
@@ -164,6 +197,8 @@ yarn add --dev @lynxwall/cucumber-tsflow
 ```
 
 **Note**: Latest updates with context management requires use of cucumber-tsflow to execute tests. As a result, you do not need to install @cucumber/cucumber. All necessary cucumber packages are installed as dependencies of cucumber-tsflow. If you do have @cucumber/cucumber in dependencies please remove the reference to avoid conflicts.
+
+**Agent skill**: the package ships a skill for coding agents in `skills/cucumber-tsflow/`, following the [skills-npm](https://github.com/antfu/skills-npm) convention. Run `npx skills-npm` in your project to link it into your agents' skill folders; an agent then reads the binding rules, the configuration options and the CLI of the version you installed, and the skill is updated with every release.
 
 ### Create .feature files to describe your specifications
 
@@ -444,105 +479,15 @@ echo $LastExitCode
 echo $?
 ```
 
-### Startup progress
+### Performance and diagnostics
 
-Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output, cucumber-tsflow prints one line per startup phase so a large suite never sits silent while it transpiles and loads support code. The phases, in order: resolving the support-code globs and plugins, parsing the feature files into scenarios, transpiling and loading the support files, and launching (BeforeAll hooks, or the parallel workers). Each line starts with a spinner in a fixed slot, then a themed label and a plain-language note on what is actually happening, and ends with a running count (feature files parsed, support files loaded, parallel workers ready). The line is redrawn in place while the phase is open; when it completes the spinner becomes a check mark and the count is replaced by a summary and the elapsed time:
-
-```text
-[ ✓ ] Prepping the cucumbers — resolving support-code globs and plugins 312 support files, 84 feature files, 41ms
-[ ✓ ] Making the brine — parsing 84 feature files into scenarios 6 scenarios to run, 212ms
-[ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm 41/312
-```
-
-The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms, and its color walks a twelve-color wheel (blue, green, yellow, orange, red, purple, with a blend between each pair) one step every five frames. A new color enters at the left bracket and sweeps across the glyph and the right bracket over three frames, and because five is not a multiple of the four frames in a rotation the sweep starts one glyph later each time, drifting around the turn like an offbeat and coming back into step every twenty frames. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
-
-The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over.
-
-Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears; while nothing has completed yet it explains why (the first support file pulls in its whole import graph before it counts). When work has been quick again for a while after a stall that long — five files in a row, each within a second of the last, since the unit that ended the stall is often followed by another slow one — a relief message takes the slot instead:
-
-```text
-[ - ] Packing the jars — transpiling and loading 312 support files with es-node-esm (2/312)
-      phew, that was a big jar. Back to the quick ones
-```
-
-The theme is chosen with `TSFLOW_THEME`:
-
-| Value         | Effect                                                                                                                           |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| unset / other | Default pickling theme shown above (labels and check mark in muted steel blue)                                                   |
-| `lotr`        | The Lord of the Rings: the Fellowship assembles, the beacons of Gondor are lit, the Rohirrim muster (labels and check mark in gold) |
-| `off`         | No startup progress output                                                                                                       |
-
-```bash
-TSFLOW_THEME=lotr npx cucumber-tsflow -p default
-```
-
-The spinner, counter and message line are only drawn when stdout is an interactive terminal. In CI logs and when stdout is redirected to a file the output is append-only: the phase line, any messages, and the summary. Anything your support code writes to stdout while a phase is open (for example a `console.log` in a `BeforeAll` hook) lands inside that line and can displace the spinner, exactly as it would land among the formatter's own progress dots.
-
-Before any of that, the `cucumber-tsflow` command prints a plain line as its very first action, `Bootstrapping cucumber-tsflow 7.7.2 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431 ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed gray as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
-
-### Startup timing diagnostics
-
-Set `TSFLOW_TIMING=true` to find out where startup time goes. When the run completes, cucumber-tsflow prints a report to stderr with the wall-clock time of each startup phase (configuration, support-code require/import, registration, gherkin parsing, test execution), the same phases for every parallel child process, per-context file totals, and a table of the 25 slowest files by transpile, ESM load, and top-level require/import time.
-
-```bash
-TSFLOW_TIMING=true npx cucumber-tsflow -p default
-```
-
-The report is diagnostic output only and does not change how tests run. Without the variable set, the instrumentation is inactive. `TSFLOW_VERBOSE=true` remains available for untimed checkpoint logging.
-
-### Compile cache
-
-On Node 22.8 or later the `cucumber-tsflow` command enables Node's module compile cache, so the V8 bytecode for the library, its dependencies and your transpiled support code is reused across runs, and parallel child processes and preload threads share the same cache directory. Set `NODE_DISABLE_COMPILE_CACHE=1` to turn it off, or `NODE_COMPILE_CACHE=<dir>` to choose where it lives (Node's default is a `node-compile-cache` directory under the OS temp directory).
-
-### Transpile cache
-
-The esbuild transpilers (`es-node`, `es-vue`, `es-node-esm`, `es-vue-esm`) and the Vue SFC compiler behind every Vue transpiler store their output on disk, so a run whose sources have not changed reads the transpiled code back instead of transpiling it, and the coordinator, its parallel child processes and any `parallelLoad` preload threads share one cold transpile of each file instead of each doing their own. Entries are content-addressed: the key is a hash of the file's source and path, the transpiler options (including the decorator mode and the Vue `<style>` flag), the tsconfig `paths` the ESM loaders bake into their output, the esbuild and Vue compiler versions, and the cucumber-tsflow version, so any change to the source or the tooling is a new key and a stale entry is never served. The cache lives in `node_modules/.cache/cucumber-tsflow/transpile` under the nearest `node_modules` directory at or above the working directory (or under the OS temp directory when there is none) and is bounded to 512 MB, oldest entries evicted first. The load-phase progress line reports how many transpiles were served from it, and the `TSFLOW_TIMING` report has `transpile-cache:hit` and `transpile-cache:miss` rows whose `calls` column is the count.
-
-`--no-transpile-cache` (or `transpileCache: false` in a profile, or `TSFLOW_TRANSPILE_CACHE=false` in the environment) transpiles everything from source and neither reads nor writes the cache; `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` chooses where it lives. The TypeScript output of the `ts-node` and `ts-vue` transpilers comes from ts-node's TypeScript compiler and is not cached; their `.vue` compilation is.
-
-### Selective loading
-
-Running one scenario in a large suite normally costs the same startup as running all of them: every support file is transpiled and evaluated before cucumber-tsflow finds out that the scenario needed three of them. With `selectiveLoad: true` (or `--selective-load`, or `TSFLOW_SELECTIVE_LOAD=true`), a run that selects a subset of scenarios — with `--name`, `--tags`, a feature file or a `file:line` on the command line, or a profile whose `paths` cover part of the suite — loads only the support files it needs. Feature files are parsed first, and the selected steps are matched against an index of step patterns that earlier runs wrote to `node_modules/.cache/cucumber-tsflow/selective-load` (beside the transpile cache, one file per configuration). The load-phase progress line says what happened: `transpiling and loading 14 of 214 support files with es-vue-esm (200 skipped: not used by the selected scenarios)`.
-
-What is loaded, and what is not:
-
-- A support file is loaded when any selected step's text matches one of the step patterns it registered, matched with the same Cucumber expression and regular expression classes CucumberJS uses and with the parameter types the support code defines. Every file with a matching pattern is loaded, so an ambiguity or a tag-scoped alternative in another file is present exactly as in a full run.
-- A support file is always loaded when it registered anything other than step definitions: a hook (`@before`, `@after`, `@beforeAll`, …, or the CucumberJS functions), a parameter type, a World constructor, a default timeout, a definition wrapper, or nothing at all. Set-up files, `World` files and context classes therefore always load.
-- A support file is loaded when it is new to the index, or when any module in its import graph — the file itself, the modules it imports, and theirs — has changed since the index recorded it (by modification time and size). The graph comes from Node's own module cache for `require` and from the ESM loader's resolve hook for `import`, so a pattern that lives in a shared helper is attributed to every file that imports it.
-- If any selected step matches no indexed pattern, every support file is loaded, so an undefined step is reported exactly as a full run would report it, and the progress line names the step.
-
-The first run with the option on loads everything and writes the index; every run refreshes the records of the files it loaded and keeps the validated records of the files it skipped, so the index tracks edits without ever being rebuilt from scratch. Parallel child processes load the same subset as the coordinator.
-
-The option is off by default because it rests on one assumption the tool cannot check: that a support file which only defines step definitions has no other effect on the run. A file that patches a global at module level, registers a Vue plugin, or otherwise sets something up as a side effect of being imported — and also defines steps — is skipped when its steps are not selected. Move such set-up into a file of its own (which, having no step definitions, always loads) or into a hook. Two smaller limits: step patterns that are not literals in the module graph (read from a file or the environment) are not tracked, and step definitions inside `node_modules` are not either. Selective loading is unavailable, and every file is loaded, with the `ts-node-esm` and `ts-vue-esm` transpilers, with any third-party `loader`, and under `TSFLOW_ESM_HOOKS=async`: those loaders run on Node's loader hooks thread, where the import graph cannot be observed; the progress line says so. Report formatters that list step definitions (`usage`, the message stream) see only the definitions that were loaded.
-
-Startup phases with `TSFLOW_TIMING=true`: `selective-load:plan` is the time to read the index and match the selected steps, `selective-load:index` the time to record the loaded files' import graphs and write it back.
-
-### Watch mode
-
-`cucumber-tsflow --watch` (or `-w`, or `watch: true` in a profile, overridden by `--no-watch`) runs the configuration, then stays running and runs it again whenever a feature file, a support file or a module the support code loaded changes, or when you press Enter. `q` (or Ctrl-C) quits. Any filter on the command line (`--name`, `--tags`, a feature file or `file:line`) applies to every run, so the inner loop for one scenario is `cucumber-tsflow -p default --name "the scenario" --watch`.
-
-The point is what the process keeps between runs. A fresh process spends most of a filtered run's startup loading modules that never change between two edits: the test framework, jsdom, Vue and a component library, the project's shared helpers. In watch mode those stay loaded, and a rerun evaluates again only what has to run again:
-
-- support files that registered anything on the previous run — step definitions, hooks, parameter types, a World constructor, a default timeout or a definition wrapper — because CucumberJS's library is rebuilt from scratch for every run and their decorators have to fire again. A set-up file that registered nothing (the jsdom initialization, say) is evaluated once and kept;
-- the files that changed, every project module that imports or requires them, directly or through other modules, and every new file;
-- any module that applies `@binding` decorators without being a support file itself (a helper imported by one).
-
-The load-phase progress line reports the decision: `transpiling and loading 216 support files with es-vue-esm (rerun 3: 24 evaluated again, 192 kept loaded, 2 other modules)`. Selective loading composes with it: with `selectiveLoad` on, a rerun evaluates only the files the selected scenarios need among those. Because a module that must load again cannot be removed from Node's ES module map, an ES module evaluated again is imported under a `?tsflow=<n>` query, which is what its URL looks like in a stack trace; reported step locations are unaffected.
-
-Watch mode changes nothing about how a run executes and each run writes its report files as usual. What it cannot undo is the resident state of the modules it keeps: module-level state in a kept module persists between runs, and a class re-evaluated in one run is not `instanceof`-compatible with an instance a module-level singleton kept from the previous one (scenarios create their instances afresh, so this only matters to code that caches instances across runs). If a rerun behaves differently from a fresh run, quit and start again.
-
-The same goes for memory. Whatever a run leaves behind in a kept module — components mounted into the jsdom `document` and never unmounted, spies and mocks registered with a test framework shim and never reset, caches in a store — is discarded when a fresh process exits but stays in a resident one, and the next run adds its own. The status line after each run shows the heap the next run starts from (`Run took 41.5s, heap 2.5 GB`; measured after a full collection when Node runs with `--expose-gc`, as it stands otherwise). If that figure climbs run after run, the suite is keeping state between scenarios: clean it up in an `@after` hook (for example `cleanup()` from a testing library, and whatever resets the mocks), or accept the growth and start with `NODE_OPTIONS=--max-old-space-size=8192`, or use watch mode for what it is meant for, a filtered inner loop, and run the whole suite in a fresh process. A suite whose scenarios clean up after themselves stays flat. Files in a directory that held no known file when the last run finished are not watched until a rerun picks them up: press Enter. With the `ts-node-esm` and `ts-vue-esm` transpilers, any third-party `loader`, or `TSFLOW_ESM_HOOKS=async`, the loader runs on Node's loader hooks thread, where modules cannot be reloaded in place, so watch mode still watches and reruns but each run is a fresh `cucumber-tsflow` process; the first line printed says so. `--exit`/`--force-exit` is ignored while watching.
-
-### ESM loader hooks
-
-On Node 22.15 / 23.5 or later the `es-node-esm` and `es-vue-esm` transpilers attach their `resolve` and `load` hooks with `module.registerHooks()`, so they run synchronously on the thread that is importing your support code instead of on a separate loader thread with a message round trip per module. They also transpile TypeScript with esbuild directly rather than through a `ts-node` service. On older Node versions the same loaders fall back to `module.register()`; set `TSFLOW_ESM_HOOKS=async` to force that behavior. `ts-node-esm` and `ts-vue-esm` always use `module.register()`, because ts-node's hooks are asynchronous.
+On a large suite most of a run is startup: transpiling and evaluating the support files and everything they import. cucumber-tsflow prints a progress line for each startup phase so that stretch is never silent, caches transpiled output on disk between runs (`transpileCache`, on by default), can load only the support files a filtered run needs (`selectiveLoad`), and can stay resident and rerun on file changes with the modules kept loaded (`--watch`). `TSFLOW_TIMING=true` prints a report of where the startup time went. All of it is described in [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md): each feature and its limits, where the caches live and how to clear them, every environment variable, and the repository's benchmark script.
 
 ## New Configuration options
 
 As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/configuration.md>
 
-In addition to cucumber configuration options the following two options have been added:
+In addition to cucumber configuration options the following options have been added:
 
 | Name                     | Type      | Repeatable | CLI Option                  | Description                                                  | Default |
 | ------------------------ | --------- | ---------- | --------------------------- | ------------------------------------------------------------ | ------- |
@@ -550,10 +495,10 @@ In addition to cucumber configuration options the following two options have bee
 | `debugFile`              | `string`           | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
 | `enableVueStyle`         | `boolean`          | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 | `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
-| `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the [transpile cache](#transpile-cache) replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
-| `transpileCache`         | `boolean`          | No         | `--transpile-cache` / `--no-transpile-cache` | Cache esbuild and Vue SFC transpiler output on disk between runs (see [Transpile cache](#transpile-cache)). | true    |
-| `selectiveLoad`          | `boolean`          | No         | `--selective-load` / `--no-selective-load` | On a filtered run, load only the support files whose step definitions the selected scenarios use, plus every file that registers anything else (see [Selective loading](#selective-loading)). | false   |
-| `watch`                  | `boolean`          | No         | `-w, --watch` / `--no-watch` | Stay running after the run and rerun on changes or Enter, keeping the support code loaded between runs (see [Watch mode](#watch-mode)). | false   |
+| `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the [transpile cache](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#transpile-cache) replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
+| `transpileCache`         | `boolean`          | No         | `--transpile-cache` / `--no-transpile-cache` | Cache esbuild and Vue SFC transpiler output on disk between runs (see [Transpile cache](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#transpile-cache)). | true    |
+| `selectiveLoad`          | `boolean`          | No         | `--selective-load` / `--no-selective-load` | On a filtered run, load only the support files whose step definitions the selected scenarios use, plus every file that registers anything else (see [Selective loading](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#selective-loading)). | false   |
+| `watch`                  | `boolean`          | No         | `-w, --watch` / `--no-watch` | Stay running after the run and rerun on changes or Enter, keeping the support code loaded between runs (see [Watch mode](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#watch-mode)). | false   |
 
 ### Transpiler and Vue3 supported
 

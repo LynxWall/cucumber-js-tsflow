@@ -1,4 +1,12 @@
 {
+	"bench": {
+		"transpiler": "es-node-esm",
+		"paths": ["../features/**/*.feature"],
+		"import": ["./src/step_definitions/**/*.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node-esm and not @cli-run and not @watch and not @reload"
+	},
 	"tsnodeesm": {
 		"paths": ["../features/**/*.feature"],
 		"import": ["./src/step_definitions/**/*.ts"],

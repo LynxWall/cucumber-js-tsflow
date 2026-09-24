@@ -12,6 +12,39 @@ This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. 
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
 
+## Release Updates (7.8.0)
+
+A performance release. Startup on a large suite is the target: nothing about writing step definitions changes, and every published option, flag and export still works. The detail is in the [CHANGELOG](CHANGELOG.md) and in the new [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide.
+
+### Faster startup
+
+- **The esbuild ESM loaders run in-thread** with `module.registerHooks()` on Node 22.15 or later, and they call esbuild directly, without a `ts-node` service or a loader-thread round trip per module.
+- **On-disk transpile cache** for the esbuild transpilers and the Vue SFC compiler (`transpileCache`, on by default): an unchanged tree reads its transpiled code back instead of transpiling it, and parallel workers share one transpile per file.
+- **Callsite capture is lazy**, and callsite resolution no longer issues a synchronous XMLHttpRequest per support file under jsdom, which was the largest single startup cost in Vue suites.
+- Feature files are parsed and filtered before the support code loads; parallel workers receive the resolved support-file lists instead of expanding the globs again; the `cucumber-tsflow` command enables Node's compile cache.
+
+### New features
+
+- **Selective loading** (`selectiveLoad`, off by default): a filtered run loads only the support files its scenarios use.
+- **Watch mode** (`--watch`): one resident process that reruns on file changes or Enter, keeping the loaded modules between runs.
+- **Startup progress**: one line per startup phase with a spinner, a bootstrap notice, and `TSFLOW_THEME` to pick the labels or turn them off.
+- **Startup timing report** with `TSFLOW_TIMING=true`.
+- **`@lynxwall/cucumber-tsflow/bindings`** entry point: the decorators, the context types and the CucumberJS helpers without the formatters and the CLI.
+- **An agent skill** ships with the package (see [Install](#install-lynxwallcucumber-tsflow)).
+
+### Fixed
+
+- A `BeforeAll` or `AfterAll` hook that throws fails the run, as it does in CucumberJS.
+- Steps always receive the running scenario's context; the previous lookup could resolve another scenario's context when a step pattern also matched text in another pickle.
+- Step locations in reports and ambiguity errors under the esbuild ESM loaders map to the TypeScript line; a support file that fails to load is reported once; `reloadSupport()` builds a complete library.
+- Every package the library imports is declared, so strict `node_modules` layouts such as pnpm's resolve them.
+- `es-node-esm` starts in a project that does not have `vue` installed; the Vue SFC compiler now loads on the first `.vue` file.
+
+### Deprecated and removed
+
+- `parallelLoad` / `--parallel-load` is accepted and ignored, with a deprecation notice: the parallel preload it enabled cost more than it saved once the transpile cache existed, and it was removed. The option goes in the next major version.
+- The internal `lib/transpilers/esm/esbuild-transpiler` export, used only by the removed ts-node routing of the esbuild ESM loaders, is gone; use `es-node-esm` or `es-vue-esm`.
+
 ## Release Updates (7.7.0)
 
 This release focuses on correctness, performance, and code quality improvements across the codebase.
@@ -26,12 +59,12 @@ This release focuses on correctness, performance, and code quality improvements 
 
 ### New Features
 
-- **Parallel preload** (`parallelLoad` configuration option) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
+- **Parallel preload** (`parallelLoad` configuration option; removed in 7.8.0, see above) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
 
 ### Performance and Efficiency
 
 - **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in favor of native `Array.prototype` equivalents.
-- **O(1) binding lookup** — added a `Map` index to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
+- **O(1) binding lookup** — added a `Map` index to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` lookups, replacing linear scans.
 - **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` with a lookup map.
 - **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext` with a single spread call, removing the previous limit of nine context objects.
 - **Extracted `replaceFormatAlias` helper** — deduplicated two identical format-replacement loops in `load-configuration.ts`.
@@ -164,6 +197,8 @@ yarn add --dev @lynxwall/cucumber-tsflow
 ```
 
 **Note**: Latest updates with context management requires use of cucumber-tsflow to execute tests. As a result, you do not need to install @cucumber/cucumber. All necessary cucumber packages are installed as dependencies of cucumber-tsflow. If you do have @cucumber/cucumber in dependencies please remove the reference to avoid conflicts.
+
+**Agent skill**: the package ships a skill for coding agents in `skills/cucumber-tsflow/`, following the [skills-npm](https://github.com/antfu/skills-npm) convention. Run `npx skills-npm` in your project to link it into your agents' skill folders; an agent then reads the binding rules, the configuration options and the CLI of the version you installed, and the skill is updated with every release.
 
 ### Create .feature files to describe your specifications
 
@@ -444,11 +479,15 @@ echo $LastExitCode
 echo $?
 ```
 
+### Performance and diagnostics
+
+On a large suite most of a run is startup: transpiling and evaluating the support files and everything they import. cucumber-tsflow prints a progress line for each startup phase so that stretch is never silent, caches transpiled output on disk between runs (`transpileCache`, on by default), can load only the support files a filtered run needs (`selectiveLoad`), and can stay resident and rerun on file changes with the modules kept loaded (`--watch`). `TSFLOW_TIMING=true` prints a report of where the startup time went. All of it is described in [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md): each feature and its limits, where the caches live and how to clear them, every environment variable, and the repository's benchmark script.
+
 ## New Configuration options
 
 As mentioned, when using cucumber-tsflow to execute tests all of the configuration options documented here are supported: <https://github.com/cucumber/cucumber-js/blob/v12.7.0/docs/configuration.md>
 
-In addition to cucumber configuration options the following two options have been added:
+In addition to cucumber configuration options the following options have been added:
 
 | Name                     | Type      | Repeatable | CLI Option                  | Description                                                  | Default |
 | ------------------------ | --------- | ---------- | --------------------------- | ------------------------------------------------------------ | ------- |
@@ -456,7 +495,10 @@ In addition to cucumber configuration options the following two options have bee
 | `debugFile`              | `string`           | No         | `--debug-file`              | Path to a file with steps for debugging                      |         |
 | `enableVueStyle`         | `boolean`          | No         | `--enable-vue-style`        | Enable Vue `<style>` block when compiling Vue SFC.           | false   |
 | `experimentalDecorators` | `boolean`          | No         | `--experimental-decorators` | Enable TypeScript Experimental Decorators.                   | false   |
-| `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the on-disk transpile cache replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
+| `parallelLoad`           | `boolean \| number` | No         | `--parallel-load`           | Deprecated and ignored. Parallel preloading was removed because it made every run slower; the [transpile cache](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#transpile-cache) replaces it. A run that still sets it prints a deprecation notice; remove the option from your configuration. |         |
+| `transpileCache`         | `boolean`          | No         | `--transpile-cache` / `--no-transpile-cache` | Cache esbuild and Vue SFC transpiler output on disk between runs (see [Transpile cache](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#transpile-cache)). | true    |
+| `selectiveLoad`          | `boolean`          | No         | `--selective-load` / `--no-selective-load` | On a filtered run, load only the support files whose step definitions the selected scenarios use, plus every file that registers anything else (see [Selective loading](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#selective-loading)). | false   |
+| `watch`                  | `boolean`          | No         | `-w, --watch` / `--no-watch` | Stay running after the run and rerun on changes or Enter, keeping the support code loaded between runs (see [Watch mode](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md#watch-mode)). | false   |
 
 ### Transpiler and Vue3 supported
 
@@ -575,6 +617,8 @@ export default class MySteps {
     ...
 }
 ```
+
+Step-definition files can also import from `@lynxwall/cucumber-tsflow/bindings`, which exposes the decorators, the context classes and the CucumberJS support-code helpers (`DataTable`, `World`, `Status`, `defineParameterType`, …) without the formatters and CLI the package root also loads. It is the lighter import for support code; the package root remains the full API and re-exports everything in it.
 
 ## Step Definitions
 

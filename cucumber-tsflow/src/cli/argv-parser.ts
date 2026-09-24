@@ -186,7 +186,7 @@ const ArgvParser = {
 			)
 			.option('--no-watch', 'Run once and exit, overriding a profile that sets watch.')
 			.option(
-				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|TS-VUE-ESM|ES-NODE-ESM|ES-VUE-ESM>',
+				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|ES-NODE-ESM|TS-NODE-ESM|ES-VUE-ESM|TS-VUE-ESM>',
 				`built-in transpiler to use. ESxxx transpilers use esbuild and TSxxx transpilers use typescript.\n
 				Vue versions of the transpilers add a hook for .vue transforms and initialize jsdom globally.\n
 				Default: ESNODE (esbuild without Vue support)`

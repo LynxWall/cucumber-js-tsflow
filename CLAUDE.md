@@ -14,6 +14,8 @@ Yarn 3.5.0 workspaces monorepo:
 
 - [cucumber-tsflow/](cucumber-tsflow/) — the published library; all source under [cucumber-tsflow/src/](cucumber-tsflow/src/), compiled to `lib/`
 - [cucumber-tsflow-specs/](cucumber-tsflow-specs/) — 8 private spec workspaces covering the Node/Vue × CJS/ESM × TC39/experimental-decorator matrix, all sharing the feature files in [cucumber-tsflow-specs/features/](cucumber-tsflow-specs/features/)
+- [docs/](docs/) — user documentation beyond the README. [docs/performance-and-diagnostics.md](docs/performance-and-diagnostics.md) holds every performance feature, cache and environment variable; the root README keeps one paragraph that links to it, so new performance documentation goes there, not into the README
+- [scripts/](scripts/) — `yarn bench` ([scripts/benchmark.mjs](scripts/benchmark.mjs), the startup phases of a spec workspace over several runs) and `yarn smoke:tarball` ([scripts/smoke-test-tarball.mjs](scripts/smoke-test-tarball.mjs), the packed tarball installed and run in fresh CJS and ESM projects)
 
 ## Commands
 
@@ -30,8 +32,10 @@ All commands run from the repo root unless noted.
 | Format | `yarn format` |
 | Unit tests (`node --test` over [cucumber-tsflow/test/](cucumber-tsflow/test/), against the built `lib/`) | `yarn test:unit` |
 | Full test matrix (what CI runs) | `yarn test:all` |
+| Startup benchmark of a spec workspace (`--workspace`, `--runs`, `--cold`, `--report`) | `yarn bench` |
+| Packed-tarball smoke test (pack, install into fresh CJS and ESM projects, run a feature, type-check) | `yarn smoke:tarball` |
 
-There is **no root `yarn test` script** — CONTRIBUTE.md is out of date on this point. The tests are the unit tests under `cucumber-tsflow/test/` (Node's built-in runner with chai, importing the built `lib/`) and the spec workspaces, run through the built CLI, so **`yarn build` must succeed before any test command**.
+There is **no root `yarn test` script**. The tests are the unit tests under `cucumber-tsflow/test/` (Node's built-in runner with chai, importing the built `lib/`) and the spec workspaces, run through the built CLI, so **`yarn build` must succeed before any test command**.
 
 ### Running a subset of tests
 
@@ -58,6 +62,7 @@ Profiles live in each workspace's `cucumber.json` (e.g. `esnode`/`tsnode` in [cu
 
 - Always build with `tsc --build tsconfig.node.json` (i.e. via `yarn build`), never bare `tsc`. The base [cucumber-tsflow/tsconfig.json](cucumber-tsflow/tsconfig.json) has **no `outDir`** — it exists for editor/`--noEmit` type-checking. Bare `tsc` emits `.js`/`.js.map` into `src/`, which is wrong.
 - `yarn build` also runs `genversion` (regenerates [cucumber-tsflow/src/version.ts](cucumber-tsflow/src/version.ts)), and copies hand-written `.mjs` files from `src/` into `lib/`. A plain `tsc --build` alone is not a complete build.
+- `yarn build` copies `README.md`, `CHANGELOG.md` and `LICENSE` from the repo root into `cucumber-tsflow/`, where the package's `files` list picks them up. Edit the root files only; the copies are committed build output, and `cucumber-tsflow/README.md` must be byte-identical to the root README.
 - `src/transpilers/esm/*` is excluded from the TypeScript build; those are authored `.mjs` loaders copied verbatim.
 - After building, verify no stray `.js`/`.js.map` appeared under `src/` (legitimate exception: `src/wrapper.mjs`).
 - New public entry points need a matching key in the `exports` map of [cucumber-tsflow/package.json](cucumber-tsflow/package.json).

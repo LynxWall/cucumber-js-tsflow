@@ -1,4 +1,12 @@
 {
+	"bench": {
+		"transpiler": "es-node",
+		"paths": ["../features/**/*.feature"],
+		"require": ["./src/step_definitions/**/*.ts"],
+		"format": ["progress"],
+		"parallel": 0,
+		"tags": "@node and not @cli-run and not @watch and not @reload"
+	},
 	"tsnode": {
 		"transpiler": "ts-node",
 		"paths": ["../features/**/*.feature"],

@@ -104,10 +104,16 @@ Wall-clock is what matters, not the `executing steps` figure cucumber prints; on
 steps take well under a second and everything else is startup. Wrap the command in `time` or a
 `$SECONDS` delta.
 
-**Discard the first run after any `pnpm install` or `yarn build`.** Freshly written files under
-`node_modules` or `lib/` are read for the first time on that run, which on this Windows machine pays both a
-cold filesystem cache and on-access antivirus scanning. The effect is not small — see the table below — so
-a measurement is the steady state of runs two onward, never run one.
+**Discard the first run after any `pnpm install` or `yarn build`, and the first run after any run that reported
+many transpile-cache misses.** Freshly written files under `node_modules`, `lib/` or the caches are read for the
+first time on the following run, which on this Windows machine pays both a cold filesystem cache and on-access
+antivirus scanning. The effect is not small — see the table below — so a measurement is the steady state of runs
+two onward, never run one. The second clause was added in stage 12c: a run that wrote hundreds of new cache
+entries (a cold run after a cache-key change, say) was twice followed by a run whose startup was disturbed while
+the hooks themselves were fast, so the run after a cache-writing run is a warm-up too. Concurrent activity on the
+machine disturbs runs the same way: agent sessions in other repositories (greps, builds, installs and the scanner
+following what they write) made eleven of twelve consecutive runs unusable in the 12c closing measurement. Check
+`ListAgents` as well as `Get-Process` before a series, and take the fresh-process rows in one uninterrupted block.
 
 **Check for stray filesystem scanners before measuring.** A run can also be disturbed by another process
 competing for the disk: in Phase 11 an orphaned Git Bash `find / -maxdepth 8 …` from the previous day made every
@@ -163,8 +169,8 @@ The Phase 9 hand-off in the execution strategy has the numbers.
 `--watch` (Phase 10) keeps one process alive and reruns on Enter or on a file change, keeping every module
 loaded except the support files that registered something, the changed files and their dependents. The
 measurement of interest is the startup of a rerun against the startup of a fresh process, with the run itself
-unchanged. Because the captured shell is not a TTY, drive the process through piped stdin: the scratch script
-used in Phase 10 spawns the CLI with `--watch`, waits for the `Run took` status line after each run, writes `\n`
+unchanged. Because the captured shell is not a TTY, drive the process through piped stdin: the driver script
+below spawns the CLI with `--watch`, waits for the `Run took` status line after each run, writes `\n`
 for a rerun and `q` to quit, and can edit a file between runs. Its essentials, for a one-scenario inner loop:
 
 ```sh
@@ -179,6 +185,21 @@ the current run, so this gives two runs, not three — a script that waits for e
 writing the next key gets the exact count. Read each run's `TSFLOW_TIMING` report (the timing store is reset
 per run, so every report covers one run) and the load-phase line's `(rerun N: A evaluated again, B kept
 loaded, C other modules)` note. The Phase 10 hand-off in the execution strategy has the numbers.
+
+The driver is committed as `research/scripts/watch-driver.js` (stage 12c). It spawns the CLI with `--watch` and
+`TSFLOW_TIMING=true TSFLOW_THEME=off` in the UIS `test` directory, logs stdout and stderr to the file given, waits
+for each `Run took` line, writes a newline for a rerun until the requested number of runs is reached, then `q`, and
+prints each run's status line with its time since spawn. Node arguments go before `--`, CLI arguments after it:
+
+```sh
+cd C:/Git/GitHub/cucumber-js-tsflow
+node research/scripts/watch-driver.js research/profiles/<series>/dim-watch.log 2 -- -p dim
+node research/scripts/watch-driver.js research/profiles/<series>/full-watch.log 2 --max-old-space-size=8192 -- -p default
+```
+
+`TSFLOW_WATCH_CWD` overrides the directory the CLI runs in. The full suite's rerun needs the raised heap: the first
+run leaves about 4 GB of the suite's own state live (see the Phase 10 and 12c hand-offs), and the default limit is
+where Phase 10's rerun died.
 
 ## Profiling a run
 

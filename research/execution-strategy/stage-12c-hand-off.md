@@ -3,8 +3,7 @@
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
 Written as the groups land (started 2026-09-23), so that a pause after any group can resume cold. Stage 12c is
-[Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **Groups 1
-to 5 are complete; group 6, the closing measurement, has not started.**
+[Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **All six groups are complete and the stage is closed (2026-09-24).**
 
 ## State of the tree
 
@@ -113,6 +112,20 @@ to 5 are complete; group 6, the closing measurement, has not started.**
   `cucumber.json` in `node` and `node-esm`. Also `Architecture.md` (a new "Loading support code" section, the
   watch-mode paragraph, the loader-registration sentence, the API list), both READMEs' `reloadSupport`
   paragraph, and the CHANGELOG (one `Fixed` entry for `reloadSupport`, one `Changed` line for the parallel child).
+- **Group 6** (the closing measurement, 2026-09-24) changed no source; it is the documentation commit on top of
+  `6920b17`: this document, the strategy map, the 12c status line and finding P's triage row in
+  `phase-12-plan.md`, the discard rule and the watch-driver reference in `local-consumer-testing.md`, and
+  `research/scripts/watch-driver.js`, the piped-stdin driver the watch-mode measurements were taken with (Phase
+  10's was a scratch script that was never committed). The logs are under `research/profiles/12c-closing/`,
+  gitignored like the earlier series. `lib/` was built from `972d5b9` at the start of the session (clean, no stray
+  `.js` under `src/`); the boundary matrix was not rerun, since the only commit after the group 5 boundary changed
+  one declaration file in the test program. A peer session worked in the same tree during this one and landed
+  `6920b17` ("12e (early): ship an agent skill with the package, and keep it in sync") between `972d5b9` and this
+  commit, with the owner's go-ahead: the shipped agent skill under `cucumber-tsflow/skills/`, its `files` entry in
+  `cucumber-tsflow/package.json`, the maintenance rule in CLAUDE.md, CONTRIBUTE.md and
+  `.github/copilot-instructions.md`, and additions to the 12d to 12f sections of `phase-12-plan.md`. It touches no
+  source, test or spec file and is independent of group 6; its two `yarn build` runs in the tree (same TypeScript,
+  a regenerated `version.ts`) overlapped only runs this measurement had already discarded as disturbed.
 
 ## What group 1 landed
 
@@ -362,15 +375,151 @@ serial and `--parallel 1` under both hook modes.
   global (`__tsflowReloaderTest`), which also stands in for their decorators, and the assertions are on which
   modules evaluated rather than on `require.cache` state. `yarn test:unit` is at **261 tests**.
 
-## Notes specific to the pause and group 6
+## What group 6 measured
 
-- **Group 5 boundary: `yarn test:all` green on all sixteen variants (counts above).** Group 6 remains: the
-  closing measurement on the UIS suite (`dim` and the full suite, fresh process and one `--watch` rerun) against
-  the Phase 10 clean reference in [phase-10-hand-off.md](phase-10-hand-off.md), following the Phase 11 note about
-  stray filesystem scanners first, with finding P riding along as one A/B pair (compile cache on and off). The
-  UIS testbed and its `link:` wiring are in [local-consumer-testing.md](../local-consumer-testing.md). If the
-  numbers moved, stop and look before touching anything else; group 5 is the freshest suspect by design, and its
-  two working commits (D/U, then N) are recoverable from the squashed diff by file if bisecting is needed.
+UIS Tools VueApp, `es-vue-esm`, experimental decorators, serial, `TSFLOW_TIMING=true`, `TSFLOW_THEME=off`, one
+build (`972d5b9`), one machine, one session (2026-09-24, 07:50 to 09:50), against the Phase 10 clean reference in
+[phase-10-hand-off.md](phase-10-hand-off.md#measured-effect-on-the-large-suite) and the Phase 8 warm rows in
+[phase-08-hand-off.md](phase-08-hand-off.md). Finding P rode along as the A/B: **on** rows are the shipped bin
+(`module.enableCompileCache()`), **off** rows set `NODE_DISABLE_COMPILE_CACHE=1`; the transpile cache was warm for
+every row not marked cold. Wall clock is the timing report's "ms since process start". Twenty runs were taken and
+eight are clean; the rest are shown and marked, not hidden, by the criterion of the earlier phases (a `bootstrap`
+over a second, a startup row more than double its neighbors, or a runtime more than 1.5 times the clean band). No
+stray filesystem scanner was found before the series (the Phase 11 check), but the owner was working on the
+machine throughout with agent sessions in three other repositories, and the UIS working tree itself moved at 08:51
+(a pull; the suite grew from 1583 to 1616 scenarios and 36 support files changed), so the runs after that point
+are on a slightly different suite. The notes say what the disturbed runs have in common.
+
+`dim` (334 to 335 scenarios, 200 files through the hooks), fresh process:
+
+| Run | Compile cache | `bootstrap` | `gherkin` | `esm:resolve` (2823 to 2827 calls) | `esm:load` (912 to 913) | `transpile-cache:hit` (200) | `support:import` | `runtime:run` | Wall clock | Note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | on | 6182 ms | 40 ms | 3475 ms | 21964 ms | 200 misses, 3045 ms | 67.1 s | 40.4 s | 134 s | cold: first run after the build, under group 4's new cache keys; discarded |
+| 1 | on | 34203 ms | 613 ms | 824 ms | 502 ms | 48 ms | 37.7 s | 39.6 s | 160 s | startup disturbed (the two files that load jsdom and the library's setup took 41 s and 36 s); discarded |
+| 2 | on | 502 ms | 46 ms | 800 ms | 302 ms | 71 ms | **2547 ms** | 44.4 s | 48.2 s | clean |
+| 3 | off | 458 ms | 65 ms | 805 ms | 285 ms | 57 ms | **2386 ms** | 45.3 s | 49.0 s | clean |
+| 4 | on | 429 ms | 38 ms | 681 ms | 248 ms | 47 ms | **2245 ms** | 48.5 s | 51.8 s | clean |
+| 5 | off | 386 ms | 42 ms | 667 ms | 244 ms | 43 ms | **2059 ms** | 42.6 s | 45.7 s | clean |
+| 6 | off | 23763 ms | 610 ms | 6125 ms | 39392 ms | 6765 ms | 88.1 s | 95.3 s | 235 s | disturbed throughout; discarded |
+| 7 | on | 8658 ms | 70 ms | 3309 ms | 1391 ms | 204 ms | 48.4 s | 107.1 s | 180 s | disturbed throughout; discarded |
+| 8 | off | 850 ms | 70 ms | 1836 ms | 688 ms | 150 ms | 5055 ms | 117.2 s | 127 s | disturbed (runtime 2.5 times the band); discarded |
+| 9 | on | 922 ms | 63 ms | 2711 ms | 957 ms | 184 ms | 8268 ms | 117.7 s | 130 s | disturbed; discarded |
+
+Reference: Phase 8's warm `dim` rows had `bootstrap` 422 to 527 ms, `esm:resolve` 621 to 657 ms, `esm:load` 259
+to 280 ms, hits 42 to 49 ms, `support:import` 2175 to 2497 ms and `runtime:run` 37.9 to 40 s; Phase 10's `dim`
+first run had `gherkin` 44 ms, `esm:resolve` 895 ms, `esm:load` 338 ms, `support:import` 2844 ms and `runtime:run`
+48.4 s. **Runs 2 to 5 sit inside those bands on every row.** The runtime's own spread (42.6 to 48.5 s over four
+clean runs of one build) is the one the Phase 8 series saw.
+
+Full suite (`-p default`; 1583 scenarios for runs 0 to 4, 1616 for runs 5 and 6), fresh process:
+
+| Run | Compile cache | `bootstrap` | `gherkin` | `esm:resolve` (9631 / 9681 calls) | `esm:load` (2570 / 2573) | `transpile-cache:hit` (974 / 977) | `support:import` | `runtime:run` | Wall clock | Note |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | on | 655 ms | 1895 ms | 3834 ms | 31790 ms | 774 misses 6065 ms, 200 hits 65 ms | 39.1 s | 234.7 s | 277 s | cold for the 774 files `dim` does not load; discarded |
+| 1 | on | 16315 ms | 489 ms | 1960 ms | 1354 ms | 425 ms | 8086 ms | 216.5 s | 251 s | startup disturbed, runtime clean; startup discarded |
+| 2 | on | 448 ms | 175 ms | 3109 ms | 1189 ms | 384 ms | **7048 ms** | 214.1 s | 222.5 s | clean (see the note on its `esm:resolve`) |
+| 3 | off | 382 ms | 155 ms | 1721 ms | 831 ms | 271 ms | **4124 ms** | 233.9 s | 239.3 s | clean; the fastest startup recorded on this suite |
+| 4 | on | 32516 ms | 233 ms | 9272 ms | 113578 ms | 29098 ms | 241.8 s | 444.5 s | 764 s | disturbed throughout; discarded |
+| 5 | on | 19260 ms | 3308 ms | 5667 ms | 77635 ms | 941 hits 19635 ms, 36 misses | 125.2 s | 254.6 s | 430 s | disturbed throughout, and the first run on the moved tree; discarded |
+| 6 | on | 5324 ms | 2003 ms | 2957 ms | 34533 ms | 11658 ms | 61.7 s | 252.0 s | 324 s | disturbed throughout; discarded |
+
+Reference: Phase 10's clean full run had `gherkin` 165 ms, `esm:resolve` 1865 ms, `esm:load` 1411 ms, hits
+478 ms, `support:import` 5125 ms, `runtime:run` 234.5 s and 4 m 1 s wall clock; Phase 8's warm rows had
+`esm:resolve` 1748 to 2084 ms, `esm:load` 927 to 1106 ms, hits 254 to 311 ms, `support:import` 5116 to 5519 ms and
+`runtime:run` 196 to 214 s. **Runs 2 and 3 are within those bands**, with one row to name: run 2's `esm:resolve`,
+3.1 s over the same 9631 calls, is 1 s above the top of the band while its `esm:load` and hits sit at the bottom of
+theirs, and run 3, six minutes later, has the row at 1.7 s. Nothing in the resolve hook changed in 12c apart from
+group 3's `canonicalPath` consolidation, which `dim` does not show either (four clean runs at 0.24 to 0.29 ms per
+call against Phase 8's 0.22 to 0.23); the row is read as the run-to-run variance Phase 8 recorded on it (1586 to
+2084 ms across four clean runs). `runtime:run` over the four fresh runs with a clean runtime (0 to 3) is 214 to
+235 s against Phase 10's 234 s and Phase 8's 188 to 218 s.
+
+`--watch`, one rerun, driven through a piped stdin by `research/scripts/watch-driver.js`:
+
+| Profile | Run | `gherkin` | `esm:resolve` (calls) | `esm:load` (files) | `transpile-cache:hit` | `support:import` | `formatters:init` | `runtime:run` | Wall clock of the run | Heap after |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `dim` | first (fresh) | 284 ms | 3111 ms (2827) | 24100 ms (913) | 2359 ms (201) | 74.5 s | 129 ms | 38.1 s | 2 m 24 s | 1.4 GB |
+| `dim` | rerun (`33 evaluated again`) | 29 ms | 48 ms (311) | 21 ms (33) | 11 ms (33) | **405 ms** | 5.5 ms | 40.1 s | **40.6 s** | 2.4 GB |
+| full, `--max-old-space-size=8192` | first (fresh) | 1754 ms | 3176 ms (9681) | 47920 ms (2573) | 10113 ms (977) | 73.1 s | 20 ms | 484.7 s | 9 m 20 s | 4.0 GB |
+| full | rerun (`213 evaluated again`) | 550 ms | 1059 ms (1831) | 792 ms (213) | 433 ms (213) | 5428 ms | 48 ms | 915.1 s | 15 m 22 s | 7.6 GB |
+
+Both first runs had disturbed startups (the `dim` one at 26 ms per `esm:load`, the full one at 19 ms) and the full
+one a doubled runtime; the fresh-process rows above measure them properly and they are not re-read here. **The
+`dim` rerun is Phase 10's rerun row for row**: Phase 10 had `gherkin` 25 and 20 ms, `esm:resolve` 51 and 47 ms over
+311 calls, `esm:load` 20 and 21 ms over 33 files, `support:import` 133 and 421 ms, `runtime:run` 41.0 and 56.4 s,
+heap 2.5 and 3.5 GB after its second and third runs. The full-suite rerun, which Phase 10 could not complete (it
+died at the 4 GB default heap about 80 scenarios in), completes with the heap raised: its startup is sound (213
+files evaluated again in 5.4 s against Phase 10's 10.0 s for 211, and the features parsed in 0.55 s against 2.5 s),
+and then the run itself takes 15 minutes at a 7.6 GB heap and fails 17 scenarios. Those failures are the suite's
+retained state, which the Phase 10 hand-off and the README already describe: two assert that a `jest.fn()` was not
+called and it carries its call count from the first run, three time out at 5 s under a heap V8 spends its time
+compacting, and the rest are elements or matches not found in a document the first run left behind. None of them
+is tsflow's, and the fresh full run of the same tree passes all 1616. The conclusion stands as Phase 10 wrote it:
+watch mode is for the filtered inner loop, and the heap line after each run is the signal to read.
+
+**Finding P, the compile cache.** Three clean pairs, interleaved on and off, same build: `dim` `bootstrap` 502
+against 458 ms and 429 against 386 ms, `support:import` 2547 against 2386 ms and 2245 against 2059 ms; the full
+suite `bootstrap` 448 against 382 ms and `support:import` 7048 against 4124 ms (the pair that includes run 2's high
+resolve row). Off is 40 to 70 ms quicker to bootstrap in all three and never slower on any row. That is the Phase 4
+result again ("indistinguishable with and without"), with the sign now consistently, if slightly, against the
+cache, and there is a plain reason for it: the library, jsdom and Vue arrive through Node's CommonJS loader already
+warm in the OS file cache, so the bytecode the cache saves recompiling is cheap, while every module costs one more
+file open to look its entry up (the cache directory holds 18719 entries, 100 MB, for this machine's Node). The
+cache is kept as shipped: it is what Phase 4 decided and what the README and CHANGELOG document, turning it off
+would be a published-behavior change for a gain inside the noise, and Node's own switches
+(`NODE_DISABLE_COMPILE_CACHE=1`, `NODE_COMPILE_CACHE=<dir>`) already let a consumer choose. The owner can reverse
+this in 12d with the README "Compile cache" section, the CHANGELOG entry and the bin file as the three places to
+touch; the numbers here are the measurement the triage asked for.
+
+**Result: the UIS numbers are within noise of the Phase 10 reference on every row the plan named, and the
+stage's gate is met.** Nothing moved, so nothing was bisected; group 5's two working commits remain recoverable
+from the squashed diff by file should a later measurement disagree.
+
+## Notes specific to the stage close and 12d
+
+- **Stage 12c is closed (2026-09-24): every triaged finding landed, moved or closed, the boundary matrix was green
+  after each of groups 1 to 5, and the closing measurement is within noise of Phase 10** (the section above). 12d,
+  the housekeeping sweeps, is next; its definition and gate are in
+  [phase-12-plan.md](phase-12-plan.md#12d-housekeeping-sweeps) and the items the earlier groups left for it are in
+  the leftover bullets below. The plan allows the stage to be squashed further now that the measurement is done;
+  that is the owner's call and was not done here.
+- **Finding P is closed by measurement**, the compile cache kept as shipped; the numbers, the reasoning and the
+  three places to touch if the owner prefers to drop it are under "Finding P" above.
+- **The discard rule needs a second clause.** `local-consumer-testing.md` said to discard the first run after any
+  install or build. This session's first `dim` run after the build was cold as expected, and then the *next* run was
+  disturbed at startup while everything the hooks did was fast; the full suite repeated the pattern (run 0 cold,
+  run 1 disturbed at startup). The run that follows a run that wrote hundreds of new cache entries (200 and 774
+  transpile-cache entries here, under group 4's new keys) also pays, presumably for background scanning of what
+  was just written. The rule in that document now reads: discard the first run after a build or install *and* the
+  first run after any run that reported many transpile-cache misses.
+- **Disturbed runs share one signature and it is not tsflow's.** In all twelve, every file read is slow at once:
+  `gherkin` (212 feature files nothing has written) at 3 to 20 times its 165 ms, transpile-cache hits at 12 to
+  30 ms each against 0.3 ms, `esm:load` at 19 to 44 ms per file against 1 ms, `bootstrap` at 5 to 34 s; when the
+  runtime is affected too it is exactly doubled. Per-process CPU sampling during a disturbed run never showed a
+  competing process (the cost lands inside the measured process, as filter-driver or on-access-scan latency does)
+  and the disk-time counter read under 8 % between runs. One cause was self-inflicted: a Git Bash `find` with a
+  `-mmin` test over the 18719 compile-cache files took minutes (its per-file `stat` emulation is slow; Node stats
+  the same files in 2.5 s) and overlapped full run 5. The rest coincide with the owner working on the machine with
+  agent sessions in three other repositories, one of which pulled the UIS tree mid-series, and with a peer
+  session's two `yarn build` runs in this tree near the end; the eleven-run stretch from full run 4 onward has one
+  clean run in it. For the next measurement session: check for stray scanners *and* for peer agent sessions
+  (`ListAgents`) before starting, and if anything else is active on the machine, take the fresh-process rows in
+  one uninterrupted block early or leave them for a night run. A mid-session hypothesis that the disturbances
+  followed the compile cache (the first six were all cache-on runs) was falsified by `dim` runs 6 and 8, cache off
+  and disturbed.
+- **The full-suite rerun under `--watch` completes with an 8 GB heap** and shows the suite's retained state as
+  failures rather than as an out-of-memory crash (17 of 1616, itemized above). The README's guidance from Phase 10
+  covers it; nothing to change. The heap line printed after each run (4.0 GB, then 7.6 GB) is doing its job.
+- **Two sessions worked in this tree at once again** (this one on group 6, a peer on the 12e agent skill), and the
+  working agreement below held. Two refinements from this time: the peer announced its commit by message before
+  making it and again when it had landed, so the documentation commits went in one after the other with no
+  overlap; and a build by either session is a measurement disturbance for the other, so during a measurement
+  series the peer asks before building.
+- `research/scripts/watch-driver.js` is the piped-stdin driver used for the watch rows (spawn the CLI with
+  `--watch`, wait for each `Run took` line, write a newline for a rerun and `q` to quit, log everything); usage is
+  in `local-consumer-testing.md` under "Watch mode on this suite". A `find` over a large directory from the
+  assistant's Git Bash is a stray scanner in the Phase 11 sense: prefer a Node one-liner for anything that stats
+  thousands of files.
 - Nothing is open from group 5: all three findings landed as triaged, with two decisions the owner may want to
   read: the reload spec moved out of process (the triage's own decision, a load clearing the registry, made the
   in-process spec impossible), and N covers `node-esm` as well as `node`.

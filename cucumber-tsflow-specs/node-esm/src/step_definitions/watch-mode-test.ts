@@ -25,6 +25,28 @@ function slashes(text: string): string {
 }
 
 /**
+ * The Cucumber-expression step definitions a message report (`--format message:<path>`) lists for one support
+ * file, pattern text to reported line. Read after each run, since the CLI rewrites the report per run.
+ */
+function reportedDefinitions(reportPath: string, relativePath: string): Map<string, number> {
+	const definitions = new Map<string, number>();
+	const report = fs.readFileSync(path.resolve(process.cwd(), reportPath), 'utf8');
+	for (const line of report.split(/\r?\n/).filter(Boolean)) {
+		const envelope = JSON.parse(line) as {
+			stepDefinition?: {
+				pattern: { source: string; type: string };
+				sourceReference: { uri?: string; location?: { line: number } };
+			};
+		};
+		const definition = envelope.stepDefinition;
+		if (!definition || definition.pattern.type !== 'CUCUMBER_EXPRESSION') continue;
+		if (slashes(definition.sourceReference.uri ?? '') !== slashes(relativePath)) continue;
+		definitions.set(definition.pattern.source, definition.sourceReference.location?.line ?? -1);
+	}
+	return definitions;
+}
+
+/**
  * One `cucumber-tsflow --watch` child process and everything it has printed.
  */
 class WatchSession {
@@ -89,6 +111,20 @@ class WatchSession {
 		fs.appendFileSync(file, `\r\n// touched by the watch spec at ${new Date().toISOString()}\r\n`);
 	}
 
+	/** Insert `count` comment lines at the top of a file, so that every declaration in it moves down by `count`. */
+	editTop(relativePath: string, count: number): void {
+		const file = path.resolve(process.cwd(), relativePath);
+		if (!this.originals.has(file)) {
+			const stat = fs.statSync(file);
+			this.originals.set(file, { content: fs.readFileSync(file), atime: stat.atime, mtime: stat.mtime });
+		}
+		const inserted = Array.from({ length: count }, (_, i) => `// inserted by the watch spec ${i + 1}\r\n`).join('');
+		fs.writeFileSync(file, inserted + fs.readFileSync(file, 'utf8'));
+	}
+
+	/** Step definitions the last read of a message report listed for a file: pattern text to reported line. */
+	public recordedDefinitions = new Map<string, number>();
+
 	/** Put every edited file back, content and timestamps, so the tree and the selective-load stamps read as before. */
 	restore(): void {
 		for (const [file, original] of this.originals) {
@@ -142,6 +178,37 @@ export default class WatchModeSteps {
 		const target = this.session.runs + 1;
 		this.session.edit(relativePath);
 		await this.session.waitForRuns(target);
+	}
+
+	@when('I insert {int} comment lines at the top of {string} and wait for the run to finish', undefined, RUN_TIMEOUT_MS)
+	async insertLines(count: number, relativePath: string): Promise<void> {
+		const target = this.session.runs + 1;
+		this.session.editTop(relativePath, count);
+		await this.session.waitForRuns(target);
+	}
+
+	@when('I record the step definitions reported to {string} for {string}')
+	recordDefinitions(reportPath: string, relativePath: string): void {
+		this.session.recordedDefinitions = reportedDefinitions(reportPath, relativePath);
+	}
+
+	@then('every step definition reported to {string} for {string} points at the line of its decorator')
+	verifyDefinitionLines(reportPath: string, relativePath: string): void {
+		const definitions = reportedDefinitions(reportPath, relativePath);
+		expect(definitions.size, `no step definitions for ${relativePath} in ${reportPath}`).to.be.greaterThan(0);
+		const lines = fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8').split(/\r?\n/);
+		for (const [pattern, line] of definitions) {
+			expect(lines[line - 1] ?? '', `${pattern} reported at line ${line}`).to.include(pattern);
+		}
+	}
+
+	@then('the step definitions reported to {string} for {string} are {int} lines further down than recorded')
+	verifyDefinitionsMoved(reportPath: string, relativePath: string, offset: number): void {
+		const definitions = reportedDefinitions(reportPath, relativePath);
+		expect(this.session.recordedDefinitions.size).to.be.greaterThan(0);
+		for (const [pattern, line] of this.session.recordedDefinitions) {
+			expect(definitions.get(pattern), `${pattern} was at line ${line}`).to.equal(line + offset);
+		}
 	}
 
 	@when('I quit the watch session', undefined, 30000)

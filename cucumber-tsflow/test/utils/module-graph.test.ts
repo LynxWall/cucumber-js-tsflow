@@ -199,6 +199,32 @@ describe('CommonJS modules through require.cache', () => {
 		require(file('helper.cjs'));
 		expect(evaluations()).to.equal(2);
 	});
+
+	it('forgets the source map source-map-support cached for an evicted module', () => {
+		const symbol = Symbol.for('source-map-support/sharedData');
+		const globals = globalThis as Record<symbol, unknown>;
+		const previous = globals[symbol];
+		const url = pathToFileURL(file('unrelated.cjs')).toString();
+		const other = pathToFileURL(file('entry.cjs')).toString();
+		globals[symbol] = {
+			version: 1,
+			sourceMapCache: { [url]: { map: 'old' }, [other]: { map: 'kept' } },
+			fileContentsCache: { [url]: 'compiled', [other]: 'kept' }
+		};
+		try {
+			require(file('unrelated.cjs'));
+			expect(evictRequiredModules(new Set([key('unrelated.cjs')]))).to.equal(1);
+			const shared = globals[symbol] as {
+				sourceMapCache: Record<string, unknown>;
+				fileContentsCache: Record<string, unknown>;
+			};
+			expect(Object.keys(shared.sourceMapCache)).to.deep.equal([other]);
+			expect(Object.keys(shared.fileContentsCache)).to.deep.equal([other]);
+		} finally {
+			if (previous === undefined) delete globals[symbol];
+			else globals[symbol] = previous;
+		}
+	});
 });
 
 describe('reload listeners', () => {

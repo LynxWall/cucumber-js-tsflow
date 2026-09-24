@@ -20,7 +20,8 @@
  * and the mechanics differ by module system:
  *
  * - CommonJS modules are deleted from `require.cache` (`evictRequiredModules()`); the next `require()`
- *   reads, transpiles and evaluates the file again.
+ *   reads, transpiles and evaluates the file again. The source map `source-map-support` cached for the file
+ *   is forgotten with it, so the re-evaluated decorators report the new version's lines.
  * - ES modules cannot be removed from Node's module map, so a module to re-evaluate is given a version
  *   (`bumpModuleVersions()`), and `versionedUrl()` appends it as a `?tsflow=<n>` query to the module's URL:
  *   the `resolve` hook applies it to every resolution it returns and `getSupportCodeLibrary` to the URLs it
@@ -32,6 +33,7 @@
  * package is left out, since dependencies are versioned and the library's version is part of the index key.
  */
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { canonicalFromUrl, canonicalPath } from './paths';
 
 /** Recorded ESM import edges, parent to children, both as canonical paths. */
@@ -201,10 +203,47 @@ export function evictRequiredModules(files: ReadonlySet<string>): number {
 		const module = require.cache[key];
 		if (files.has(canonicalPath(module?.filename ?? key))) {
 			delete require.cache[key];
+			forgetSourceMap(module?.filename ?? key);
 			evicted++;
 		}
 	}
 	return evicted;
+}
+
+/** The store `@cspotcode/source-map-support` shares between copies of itself, as far as this module reads it. */
+interface SourceMapSupportSharedData {
+	sourceMapCache?: Record<string, unknown>;
+	fileContentsCache?: Record<string, unknown>;
+}
+
+/**
+ * Forget what `source-map-support` remembers about the CommonJS module at `filename`: the parsed source map
+ * and the compiled content it came from. The CommonJS transpilers run under ts-node, which installs
+ * `@cspotcode/source-map-support` with a `retrieveFile` that reads its in-memory output; that library keeps
+ * both caches in a store on `globalThis` (`Symbol.for('source-map-support/sharedData')`, its contract for
+ * several copies sharing one cache), keyed by the file's URL, for the life of the process, and nothing
+ * clears an entry when the file is compiled again. Without this, the decorators of a re-evaluated support
+ * file would resolve their callsites (`Callsite` goes through `wrapCallSite`) with the previous version's
+ * map and report the previous version's lines in every message, report and error. Best-effort: when the
+ * store is absent (no ts-node in the process) or shaped differently, nothing happens.
+ */
+function forgetSourceMap(filename: string): void {
+	const shared = (globalThis as Record<symbol, unknown>)[Symbol.for('source-map-support/sharedData')] as
+		| SourceMapSupportSharedData
+		| undefined;
+	if (!shared) return;
+	let url: string;
+	try {
+		url = pathToFileURL(filename).toString();
+	} catch {
+		url = filename;
+	}
+	for (const cache of [shared.sourceMapCache, shared.fileContentsCache]) {
+		if (cache && typeof cache === 'object') {
+			delete cache[url];
+			delete cache[filename];
+		}
+	}
 }
 
 /**

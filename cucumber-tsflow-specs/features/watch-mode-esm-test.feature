@@ -37,3 +37,17 @@ Feature: Watch mode with ES modules
     And no rerun note was printed
     And rerun 1 was triggered by a change to "src/step_definitions/basic-test.ts"
     And the session exited with code 0
+
+  Scenario: Reported step locations follow an edit
+    The decorators of a re-evaluated support file resolve their callsites
+    again, so a rerun must report the lines of the file as it is now, not
+    the lines of the version the process first loaded.
+
+    Given a watch session on the "watch" profile with "--format message:../reports/watch-locations-esm.ndjson" has completed its first run
+    Then every step definition reported to "../reports/watch-locations-esm.ndjson" for "src/step_definitions/basic-test.ts" points at the line of its decorator
+    When I record the step definitions reported to "../reports/watch-locations-esm.ndjson" for "src/step_definitions/basic-test.ts"
+    And I insert 3 comment lines at the top of "src/step_definitions/basic-test.ts" and wait for the run to finish
+    Then every step definition reported to "../reports/watch-locations-esm.ndjson" for "src/step_definitions/basic-test.ts" points at the line of its decorator
+    And the step definitions reported to "../reports/watch-locations-esm.ndjson" for "src/step_definitions/basic-test.ts" are 3 lines further down than recorded
+    When I quit the watch session
+    Then the session exited with code 0

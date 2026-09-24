@@ -22,11 +22,7 @@ import { startTimer, recordFile } from '../utils/tsflow-timing';
 import { withTranspileCache } from './transpile-cache';
 
 export type TranspileOptions = {
-	debug: boolean;
 	esbuild?: CommonOptions & TransformOptions & BuildOptions;
-};
-const defaultOptions: TranspileOptions = {
-	debug: true
 };
 
 /** What a caller fixes about its output: the module format, and for Node's ESM loader the platform. */
@@ -74,7 +70,7 @@ export function transformOptionsFor(
 	output: OutputFormat,
 	experimentalDecorators: boolean
 ): TransformOptions {
-	const merged: TranspileOptions = { ...defaultOptions, ...options };
+	const merged: TranspileOptions = { ...options };
 	const loaderExt = ext ?? path.extname(filename);
 	return {
 		...output,

@@ -300,56 +300,6 @@ export class BindingRegistry {
 	};
 
 	/**
-	 * Remove all step bindings that originated from a given source file.
-	 * This supports delta-aware reload — bindings from changed files are purged
-	 * before re-loading so stale entries don't accumulate.
-	 *
-	 * @param filename Absolute path to the source file whose bindings should be removed.
-	 */
-	public removeBindingsForFile(filename: string): void {
-		// Remove from _stepBindings index
-		for (const [pattern, tagMap] of this._stepBindings) {
-			for (const [tag, bindings] of tagMap) {
-				const filtered = bindings.filter(b => b.callsite.filename !== filename);
-				if (filtered.length === 0) {
-					tagMap.delete(tag);
-				} else {
-					tagMap.set(tag, filtered);
-				}
-			}
-			if (tagMap.size === 0) {
-				this._stepBindings.delete(pattern);
-			}
-		}
-
-		// Remove from _cucumberKeyIndex
-		for (const [key, binding] of this._cucumberKeyIndex) {
-			if (binding.callsite.filename === filename) {
-				this._cucumberKeyIndex.delete(key);
-			}
-		}
-
-		// Remove from _classBindings index
-		for (const [proto, classBinding] of this._classBindings) {
-			classBinding.stepBindings = classBinding.stepBindings.filter(b => b.callsite.filename !== filename);
-			classBinding.stepBindingKeys = new Set(classBinding.stepBindings.map(stepBindingKey));
-			if (classBinding.stepBindings.length === 0 && classBinding.contextTypes.length === 0) {
-				this._classBindings.delete(proto);
-			}
-		}
-	}
-
-	/**
-	 * Check whether a binding with the given cucumberKey is already registered.
-	 *
-	 * @param cucumberKey The unique key to check.
-	 * @returns true if a binding with that key exists.
-	 */
-	public hasBindingForKey(cucumberKey: string): boolean {
-		return this._cucumberKeyIndex.has(cucumberKey);
-	}
-
-	/**
 	 * Maps an array of tag names to an array of associated step bindings.
 	 *
 	 * @param tags An array of [[TagName]].

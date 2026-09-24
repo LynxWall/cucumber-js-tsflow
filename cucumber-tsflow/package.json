@@ -74,7 +74,6 @@
 		"esbuild": "~0.25.10",
 		"glob": "~11.0.3",
 		"hash-sum": "~2.0.0",
-		"import-sync": "^2.2.3",
 		"jsdom": "~26.0.0",
 		"jsdom-global": "~3.0.2",
 		"lodash.merge": "~4.6.2",
@@ -84,7 +83,6 @@
 		"source-map-support": "~0.5.21",
 		"ts-node-maintained": "~10.9.6",
 		"tsconfig-paths": "~4.2.0",
-		"tslib": "2.8.1",
 		"typescript": "~5.9.2"
 	},
 	"devDependencies": {
@@ -98,13 +96,14 @@
 		"shx": "0.4.0"
 	},
 	"scripts": {
-		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs",
+		"build": "genversion --es6 --semi src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs",
 		"build:copy-mjs": "yarn copy:root-mjs && yarn copy:api-mjs && yarn copy:transpiler-mjs && yarn copy:utils-mjs",
 		"copy:root-mjs": "shx cp src/*.mjs lib/",
 		"copy:api-mjs": "shx cp src/api/*.mjs lib/api/",
 		"copy:transpiler-mjs": "shx mkdir -p lib/transpilers/esm && shx cp src/transpilers/esm/*.mjs lib/transpilers/esm/",
 		"copy:utils-mjs": "shx cp src/utils/*.mjs lib/utils/",
 		"build:watch": "tsc --build tsconfig.node.json --watch",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p test/tsconfig.json",
 		"test:unit": "node --test \"test/**/*.test.ts\""
 	},
 	"bin": "bin/cucumber-tsflow.js",

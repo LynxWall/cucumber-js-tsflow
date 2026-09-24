@@ -18,7 +18,7 @@ import ansis from 'ansis';
 import { ITsFlowRunConfiguration } from '../runtime/types';
 import { Console } from 'console';
 import { join } from 'path';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, describeThrowable } from '../utils/tsflow-logger';
 
 const logger = createLogger('config');
 
@@ -61,7 +61,8 @@ export const loadConfiguration = async (
 		cucumberLogger = made.logger;
 		logger.checkpoint('Environment created', { cwd });
 	} catch (error: any) {
-		logger.error('Failed to create environment', error);
+		// Each error below propagates to the CLI, which reports it once; only the verbose trail keeps a copy here
+		logger.checkpoint('Failed to create environment', { error: describeThrowable(error) });
 		throw new Error(`Failed to create environment: ${error.message}`, { cause: error });
 	}
 
@@ -72,7 +73,7 @@ export const loadConfiguration = async (
 		configFile = options.file ?? locateFile(cwd);
 		logger.checkpoint('Config file resolved', { configFile });
 	} catch (error: any) {
-		logger.error('Failed to locate config file', error);
+		logger.checkpoint('Failed to locate config file', { error: describeThrowable(error) });
 		throw new Error(`Failed to locate configuration file: ${error.message}`, { cause: error });
 	}
 
@@ -104,7 +105,7 @@ export const loadConfiguration = async (
 				paths: (profileConfiguration as any).paths
 			});
 		} catch (error: any) {
-			logger.error('Failed to load configuration from file', error, { configFile });
+			logger.checkpoint('Failed to load configuration from file', { configFile, error: describeThrowable(error) });
 			throw new Error(`Failed to load configuration from "${configFile}": ${error.message}`, { cause: error });
 		}
 	}
@@ -131,7 +132,7 @@ export const loadConfiguration = async (
 			pathCount: original.paths?.length
 		});
 	} catch (error: any) {
-		logger.error('Failed to merge configurations', error);
+		logger.checkpoint('Failed to merge configurations', { error: describeThrowable(error) });
 		throw new Error(`Failed to merge configurations: ${error.message}`, { cause: error });
 	}
 
@@ -244,7 +245,10 @@ export const loadConfiguration = async (
 				requires: original.require
 			});
 		} catch (error: any) {
-			logger.error('Failed to configure transpiler', error, { transpiler: original.transpiler });
+			logger.checkpoint('Failed to configure transpiler', {
+				transpiler: original.transpiler,
+				error: describeThrowable(error)
+			});
 			throw new Error(`Failed to configure transpiler "${original.transpiler}": ${error.message}`, { cause: error });
 		}
 	} else {
@@ -283,7 +287,7 @@ export const loadConfiguration = async (
 		replaceFormatAlias('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
 		logger.checkpoint('Format options processed');
 	} catch (error: any) {
-		logger.error('Failed to process format options', error);
+		logger.checkpoint('Failed to process format options', { error: describeThrowable(error) });
 		throw new Error(`Failed to process format options: ${error.message}`, { cause: error });
 	}
 
@@ -304,7 +308,10 @@ export const loadConfiguration = async (
 				logger.checkpoint('No features found for debugFile');
 			}
 		} catch (error: any) {
-			logger.error('Failed to process debugFile', error, { debugFile: original.debugFile });
+			logger.checkpoint('Failed to process debugFile', {
+				debugFile: original.debugFile,
+				error: describeThrowable(error)
+			});
 			throw new Error(`Failed to process debugFile "${original.debugFile}": ${error.message}`, { cause: error });
 		}
 	}
@@ -322,7 +329,7 @@ export const loadConfiguration = async (
 		validateConfiguration(original, cucumberLogger);
 		logger.checkpoint('Configuration validated');
 	} catch (error: any) {
-		logger.error('Configuration validation failed', error);
+		logger.checkpoint('Configuration validation failed', { error: describeThrowable(error) });
 		throw new Error(`Configuration validation failed: ${error.message}`, { cause: error });
 	}
 
@@ -336,7 +343,7 @@ export const loadConfiguration = async (
 			loaders: runnable.support?.loaders
 		});
 	} catch (error: any) {
-		logger.error('Failed to convert configuration', error);
+		logger.checkpoint('Failed to convert configuration', { error: describeThrowable(error) });
 		throw new Error(`Failed to convert configuration: ${error.message}`, { cause: error });
 	}
 

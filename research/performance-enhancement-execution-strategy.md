@@ -96,7 +96,7 @@ be worth far more than its rating: see [Phase 4 hand-off](execution-strategy/pha
 **Phase 5: items 18, 21 — COMPLETE (2026-09-04).** The ESM hook mechanics. Item 18 wants async `transform()`
 and item 21 wants synchronous hooks, so the two have to be settled together, and they must be settled before
 Phase 6 builds the cache into the `load` hook it reshapes. The four ESM workspaces are the test. Settled in
-favour of synchronous in-thread hooks (`module.registerHooks()`), with item 18's ts-node bypass landed and its
+favor of synchronous in-thread hooks (`module.registerHooks()`), with item 18's ts-node bypass landed and its
 async `transform()` half dropped; see [Phase 5 hand-off](execution-strategy/phase-05-hand-off.md).
 
 **Phase 6: items 26, 28 — COMPLETE (2026-09-16).** Developer experience, open-ended by design. The fixed part is startup feedback: a

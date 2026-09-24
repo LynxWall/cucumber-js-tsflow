@@ -49,11 +49,11 @@ and [`parallelLoad` removal](#parallelload-removal-2026-09-17) below — and bot
   `createRequire`, the pattern `esm/vue-sfc-compiler.mjs` already used, so within a thread all three entry
   points share one module instance and one set of counters, and there is no `.mjs` twin to keep in step.
 - **The key** is a SHA-256 over: entry format version, tsflow version, caller `kind` (`esbuild-cjs`,
-  `esbuild-esm`, `vue-sfc`), the caller's serialised configuration, the absolute file name, and the source
+  `esbuild-esm`, `vue-sfc`), the caller's serialized configuration, the absolute file name, and the source
   text. The configuration carries the full esbuild `TransformOptions` (so `tsconfigRaw`, hence the decorator
   mode, and `sourcemap`) and the esbuild version; for `esbuild-esm` additionally the tsconfig
   `absoluteBaseUrl` and `paths` that `rewritePathMappings` bakes into the output as `file://` URLs — the
-  analysis-3 portability point, honoured by making entries non-portable rather than by trying to make the
+  analysis-3 portability point, honored by making entries non-portable rather than by trying to make the
   output portable; for `vue-sfc` the style flag, output format, decorator mode and the consumer's `vue`
   version (`require('vue/package.json')`, `'unknown'` if unresolvable). The file name is in the key because
   esbuild names it in the source map and the Vue compiler derives the component id from it. Nothing is keyed
@@ -79,7 +79,7 @@ and [`parallelLoad` removal](#parallelload-removal-2026-09-17) below — and bot
   not inject a default that would override a profile). `loadConfiguration` writes the resolved value to
   `TSFLOW_TRANSPILE_CACHE`, which is what the transpilers read — that is the only transport that reaches the
   ESM hooks thread under `module.register()`, preload threads and parallel children alike, the same route
-  `CUCUMBER_EXPERIMENTAL_DECORATORS` takes. An environment value already present is honoured as the default
+  `CUCUMBER_EXPERIMENTAL_DECORATORS` takes. An environment value already present is honored as the default
   when the option is unset, so CI can disable it without touching configuration.
 - **Visibility**: the load-phase progress line ends with `N of M transpiles from the cache` (main-process
   counters), and the timing report gains `transpile-cache:hit` / `transpile-cache:miss` phases whose
@@ -91,9 +91,9 @@ and [`parallelLoad` removal](#parallelload-removal-2026-09-17) below — and bot
   `cucumber-tsflow -p default` command and `Loading configuration` — the `bootstrap` phase, Node loading the
   library's several hundred modules, during which nothing of tsflow's has run and nothing was printed.
   `bin/cucumber-tsflow.js` now prints one line before requiring the library (requiring `ansis` on its own
-  for the colour) and `lib/cli/run.ts` prints `cucumber-tsflow loaded in N ms.` on entry
+  for the color) and `lib/cli/run.ts` prints `cucumber-tsflow loaded in N ms.` on entry
   (`performance.now()`, the `bootstrap` figure), gated by a `globalThis.__CUCUMBER_TSFLOW_BOOTSTRAP_ANNOUNCED`
-  flag so programmatic callers never see it. Both in `ansis.dim`, the phase-detail grey, at the owner's
+  flag so programmatic callers never see it. Both in `ansis.dim`, the phase-detail gray, at the owner's
   request; no spinner and no theme, by the owner's choice: two lines that are superfluous at the usual 0.4 s and the point when
   it is 29 s (the first run after a `yarn build`, when Node's compile cache is rebuilt for the changed
   files — observed on the spec workspace today, 390–399 ms on the two runs after). Skipped for
@@ -117,7 +117,7 @@ per-file total from the file-totals table (on a warm run it is the cache lookup 
 `transpile` entry); `hits`/`misses` are the `transpile-cache:*` `calls`. The machine carried the owner's own
 load throughout (an editor, Teams, Zoom, Spotify at 40–60% CPU between runs), so disturbed runs are shown struck
 through by note rather than hidden and excluded from the conclusions: the criterion is `bootstrap` over a second
-or a startup row more than double its neighbours with a normal `runtime:run`.
+or a startup row more than double its neighbors with a normal `runtime:run`.
 
 `dim` (334 scenarios, 200 files through the hooks):
 

@@ -166,7 +166,7 @@ item 5.
 
 **On impact.** Item 1 is the best finding in either document on a cost-to-benefit basis. It is a
 superlinear cost on the hottest path in the runtime, the memoization fix is about ten lines with no
-behavioural change, and the structural fix is a field on `MessageCollector` set in `startTestCase` and
+behavioral change, and the structural fix is a field on `MessageCollector` set in `startTestCase` and
 cleared in `endTestCase` — modeled directly on what `getHookScenarioContext` already does, so there is a
 working precedent in the same file. Items 2 through 6 are all small, safe, and mechanical. Item 8 is a
 single line with a genuine cross-process payoff. Very little of this document is speculative, which is
@@ -218,10 +218,10 @@ Ordered by confidence times payoff divided by risk, drawing on both documents. S
 | --- | --- | --- | --- |
 | 1 | Phase timing instrumentation and a `--profile-startup` summary | `[A2]` | Everything below should be validated, and neither document can currently tell you where the time goes |
 | 2 | Track the running pickle's context on `MessageCollector`; both call sites read it | `[PA]` 1 | Removes a superlinear cost entirely; precedent already exists in `getHookScenarioContext` |
-| 3 | Memoize pattern-to-`RegExp` in `utils.ts` | `[PA]` 1 | Ten lines, pure function, worth doing even after #2 as defence in depth |
+| 3 | Memoize pattern-to-`RegExp` in `utils.ts` | `[PA]` 1 | Ten lines, pure function, worth doing even after #2 as defense in depth |
 | 4 | Lazy callsite resolution plus `Error.stackTraceLimit` | `[A2]` 4 | Highest payoff per unit of risk on the load path; also fixes the Windows-separator portability bug |
 | 5 | Drop `files: true` / `TS_NODE_FILES` from the ESM path | `[A2]` 6 | One line; removes a full project directory walk per ESM process |
-| 6 | Hoist the tag lowercasing and the per-step hook filtering; index definitions by id | `[PA]` 2, 3, 4 | Small, mechanical, no behavioural change |
+| 6 | Hoist the tag lowercasing and the per-step hook filtering; index definitions by id | `[PA]` 2, 3, 4 | Small, mechanical, no behavioral change |
 | 7 | Index `updateSupportCodeLibrary` and `registerStepBinding` by key | `[PA]` 5, 6 | Removes quadratic work per process, which means per worker in parallel mode |
 | 8 | `module.enableCompileCache()` in the CLI entry | `[PA]` 8 | One line, cross-process, verified absent |
 | 9 | Cache positive and negative resolutions in `resolveWithExtensions` | both | Corroborated by both documents; most visible on Windows |
@@ -241,7 +241,7 @@ exists to prove it helps.
 ## One note on both documents
 
 Neither is testable against the current spec suite. `performance-analysis.md` says so directly — 28
-scenarios across 8 feature files will not surface behaviour that scales with scenario count — and
+scenarios across 8 feature files will not surface behavior that scales with scenario count — and
 `analysis-2.md` makes the same point about support-tree size. Every finding in both documents grows with
 suite size, and none of them are visible in the workspaces used for correctness testing. That makes
 `analysis-2.md`'s Measurement section the real prerequisite for acting on either document, which is why

@@ -9,9 +9,9 @@
  *
  * The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) inside brackets, advanced
  * every 130 ms, the interval the `cli-spinners` "line" preset uses. It appears the moment the phase line is
- * printed, so there is visible motion before the first unit of work completes. Its colour walks a twelve-colour
+ * printed, so there is visible motion before the first unit of work completes. Its color walks a twelve-color
  * wheel (six stops with a blend between each pair) at a constant rate unrelated to progress, one step every
- * five frames, and each new colour enters at the left bracket and sweeps across the glyph and the right
+ * five frames, and each new color enters at the left bracket and sweeps across the glyph and the right
  * bracket over three frames. Five is not a multiple of the four frames in a rotation, so the sweep starts one
  * glyph later each time, like an offbeat in a polyrhythm, and the two rhythms come back into step every
  * twenty frames. On an interactive terminal it is drawn by a worker thread (`startup-progress-worker.ts`) writing straight to the terminal's file
@@ -20,7 +20,7 @@
  *
  * Themes are selected with `TSFLOW_THEME`:
  *
- * - unset, or any unrecognised value: the default pickling theme
+ * - unset, or any unrecognized value: the default pickling theme
  * - `lotr`: The Lord of the Rings
  * - `off`: no startup progress output at all
  */
@@ -56,9 +56,9 @@ interface PhaseText {
 
 export interface StartupTheme {
 	name: string;
-	/** Colour applied to phase titles */
+	/** Color applied to phase titles */
 	label: (text: string) => string;
-	/** Colour applied to the plain-language detail, the heartbeat quips and the elapsed-time summary */
+	/** Color applied to the plain-language detail, the heartbeat quips and the elapsed-time summary */
 	detail: (text: string) => string;
 	/** Color applied to the check mark that replaces the spinner when the phase completes */
 	mark: (text: string) => string;
@@ -77,7 +77,7 @@ export interface StartupTheme {
 
 /** Spinner frames, in clockwise order */
 const SPINNER_FRAMES = ['|', '/', '-', '\\'];
-/** The stops of the spinner's colour wheel, in order, as RGB */
+/** The stops of the spinner's color wheel, in order, as RGB */
 const WHEEL_STOPS: Array<[number, number, number]> = [
 	[0x5f, 0x87, 0xaf], // blue
 	[0x5f, 0xaf, 0x5f], // green
@@ -86,21 +86,21 @@ const WHEEL_STOPS: Array<[number, number, number]> = [
 	[0xd7, 0x5f, 0x5f], // red
 	[0x87, 0x5f, 0xaf] // purple
 ];
-/** Colours per stop: 1 shows the stops only; 2 adds one blended colour between each pair of stops, and so on */
+/** Colors per stop: 1 shows the stops only; 2 adds one blended color between each pair of stops, and so on */
 const STEPS_PER_STOP = 2;
 /**
- * Frames between colour steps (may be fractional: 3.5 alternates holds of 3 and 4 frames). Deliberately not a
- * multiple of the four frames in a rotation, so the colour change drifts around the turn instead of always
- * landing on the same glyph. With the three-frame wipe below, 5 gives two frames of solid colour per step.
+ * Frames between color steps (may be fractional: 3.5 alternates holds of 3 and 4 frames). Deliberately not a
+ * multiple of the four frames in a rotation, so the color change drifts around the turn instead of always
+ * landing on the same glyph. With the three-frame wipe below, 5 gives two frames of solid color per step.
  */
-const FRAMES_PER_COLOUR = 5;
+const FRAMES_PER_COLOR = 5;
 /**
- * Frames by which each cell of the slot (`[`, glyph, `]`) lags the cell to its left when the colour changes,
- * so a new colour enters at the left bracket and sweeps across in three frames instead of the whole slot
+ * Frames by which each cell of the slot (`[`, glyph, `]`) lags the cell to its left when the color changes,
+ * so a new color enters at the left bracket and sweeps across in three frames instead of the whole slot
  * changing at once. 0 turns the wipe off.
  */
 const WIPE_LAG_FRAMES = 1;
-/** Colours the spinner cycles through: the stops with `STEPS_PER_STOP - 1` linear RGB blends between each pair */
+/** Colors the spinner cycles through: the stops with `STEPS_PER_STOP - 1` linear RGB blends between each pair */
 const SPINNER_WHEEL = WHEEL_STOPS.flatMap((from, i) => {
 	const to = WHEEL_STOPS[(i + 1) % WHEEL_STOPS.length];
 	return Array.from({ length: STEPS_PER_STOP }, (_, step) => {
@@ -224,18 +224,18 @@ const LOTR_THEME: StartupTheme = {
 	}
 };
 
-/** The wheel colour in force at frame `n`; frames before the phase began count as its first frame. */
-function wheelColour(frame: number): (text: string) => string {
-	return SPINNER_WHEEL[Math.floor(Math.max(0, frame) / FRAMES_PER_COLOUR) % SPINNER_WHEEL.length];
+/** The wheel color in force at frame `n`; frames before the phase began count as its first frame. */
+function wheelColor(frame: number): (text: string) => string {
+	return SPINNER_WHEEL[Math.floor(Math.max(0, frame) / FRAMES_PER_COLOR) % SPINNER_WHEEL.length];
 }
 
 /**
  * The spinner slot for frame `n` (counted from the start of the phase): the glyph for `n mod 4`, each of the
- * three cells coloured for a frame `WIPE_LAG_FRAMES` behind the cell to its left.
+ * three cells colored for a frame `WIPE_LAG_FRAMES` behind the cell to its left.
  */
 function spinnerSlot(frame: number): string {
 	const cells = ['[', ` ${SPINNER_FRAMES[frame % SPINNER_FRAMES.length]} `, ']'];
-	return cells.map((cell, i) => wheelColour(frame - i * WIPE_LAG_FRAMES)(cell)).join('');
+	return cells.map((cell, i) => wheelColor(frame - i * WIPE_LAG_FRAMES)(cell)).join('');
 }
 
 /**
@@ -291,7 +291,7 @@ interface OpenPhase {
 	ticks: number;
 	/** Units of work expected, when known */
 	total: number | undefined;
-	/** Spinner frames drawn since the phase began; drives both the glyph and the wheel colour */
+	/** Spinner frames drawn since the phase began; drives both the glyph and the wheel color */
 	frame: number;
 	lastFrame: number;
 	lastTick: number;
@@ -548,7 +548,7 @@ export class PhaseRenderer {
 	}
 }
 
-/** The coloured title, and the detail after the separator when there is one. */
+/** The colored title, and the detail after the separator when there is one. */
 function phaseText(theme: StartupTheme, id: StartupPhaseId, detail: string | undefined): string {
 	const title = theme.label(theme.phases[id].title);
 	return detail ? title + theme.detail(theme.separator + detail) : title;
@@ -589,7 +589,7 @@ export type SpinnerWorkerCommand =
 export interface SpinnerWorkerData {
 	/** File descriptor to write to (the terminal) */
 	fd: number;
-	/** Theme name, resolved again inside the worker (colour functions cannot cross the thread boundary) */
+	/** Theme name, resolved again inside the worker (color functions cannot cross the thread boundary) */
 	theme: string;
 	/** One `Int32`; the worker sets it to 1 and notifies after it has finished writing an `end` */
 	signal: SharedArrayBuffer;
@@ -816,7 +816,7 @@ export class StartupProgress {
 }
 
 /**
- * The colour depth ansis chose for this thread, as a `FORCE_COLOR` level: 3 truecolor, 2 for 256 colours,
+ * The color depth ansis chose for this thread, as a `FORCE_COLOR` level: 3 truecolor, 2 for 256 colors,
  * 1 for the basic 16, 0 for none.
  */
 function detectColorLevel(): number {

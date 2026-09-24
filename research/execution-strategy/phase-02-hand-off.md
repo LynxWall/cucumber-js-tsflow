@@ -21,7 +21,7 @@ Written at the end of the Phase 2 session so that the Phase 3 session can start 
   in `endTestCase` and `reset`. `getStepScenarioContext()` now takes no argument and returns that field; the
   pickle scan, its `hasMatchingStep`/`hasMatchingTags` calls and the `stepHasTags` helper are gone. Both
   call sites (`test-case-runner.ts` and the step wrapper in `binding-decorator.ts`) were updated. The
-  behaviour change is recorded in the changelog: steps always get the running scenario's context, and the
+  behavior change is recorded in the changelog: steps always get the running scenario's context, and the
   tag-scoped binding is still chosen from the registry via `getStepBindings`.
 - **Item 4.** `hasMatchingStep` memoizes compiled `RegExp`s in a module-level `Map` keyed by step text.
   Only successful compiles are cached, so an invalid pattern still logs on every call as before. The

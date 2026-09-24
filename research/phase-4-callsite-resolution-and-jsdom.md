@@ -161,7 +161,7 @@ Two different decorator expressions can never share a raw position, and the same
 twice always does, so duplicate detection is unchanged in practice.
 
 The path-relativising now uses `path.sep`, so Linux and macOS produce cwd-relative `uri`s like Windows
-always has. This is the only intentional behaviour change in the callsite code.
+always has. This is the only intentional behavior change in the callsite code.
 
 Microbenchmark (plain Node, 30-deep stack, 5,000 iterations): the old `capture()` costs 21.5 µs, the new
 one 6.0 µs, and the deferred resolution 6.1 µs per binding when it eventually runs. Modest — this was
@@ -269,7 +269,7 @@ function withoutBrowserDetection<T>(fn: () => T): T {
 	}
 	const descriptor = Object.getOwnPropertyDescriptor(globals, 'XMLHttpRequest');
 	if (!descriptor?.configurable) {
-		return fn(); // cannot remove it; accept the library's behaviour
+		return fn(); // cannot remove it; accept the library's behavior
 	}
 	delete globals.XMLHttpRequest;
 	try {
@@ -293,7 +293,7 @@ Two alternatives were considered and rejected:
   `source-map-support/register` on the same module instance.
 - **Skipping `wrapCallSite` for `file://` frames** is simpler and today gives the same answer, but it would
   remove source mapping for a consumer who prebuilds ESM support files with real source maps. The chosen
-  fix keeps their behaviour.
+  fix keeps their behavior.
 
 ## 6. Measured effect
 

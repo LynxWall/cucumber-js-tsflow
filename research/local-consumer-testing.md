@@ -76,7 +76,7 @@ picks up the pinned version from the `packageManager` field.
   runtime; acceptable for timing work, but it means the linked setup is not a packaging test.
 
 A `file:` tarball (`yarn workspace @lynxwall/cucumber-tsflow pack` → `"file:../path/to/x.tgz"`) is the
-faithful install: it honours the `files` allowlist, installs through pnpm's store, and gets UIS's Vue.
+faithful install: it honors the `files` allowlist, installs through pnpm's store, and gets UIS's Vue.
 It costs a pack plus `pnpm install` per iteration, and pnpm has been known to cache `file:` tarballs by
 path, so a version bump or store prune may be needed to pick up changes. Use it as a final check before a
 release, not for iteration.

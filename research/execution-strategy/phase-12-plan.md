@@ -66,11 +66,12 @@ tightening a net and turns the review from a read-through into a hands-on pass.
   error today, in the same files). Related: ESLint's `no-undef` cannot see the Node global types (`NodeJS.*`,
   `BufferEncoding`), which is why `cli/index.ts` and `cli/watch.ts` carry disables; typescript-eslint's guidance
   is to turn `no-undef` off for TypeScript files and let `tsc` own that check.
-- **American English.** Source has 34 British spellings in 5 files, 28 of them `colour` and its identifiers
-  (`wheelColour`, `coloured`, `Colours`), the rest `serialise`, `recognise`, `normalise`, `initialise`, `grey`.
-  Documents have about 90 across 12 files, led by `behaviour` (39) and `colour` (21). Rename identifiers only after
-  checking the `exports` map and the spec workspaces for consumers; CucumberJS's own names (`colorFns`) are already
-  American, so nothing on that boundary changes. Do the documents with a scripted pass and a manual read.
+- **American English.** Source had 34 British spellings in 5 files, 28 of them the British form of `color` and
+  its identifiers (now `wheelColor`, `colored`, `Colors`), the rest the British forms of `serialize`, `recognize`,
+  `normalize`, `initialize` and `gray`. Documents had about 90 across 12 files, led by the British forms of
+  `behavior` (39) and `color` (21). Rename identifiers only after checking the `exports` map and the spec
+  workspaces for consumers; CucumberJS's own names (`colorFns`) are already American, so nothing on that boundary
+  changes. Do the documents with a scripted pass and a manual read.
 
 ### Exit criteria
 
@@ -93,7 +94,7 @@ and a read-only coverage inventory of the branch, so that the decisions and the 
 - `npx tsc --noEmit -p tsconfig.node.json --strictNullChecks` from `cucumber-tsflow/`: **21 errors** in
   `runtime/message-collector.ts` (12), `runtime/test-case-runner.ts` (5), `api/convert-configuration.ts` (3),
   `bindings/binding-context.ts` (1). `--strict` reports the same 21 and nothing more.
-- British spellings: **26 in `src`** across `utils/startup-progress.ts` (the `colour` family, 24), `cli/run.ts`,
+- British spellings: **26 in `src`** across `utils/startup-progress.ts` (the `color` family, 24), `cli/run.ts`,
   `api/support-reloader.ts`, `transpilers/transpile-cache.ts`, `utils/module-graph.ts` and
   `transpilers/esm/README.md`; about **90 in Markdown** across 15 files, 34 of them in the execution strategy (one file at the time).
 - No unit test and no unit-test runner exist anywhere in the repository. The test suite is 16 CLI invocations
@@ -372,7 +373,7 @@ UIS testbed; CONTRIBUTE.md and CLAUDE.md match the scripts.
   publish runs (`@jsdevtools/npm-publish` is in the root devDependencies; check for a publish workflow). One box
   is the shipped agent skill, read once more against the tree that is tagged.
 - **(added)** Real-console verification of the startup output with the `verify-console-output` skill, after the
-  `colour` → `color` renames in `utils/startup-progress.ts`.
+  `color` → `color` renames in `utils/startup-progress.ts`.
 - A final `test:all` on the matrix, then tag and publish.
 
 **Gate:** the checklist has no open box.

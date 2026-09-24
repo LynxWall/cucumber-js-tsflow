@@ -10,7 +10,7 @@ large suite and nothing in it was expected to move the Phase 5 numbers.
 
 - Still on branch `2026-09-performance-enhancements`. Phase 6 is five commits: `3a03d4e` ("Startup
   progress: themed phase lines with a worker-thread spinner, wrapping naturally"), `78ca080` ("Startup
-  spinner: colour wheel with a three-cell wipe; park the cursor below the block"), `37a596e` ("LOTR startup
+  spinner: color wheel with a three-cell wipe; park the cursor below the block"), `37a596e` ("LOTR startup
   theme: emoji on every line, beacons moved to the load phase"), `5500456` ("ESM callsites map to TypeScript
   lines; startup counter in parentheses") and `ed5bbbf` ("Track the performance research notes and workspace
   settings"). The Phase 5 removals that were uncommitted at the end of that session (`esbuild-transpiler.mjs`,
@@ -50,12 +50,12 @@ large suite and nothing in it was expected to move the Phase 5 numbers.
   timer cannot fire; the main thread waits on an `Atomics` signal for the closing line so the two threads'
   writes stay ordered. Nothing is fitted to the console width: lines are written whole and wrap, and the
   block is redrawn from its first row using a row count derived from the current width, re-read every frame.
-  The spinner colour walks a twelve-colour wheel independent of theme and progress. `TSFLOW_THEME` selects
+  The spinner color walks a twelve-color wheel independent of theme and progress. `TSFLOW_THEME` selects
   `pickle` (default), `lotr` or `off`. On a non-TTY stream (CI, a captured shell, a file) the lines are
   append-only and no worker starts, so formatter output and report files are untouched.
 - **Item 26, the harness.** `.claude/skills/verify-console-output/` runs built code in a fresh console
   window at several widths and reads the screen buffer back. It exists because a captured shell has
-  `isTTY === false` and cannot show redraws, colours or glyph widths; two console facts it uncovered are in
+  `isTTY === false` and cannot show redraws, colors or glyph widths; two console facts it uncovered are in
   `Architecture.md` (the TTY stream rather than raw `fs.writeSync`, `CSI 1G` rather than `\r`).
 - **Item 26, not done.** None of the optional candidates were taken up: `TSFLOW_TIMING` is still an
   environment variable and not a `--timing` flag, `--verbose` does not report the hooks mode or Node
@@ -108,7 +108,7 @@ phase exists at all.
   which is what the layer table's `self ms` for `tsflow` already is.
 - **Idle.** `(idle)` is the event loop with nothing to run — awaiting a timer, I/O or a child. On the
   serial `dim` run, idle inside `runtime:run` is time no JavaScript was using, which points at waits in the
-  consumer's steps (`await nextTick`, timers, jsdom's async behaviour) rather than at any library. Report
+  consumer's steps (`await nextTick`, timers, jsdom's async behavior) rather than at any library. Report
   it as its own row; it is likely to be a large one.
 - **Three runs, discard the first.** The Phase 5 rule holds: `runtime:run` varied 37–47 s across clean
   runs of one build. Take at least three profiles and compare the layer percentages, which are far more

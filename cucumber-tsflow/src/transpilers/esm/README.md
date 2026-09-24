@@ -322,8 +322,8 @@ import { helper } from '@/utils/helper';   // Resolves to src/utils/helper.ts
 
 - First run may be slower due to compilation; subsequent runs use ts-node's cache
 - Consider using transpileOnly: true in ts-node config for faster test runs
-- The `ts-node-esm` transpiler always runs ts-node with `transpileOnly: true` and `files: false`, so a `"ts-node": { "files": true }` entry in your tsconfig has no effect on it and no project-tree walk happens at startup. `es-node-esm` and `es-vue-esm` do not use ts-node at all: they transpile TypeScript with esbuild directly in the `load` hook. `ts-vue-esm` uses `ts-node-maintained/esm` directly and honours your `ts-node` tsconfig block, including `files`, which it needs when type-checking `.vue` shims.
-- On Node 22.15 / 23.5 and later the `es-node-esm` and `es-vue-esm` hooks run synchronously on the importing thread (`module.registerHooks()`), which removes a thread round trip per resolve and per load. Set `TSFLOW_ESM_HOOKS=async` to force the previous `module.register()` behaviour.
+- The `ts-node-esm` transpiler always runs ts-node with `transpileOnly: true` and `files: false`, so a `"ts-node": { "files": true }` entry in your tsconfig has no effect on it and no project-tree walk happens at startup. `es-node-esm` and `es-vue-esm` do not use ts-node at all: they transpile TypeScript with esbuild directly in the `load` hook. `ts-vue-esm` uses `ts-node-maintained/esm` directly and honors your `ts-node` tsconfig block, including `files`, which it needs when type-checking `.vue` shims.
+- On Node 22.15 / 23.5 and later the `es-node-esm` and `es-vue-esm` hooks run synchronously on the importing thread (`module.registerHooks()`), which removes a thread round trip per resolve and per load. Set `TSFLOW_ESM_HOOKS=async` to force the previous `module.register()` behavior.
 
 ## Migration from CommonJS
 

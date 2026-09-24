@@ -570,7 +570,7 @@ from the squashed diff by file should a later measurement disagree.
   before rethrowing, so a configuration error prints `[tsflow:config]:ERROR …` and then the `[tsflow:run]`
   report, two copies (same mechanical change as the loaders in AB; 12d). Both READMEs still list **Parallel
   preload** as a feature at line 29 and the root README's transpile-cache paragraph still mentions "`parallelLoad`
-  preload threads" (12e). `transpile-cache.ts` has "serialised" / "serialise" (12d's spelling sweep). In a
+  preload threads" (12e). `transpile-cache.ts` has two British spellings of "serialize" (12d's spelling sweep). In a
   parallel run where no test case ever starts (the BeforeAll spec's second scenario), the formatter's summary
   prints before the launch phase line closes, because the phase closes after `runtime.run()` resolves and the
   formatter's `testRunFinished` listener was registered first; cosmetic, pre-existing. Three links in

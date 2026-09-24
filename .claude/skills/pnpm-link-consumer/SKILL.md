@@ -25,7 +25,7 @@ Background and prior measurements: [research/local-consumer-testing.md](../../..
 - The library's own dependencies resolve from **this repo's** root `node_modules` (Yarn uses
   `nodeLinker: node-modules`, so they exist). Anything the library imports *without* declaring — notably
   `vue/compiler-sfc` in `vue-sfc-compiler.ts` — also resolves from this repo, not the consumer. So a linked
-  install is a behaviour and timing test, **not a packaging test**. For a packaging check use a `file:`
+  install is a behavior and timing test, **not a packaging test**. For a packaging check use a `file:`
   tarball from `yarn workspace @lynxwall/cucumber-tsflow pack` instead.
 - Only pnpm consumers are covered here. For a Yarn Berry consumer the equivalent is `portal:`; for npm,
   `npm link` or a `file:` directory. Say so and stop if the consumer is not pnpm.
@@ -48,7 +48,7 @@ From the consumer directory, establish and report:
 - `git status --short` of `package.json` and `pnpm-lock.yaml`. If they already have uncommitted edits,
   note it — the undo step must not blindly `git checkout` them.
 - Whether `pnpm` is on `PATH`. In this repo's Bash tool it usually is not; use `corepack pnpm …` from
-  inside the consumer directory, which honours the pinned `packageManager` version.
+  inside the consumer directory, which honors the pinned `packageManager` version.
 
 ### 2. Build the library
 
@@ -115,7 +115,7 @@ onward, never run one. Wall clock is the figure that matters — cucumber's `exe
 fraction of a second on these profiles; everything else is startup.
 
 All scenarios must pass. If any fail that passed on the registry version, stop and report the diff before
-anything else — that is a behaviour regression in the local build, not a wiring problem.
+anything else — that is a behavior regression in the local build, not a wiring problem.
 
 ### 7. Report and remind
 

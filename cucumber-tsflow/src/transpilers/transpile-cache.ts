@@ -9,7 +9,7 @@
  *
  * Correctness rests on the key alone. A wrong key would not crash, it would run stale code, so the key
  * covers: the source text, the absolute file name (esbuild's source map names it and the Vue compiler
- * derives the component id from it), the caller's `kind`, the caller's serialised configuration
+ * derives the component id from it), the caller's `kind`, the caller's serialized configuration
  * (transform options including `tsconfigRaw`, the tsconfig `paths` and `absoluteBaseUrl` that the ESM
  * loader bakes into its output as `file://` URLs, the Vue style flag, the decorator mode, the esbuild and
  * Vue compiler versions), and this library's version. Nothing is looked up by path or by mtime.
@@ -143,7 +143,7 @@ function entryPath(key: string): string {
 
 /**
  * Return the cached result for `source` of `filename` under `kind` and `configuration`, or run `produce`,
- * store its result and return it. `configuration` must serialise every input other than the source and
+ * store its result and return it. `configuration` must serialize every input other than the source and
  * file name that can change the output (options, tool versions); this library's version and the entry
  * format are added here. With the cache disabled this is exactly `produce()`.
  *

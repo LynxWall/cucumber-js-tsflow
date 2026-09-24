@@ -30,7 +30,7 @@ This release focuses on correctness, performance, and code quality improvements 
 
 ### Performance and Efficiency
 
-- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in favour of native `Array.prototype` equivalents.
+- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in favor of native `Array.prototype` equivalents.
 - **O(1) binding lookup** — added a `Map` index to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
 - **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` with a lookup map.
 - **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext` with a single spread call, removing the previous limit of nine context objects.
@@ -59,7 +59,7 @@ This release adds a new API function for incremental support-code reloading and 
 
 - The CJS Vue SFC compiler (previously a 9-file Vite-plugin-derived implementation in `vue-sfc/`) has been replaced by a single shared `vue-sfc-compiler.ts` that both the CJS transpilers and the ESM loaders delegate to.
 - Removed the `rollup` and `@rollup/pluginutils` dependencies, which were only used by the old CJS implementation.
-- Fixed a bug where image assets referenced in Vue templates (e.g. `<img src="...">`) caused a `SyntaxError: Invalid or unexpected token` in CJS mode. Asset URL transforms are now disabled — `src` attributes remain as literal strings, which is the correct behaviour for unit testing Vue components with `@vue/test-utils`.
+- Fixed a bug where image assets referenced in Vue templates (e.g. `<img src="...">`) caused a `SyntaxError: Invalid or unexpected token` in CJS mode. Asset URL transforms are now disabled — `src` attributes remain as literal strings, which is the correct behavior for unit testing Vue components with `@vue/test-utils`.
 - Fixed duplicate **"Using Experimental Decorators."** console message that appeared twice when `experimentalDecorators: true` was set.
 
 ## Release Updates (7.3.0)

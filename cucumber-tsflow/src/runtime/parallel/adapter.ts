@@ -10,6 +10,7 @@ import { FinalizeCommand, RunCommand } from '@cucumber/cucumber/lib/runtime/para
 import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
 import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime, TsFlowWorkerToCoordinatorEvent } from '../types';
 import { mergeTimingSnapshot } from '../../utils/tsflow-timing';
+import { EXPERIMENTAL_DECORATORS_VARIABLE } from '../../utils/decorator-mode';
 
 const runWorkerPath = path.resolve(__dirname, 'run-worker');
 
@@ -101,7 +102,9 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				CUCUMBER_PARALLEL: 'true',
 				CUCUMBER_TOTAL_WORKERS: total.toString(),
 				CUCUMBER_WORKER_ID: id,
-				EXPERIMENTAL_DECORATORS: this.options.experimentalDecorators.toString()
+				// The variable `setExperimentalDecorators` wrote for this process, set again here because the run
+				// environment's `env` need not be `process.env`
+				[EXPERIMENTAL_DECORATORS_VARIABLE]: String(this.options.experimentalDecorators)
 			},
 			stdio: ['inherit', 'inherit', 'inherit', 'ipc']
 		});

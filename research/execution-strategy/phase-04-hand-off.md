@@ -33,11 +33,11 @@ Written at the end of the Phase 4 session so that the Phase 5 session can start 
   `rawPosition` instead of the mapped file and line, so `registerStepBinding` never resolves. The first
   resolution therefore happens in `updateSupportCodeLibrary`, after all support code has loaded — that is
   where the cost moved, and where the finding below was made. The cwd-stripping now uses `path.sep`, so
-  Linux/macOS `uri`s become cwd-relative like Windows ones (the one behaviour change; CI is Linux and the
+  Linux/macOS `uri`s become cwd-relative like Windows ones (the one behavior change; CI is Linux and the
   spec features do not assert on `uri`). Reported `uri`/`line` values on Windows are byte-identical before
   and after in nine of the ten spec reports; the tenth (`esvue.html`) differs only because `vue-esm` and
   `vue-exp-esm` both write that filename and a different profile was the last writer — a pre-existing spec
-  config collision, not a behaviour change. Microbenchmark, plain Node, 30-deep stack: old capture
+  config collision, not a behavior change. Microbenchmark, plain Node, 30-deep stack: old capture
   21.5 µs, new capture 6.0 µs, deferred resolve 6.1 µs per binding.
 - **The jsdom finding (unplanned, item 8's real payoff).** Once resolution was deferred, `registry:update`
   on the UIS `dim` profile measured 20 s where Phase 2 had measured 0.6 ms, and `support:import` dropped
@@ -68,7 +68,7 @@ Written at the end of the Phase 4 session so that the Phase 5 session can start 
   requiring `lib/cli/run.js` and, if Node returned a directory and `NODE_COMPILE_CACHE` is unset, exports
   that directory as `NODE_COMPILE_CACHE`. That export matters: `enableCompileCache()` does **not** set the
   variable itself (verified on Node 24.16), so without it forked children and preload worker threads would
-  start without the cache. `NODE_DISABLE_COMPILE_CACHE=1` and `NODE_COMPILE_CACHE=<dir>` are honoured by
+  start without the cache. `NODE_DISABLE_COMPILE_CACHE=1` and `NODE_COMPILE_CACHE=<dir>` are honored by
   Node. **Measured neutral** on the UIS `dim` profile — see the table; `bootstrap` 397–438 ms with the
   cache versus 397–402 ms without, wall clock identical within noise. Sources produced by the ESM loader
   hooks are evidently cached or not without visible effect either way. Whether to keep it is a review

@@ -8,7 +8,7 @@ The two rating scales, the summary table, the rating of every item on the workli
 
 The two axes are deliberately independent. An item can be a 9 on impact and a 2 on complexity, or a 3 on
 impact and a 9 on complexity, and both readings should be legible from the numbers alone. Neither axis is
-allowed to colour the other: a change being easy is not evidence that it is valuable, and a change being
+allowed to color the other: a change being easy is not evidence that it is valuable, and a change being
 valuable is not evidence that it is hard.
 
 ### Impact — how much performance is recovered
@@ -36,7 +36,7 @@ the recurring theme across all three analyses is that none of these costs are vi
 twenty-eight-scenario spec matrix, so a change can pass the whole of `yarn test:all` and still be wrong on
 a real suite.
 
-- **1** — A deletion, or a single hoist inside a pure function. There is no mechanism by which behaviour
+- **1** — A deletion, or a single hoist inside a pure function. There is no mechanism by which behavior
   could change, and in the strongest cases the upstream analysis proved the removed work was unreachable.
 - **3** — A localized edit to one or two files, correct by inspection, fully covered by the existing spec
   matrix.
@@ -114,7 +114,7 @@ on the worklist changes a superlinear cost into a constant one.
 shape is established, and `startTestCase` has the `ManagedScenarioContext` in hand at the moment it is
 created. What raises this above trivial is that the current lookup can legitimately resolve to a
 _different_ scenario's context whenever a step pattern matches text in another pickle — that is the bug,
-but any support code that has come to depend on the accident needs the behaviour change acknowledged
+but any support code that has come to depend on the accident needs the behavior change acknowledged
 rather than assumed benign. It also has to hold in each parallel child, where the collector is per process
 and the pickle set is a subset of the run.
 
@@ -130,7 +130,7 @@ create a `ts-node` service, this hits the esbuild ESM path as well as the `ts-no
 [analysis-3.md](../analysis-3.md) supplies rather than any property of tsflow's own code. `config.fileNames`
 is consumed at exactly one place, inside an `if (!transpileOnly)` branch, and every tsflow ESM service
 sets `transpileOnly: true`. The result of the walk is therefore unreachable, which makes the removal a
-deletion with no behaviour to change and nothing to validate beyond confirming the services still
+deletion with no behavior to change and nothing to validate beyond confirming the services still
 construct.
 
 ### 4. Memoize pattern-to-`RegExp` in `runtime/utils.ts`
@@ -140,7 +140,7 @@ item 2's figures showed the memoization taking the 200-scenario shape from 8114 
 improvement, with no API change. The rating is 6 rather than 9 because the two items overlap almost
 entirely — once item 2 removes the dominant caller, the surviving callers of `hasMatchingStep` are the two
 in [gherkin-manager.ts](../../cucumber-tsflow/src/gherkin/gherkin-manager.ts), which are on the `--debug-file`
-path only. As sequenced defence in depth it is cheap insurance; as a standalone change it is a large win.
+path only. As sequenced defense in depth it is cheap insurance; as a standalone change it is a large win.
 
 **Complexity 2.** `getRegTextForStep` is a pure function of its input — seventeen chained `String.replace`
 passes and nothing else — so a `Map<string, RegExp>` in front of it cannot change a result. The only
@@ -231,7 +231,7 @@ but an order below item 2.
 
 **Complexity 2.** `this.pickle` is fixed for the runner's entire lifetime, so both hook lists are safely
 constructor-time values, and the two `find` scans become `Map<id, definition>` indexes built once per run.
-Mechanical, contained in two files, and with no behavioural difference to reason about beyond the
+Mechanical, contained in two files, and with no behavioral difference to reason about beyond the
 identity of the returned arrays.
 
 ### 10. Send resolved paths to parallel children instead of re-globbing
@@ -277,7 +277,7 @@ solely to produce a number that is immediately discarded.
 
 **Complexity 1.** `isVerbose()` is already exported from the same file (and from its `.mjs` twin for the
 loaders), so the work is to wrap the hot call sites in the resolve and load hooks and in `transpile`, and
-leave the CLI and configuration call sites exactly as they are. There is no behaviour to preserve because
+leave the CLI and configuration call sites exactly as they are. There is no behavior to preserve because
 the discarded values are already discarded.
 
 ### 13. Delete the hardcoded `cucumber-tsflow-specs` check in `supports()`
@@ -290,7 +290,7 @@ changes no timing at all. It is on the worklist because it would silently disabl
 consumer project the moment anyone wired it up, and because the two exported predicates currently
 disagree (the CJS version has no such check), which is a trap independent of performance.
 
-**Complexity 1.** A deletion of dead code. The only judgement required is whether to delete both
+**Complexity 1.** A deletion of dead code. The only judgment required is whether to delete both
 `supports()` exports outright, given neither has a consumer, or to reconcile them — and either choice is
 safe precisely because nothing imports them.
 
@@ -361,7 +361,7 @@ transpile-only pass has to discover them, which means an esbuild `metafile` scan
 points as a replacement for transitive discovery. Against that, transpiling needs no browser globals, so
 the change deletes the roughly 160-line `window` shim at the top of
 [loader-worker.ts](../../cucumber-tsflow/src/api/loader-worker.ts) and removes the hazard of running
-module-level side effects N+1 times — a genuine simplification, but one that changes behaviour on the Vue
+module-level side effects N+1 times — a genuine simplification, but one that changes behavior on the Vue
 paths and therefore needs the `*-vue*` workspaces run deliberately.
 
 ### 18. Bypass `ts-node` in the esbuild ESM `load` path; async `transform()`
@@ -376,7 +376,7 @@ scan. Removing that is worth real time on its own. The larger half is that it un
 loaders are the only path that can ever parallelise transpilation at all.
 
 **Complexity 6.** The `load` hook has to take over everything `ts-node` was contributing — the CJS-versus-ESM
-format decision, source-map attachment, and any resolution behaviour consumers have come to rely on — and
+format decision, source-map attachment, and any resolution behavior consumers have come to rely on — and
 the blocker on going async is precisely that `ts-node`'s `Transpiler.transpile` interface is synchronous
 by contract, so the two halves of this item are one change rather than two. It touches every esbuild ESM
 variant in the matrix, which is four of the eight spec workspaces.
@@ -512,7 +512,7 @@ runtime cost and the dominant per-process startup costs.
 
 1. **Item 2** (impact 10, complexity 4) — the single largest win in the directory, the only one with
    measurements behind it, and the only one that changes a superlinear cost into a constant. Its
-   complexity is a 4 rather than a 2 purely because the behaviour change wants acknowledging.
+   complexity is a 4 rather than a 2 purely because the behavior change wants acknowledging.
 1. **Item 3** (impact 7, complexity 1) — the best ratio on the list. A deletion with a proof of safety
    attached, removing a full recursive directory walk per process, per child and per preload thread.
 1. **Item 5** (impact 7, complexity 2) — removes an O(bindings × definitions) traversal paid four times
@@ -530,7 +530,7 @@ modest, and item 13 (impact 1, complexity 1) belongs there for correctness rathe
 ### Free but marginal
 
 Items 11, 12, 13 and 15 all rate 3 or below on impact and 3 or below on complexity. None of them will be
-visible in a stopwatch. They are worth doing while in the neighbouring code — item 13 in particular is a
+visible in a stopwatch. They are worth doing while in the neighboring code — item 13 in particular is a
 latent trap rather than a slow path, and item 15 is a one-expression change that should not be made at all
 until item 17 gives the preload phase a durable output.
 

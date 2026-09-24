@@ -42,7 +42,7 @@ Written at the end of the Phase 5 session so that the Phase 6 session can start 
   cannot coexist with this design. Its other half — bypassing ts-node — landed in full.
 - **Item 21.** `registerLoader(specifier)` in `src/api/register-loaders.ts` is the one place the three
   registering contexts (main `getSupportCodeLibrary`, preload worker, parallel child) attach a loader. For
-  tsflow's own `esnode-loader` / `esvue-loader` (recognised by the `/transpilers/esm/<name>` suffix of the
+  tsflow's own `esnode-loader` / `esvue-loader` (recognized by the `/transpilers/esm/<name>` suffix of the
   specifier) on a Node with `module.registerHooks` (22.15 / 23.5+), it `import()`s the `.mjs` by path
   relative to `lib/api` and passes `{ resolve, load }` to `registerHooks()`, deduplicated per thread because
   hooks stack. Everything else — the ts-node loaders, third-party loaders in the `loader` list, older Node,
@@ -69,12 +69,12 @@ Written at the end of the Phase 5 session so that the Phase 6 session can start 
 - **Item 18.** `loadTypeScript(url)` reads the file and calls `transpileCode(code, filename, undefined,
   { esbuild: { sourcemap: 'inline' } })` from `esbuild.mjs` — the `_options.esbuild` spread already existed,
   so `esbuild.mjs` did not change. ts-node is gone from the esbuild loaders entirely: `tsnode-service.mjs`
-  (which `require`d `ts-node-maintained` at loader initialisation, before any TypeScript file) is deleted,
+  (which `require`d `ts-node-maintained` at loader initialization, before any TypeScript file) is deleted,
   along with `getEsmHooks`, `createHookExports` and the `tsNodeHooks`/`getTsNodeHooks`/`handleTsFiles`
   options of `resolveSpecifier`. Explicit `.ts`/`.tsx` specifiers now fall through to Node's resolver (ts-node's
   was only ever consulted for specifiers that already carried the extension, where the two agree).
   `tsnode-loader.mjs` keeps its ts-node fallback resolve and applies the `format: 'module'` override for
-  `.ts`/`.tsx` specifiers itself, preserving the old step-2 behaviour. `esbuild-transpiler.mjs`, its
+  `.ts`/`.tsx` specifiers itself, preserving the old step-2 behavior. `esbuild-transpiler.mjs`, its
   bundled `esbuild-transpiler-cjs.js`, the `src/scripts/build-esm-transpiler-cjs.js` script, the
   `build:transpiler` step and the `exports` entry were removed too, on the owner's decision: the ts-node
   `Transpiler` plugin was public surface, but no tsflow loader used it any more and no known consumer
@@ -100,7 +100,7 @@ cold run after the build. Sync runs 2 and 4 were disturbed by the machine (run 4
 `bootstrap` and a 6.3 s `esm:hooks-init` for work that takes 0.4 s and 0.08 s in every other run) and are
 shown struck out of the comparison, not hidden. `esm:*` rows for sync come from the main-process table; for
 async from the "Main process ESM loader hooks" table. Async has no `esm:hooks-init` row because the esbuild
-loaders no longer create a ts-node service and nothing else on the hooks thread is timed at initialisation.
+loaders no longer create a ts-node service and nothing else on the hooks thread is timed at initialization.
 
 | Mode  | Run | `bootstrap` ms | `esm:hooks-init` ms | `esm:resolve` ms (2828) | `esm:load` ms (920) | `support:import` ms | `runtime:run` ms | Wall  |
 | ----- | --- | -------------- | ------------------- | ----------------------- | ------------------- | ------------------- | ---------------- | ----- |

@@ -1,5 +1,5 @@
 import * as messages from '@cucumber/messages';
-import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
+import { doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import { ManagedScenarioContext } from './managed-scenario-context';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
@@ -132,22 +132,26 @@ export default class MessageCollector {
 	}
 
 	parseEnvelope(envelope: messages.Envelope): void {
-		if (doesHaveValue(envelope.gherkinDocument)) {
-			this.gherkinDocumentMap[envelope.gherkinDocument.uri] = envelope.gherkinDocument;
-		} else if (doesHaveValue(envelope.pickle)) {
+		if (envelope.gherkinDocument) {
+			// A document parsed from a feature file always names it; the map is keyed by that name
+			const { uri } = envelope.gherkinDocument;
+			if (uri !== undefined) {
+				this.gherkinDocumentMap[uri] = envelope.gherkinDocument;
+			}
+		} else if (envelope.pickle) {
 			this.pickleMap[envelope.pickle.id] = envelope.pickle;
-		} else if (doesHaveValue(envelope.undefinedParameterType)) {
+		} else if (envelope.undefinedParameterType) {
 			this.undefinedParameterTypes.push(envelope.undefinedParameterType);
-		} else if (doesHaveValue(envelope.testCase)) {
+		} else if (envelope.testCase) {
 			this.testCaseMap[envelope.testCase.id] = envelope.testCase;
-		} else if (doesHaveValue(envelope.testCaseStarted)) {
+		} else if (envelope.testCaseStarted) {
 			this.initTestCaseAttempt(envelope.testCaseStarted);
 			this.startTestCase(envelope.testCaseStarted);
-		} else if (doesHaveValue(envelope.attachment)) {
+		} else if (envelope.attachment) {
 			this.storeAttachment(envelope.attachment);
-		} else if (doesHaveValue(envelope.testStepFinished)) {
+		} else if (envelope.testStepFinished) {
 			this.storeTestStepResult(envelope.testStepFinished);
-		} else if (doesHaveValue(envelope.testCaseFinished)) {
+		} else if (envelope.testCaseFinished) {
 			this.storeTestCaseResult(envelope.testCaseFinished);
 		}
 	}

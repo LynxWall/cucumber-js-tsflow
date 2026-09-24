@@ -41,10 +41,10 @@ Written at the end of the Phase 9 session (2026-09-17) so that Phase 10 can star
   exist yet, so the Gherkin envelopes (`source`, `gherkinDocument`, `pickle`, `parseError`) are pushed onto an
   array and emitted after `initializeFormatters` and `emitMetaMessage`, which reproduces the previous order
   exactly (`meta`, Gherkin, then `emitSupportCodeMessages`). The parse-error path is unchanged in effect: the
-  support code still loads, the formatters still initialise and clean up, and the errors are logged after the
+  support code still loads, the formatters still initialize and clean up, and the errors are logged after the
   replay. The "exit early when nothing matches" half of item 19 was deliberately not done: a zero-scenario run
-  today still initialises formatters, writes report files and runs `BeforeAll`/`AfterAll`, and changing that is
-  a behaviour change with no performance case behind it. The startup progress phases run resolve → parse →
+  today still initializes formatters, writes report files and runs `BeforeAll`/`AfterAll`, and changing that is
+  a behavior change with no performance case behind it. The startup progress phases run resolve → parse →
   load → launch; the pickling theme's parse phase is now `Making the brine` (the title the removed preload
   phase used to have), the LOTR theme keeps the Ents, who march on Isengard before the beacons are lit, and
   the formatters no longer have a phase (they take milliseconds).

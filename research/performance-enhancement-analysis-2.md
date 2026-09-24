@@ -62,7 +62,7 @@ Findings that appear in more than one document, reached independently:
 
 The first two documents were verified in
 [performance-enhancement-analysis.md](performance-enhancement-analysis.md); those results stand and are
-summarised rather than repeated. This section concentrates on `analysis-3.md`, whose claims are new.
+summarized rather than repeated. This section concentrates on `analysis-3.md`, whose claims are new.
 
 ### `analysis-3.md` — confirmed, including its dependency-source claims
 
@@ -182,7 +182,7 @@ Graded on quality of analysis and on impact of findings if acted on.
 
 The first two grades are carried forward from
 [performance-enhancement-analysis.md](performance-enhancement-analysis.md) without change. Adding a third
-document does not alter how well the first two analysed what they analysed, and grading here is
+document does not alter how well the first two analyzed what they analyzed, and grading here is
 criterion-referenced rather than relative.
 
 ### `analysis-3.md` — A
@@ -196,12 +196,12 @@ The `files: true` analysis is the exemplar. It would have been enough to observe
 a directory walk and call it wasteful; instead the document traces `config.fileNames` to its single
 consumer, shows that consumer sits behind `if (!transpileOnly)`, and observes that every tsflow service
 sets `transpileOnly: true`. That converts a plausible inefficiency into a demonstrated no-op, and it is
-why the recommendation can be stated as "a no-behaviour-change deletion" rather than as something needing
+why the recommendation can be stated as "a no-behavior-change deletion" rather than as something needing
 validation. I verified every line of that chain and it is exact, down to the quoted comment.
 
 The same discipline appears throughout: naming the installed `ts-node-maintained` version rather than
 reasoning about "ts-node" generically; identifying that `transformSync` blocks on `Atomics.wait` rather
-than merely asserting IPC cost; recognising that `source-map-support` memoises per file and therefore
+than merely asserting IPC cost; recognizing that `source-map-support` memoises per file and therefore
 sizing the callsite prize correctly. The transpile-multiplier table turns a diffuse "work is repeated"
 complaint into four concrete configurations. And its sharpest architectural observation — that the CJS
 path can never be made async because `require` is synchronous, so the ESM loaders are not just the newer
@@ -234,7 +234,7 @@ available anywhere in this directory, and even the conservative half of it — i
 an early exit — is tractable.
 
 The reshaping of the preload phase from "evaluate every module in N threads" to "transpile into the cache
-in N threads" is better than `analysis-2.md`'s version of the same idea, because it recognises the second
+in N threads" is better than `analysis-2.md`'s version of the same idea, because it recognizes the second
 and third order effects: transpiling needs no browser globals, which deletes the 170-line `window` shim
 and the class of bugs it exists to paper over, and it removes the hazard of running module-level side
 effects N+1 times.
@@ -272,13 +272,13 @@ All three documents merged, ordered by confidence times payoff divided by risk. 
 | --- | --- | --- | --- |
 | 1 | `TSFLOW_TIMING` phase instrumentation plus a slowest-files table | `[A3]` 0, `[A2]` | Nothing below is currently measurable; this is also the regression test |
 | 2 | Track the running pickle's context on `MessageCollector`; both call sites read it | `[PA]` 1 | Removes a superlinear runtime cost; `getHookScenarioContext` is the working precedent |
-| 3 | Remove `files: true` and the `TS_NODE_FILES` forcing from all three ESM services | `[A3]`, `[A2]` 6 | Proven dead work; a deletion with no behaviour change |
-| 4 | Memoize pattern-to-`RegExp` in `runtime/utils.ts` | `[PA]` 1 | Ten lines, pure function, defence in depth behind #2 |
+| 3 | Remove `files: true` and the `TS_NODE_FILES` forcing from all three ESM services | `[A3]`, `[A2]` 6 | Proven dead work; a deletion with no behavior change |
+| 4 | Memoize pattern-to-`RegExp` in `runtime/utils.ts` | `[PA]` 1 | Ten lines, pure function, defense in depth behind #2 |
 | 5 | Replace the `Array.find` closures in `updateSupportCodeLibrary` with `Map` lookups | `[PA]` 5, `[A3]` | Removes O(B x D) per process, i.e. per parallel child |
 | 6 | Precompile the tsconfig path-mapping regexes once instead of per file | `[A3]` | Removes aliases x files regex compilations and full-source scans |
 | 7 | Cache resolution on `specifier + parentURL`; stop awaiting `getEsmHooks()` on resolves that cannot reach the `.ts` branch | all three | Cheapest win in `loader-utils.mjs`; most visible on Windows |
 | 8 | Lazy callsite resolution plus `Error.stackTraceLimit`; fix the hard-coded backslash | `[A2]` 4, `[A3]` | Per-binding stack walks and per-file map parses off the critical path, plus a portability fix |
-| 9 | Hoist tag lowercasing, per-step hook filtering, and definition lookups | `[PA]` 2, 3, 4 | Small, mechanical, no behavioural change |
+| 9 | Hoist tag lowercasing, per-step hook filtering, and definition lookups | `[PA]` 2, 3, 4 | Small, mechanical, no behavioral change |
 | 10 | Send resolved `requirePaths` / `importPaths` to parallel children instead of re-globbing | `[A2]` 3, `[A3]` | Removes N full glob passes |
 | 11 | Hoist the `shortUuid()` translator to module scope; index `registerStepBinding` dedupe | `[A3]`, `[PA]` 6 | One-line and near-one-line allocations per binding |
 | 12 | Guard hot-path `logger.checkpoint` arguments behind `isVerbose()` | `[A2]` 8, `[A3]` | Free; a constant on the hottest loop |
@@ -303,8 +303,8 @@ help.
 ## One note on all three
 
 None of the three is testable against the current spec suite, and all three say so. Twenty-eight
-scenarios across eight feature files will not surface behaviour that scales with scenario count, and the
-spec workspaces' support trees will not surface behaviour that scales with file count. Every finding in
+scenarios across eight feature files will not surface behavior that scales with scenario count, and the
+spec workspaces' support trees will not surface behavior that scales with file count. Every finding in
 every document grows with suite size, and none are visible in the workspaces used for correctness
 testing.
 

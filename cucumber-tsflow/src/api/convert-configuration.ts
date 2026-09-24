@@ -2,7 +2,7 @@ import { IConfiguration, isTruthyString, splitFormatDescriptor } from '@cucumber
 import { IPublishConfig } from '@cucumber/cucumber/lib/publish/index';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
 import { ITsFlowRunConfiguration } from '../runtime/types';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, describeThrowable } from '../utils/tsflow-logger';
 
 const logger = createLogger('convert');
 
@@ -72,7 +72,8 @@ export async function convertConfiguration(
 			formats
 		};
 	} catch (error: any) {
-		logger.error('convertConfiguration() failed', error);
+		// The error propagates to the CLI, which reports it once; only the verbose trail keeps a copy here
+		logger.checkpoint('convertConfiguration() failed', { error: describeThrowable(error) });
 		throw new Error(`Failed to convert configuration: ${error.message}`, { cause: error });
 	}
 }
@@ -81,8 +82,11 @@ function convertFormats(cucumberLogger: ILogger, flatConfiguration: IConfigurati
 	logger.checkpoint('convertFormats() started', { formatCount: flatConfiguration.format?.length });
 
 	try {
-		const splitFormats: string[][] = flatConfiguration.format.map((item, index) => {
-			const result = Array.isArray(item) ? item : splitFormatDescriptor(cucumberLogger, item);
+		// Each entry is the formatter and, optionally, the file it writes to
+		const splitFormats: Array<[string, string?]> = flatConfiguration.format.map((item, index) => {
+			const result: [string, string?] = Array.isArray(item)
+				? item
+				: (splitFormatDescriptor(cucumberLogger, item) as [string, string?]);
 			logger.checkpoint(`Format[${index}] processed`, { input: item, output: result });
 			return result;
 		});
@@ -90,14 +94,12 @@ function convertFormats(cucumberLogger: ILogger, flatConfiguration: IConfigurati
 		const stdout = [...splitFormats].reverse().find(([, target]) => !target)?.[0] ?? 'progress';
 		logger.checkpoint('Stdout format', { stdout });
 
-		const files = splitFormats
-			.filter(([, target]) => !!target)
-			.reduce((mapped, [type, target]) => {
-				return {
-					...mapped,
-					[target]: type
-				};
-			}, {});
+		const files: Record<string, string> = {};
+		for (const [type, target] of splitFormats) {
+			if (target) {
+				files[target] = type;
+			}
+		}
 		logger.checkpoint('File formats', { files });
 
 		const publish = makePublishConfig(flatConfiguration, env);
@@ -109,7 +111,7 @@ function convertFormats(cucumberLogger: ILogger, flatConfiguration: IConfigurati
 			options: flatConfiguration.formatOptions
 		};
 	} catch (error: any) {
-		logger.error('convertFormats() failed', error);
+		logger.checkpoint('convertFormats() failed', { error: describeThrowable(error) });
 		throw new Error(`Failed to convert formats: ${error.message}`, { cause: error });
 	}
 }
@@ -119,9 +121,11 @@ function makePublishConfig(flatConfiguration: IConfiguration, env: typeof proces
 	if (!enabled) {
 		return false;
 	}
+	// `IPublishConfig` declares both required, but CucumberJS's publish plugin substitutes its default URL for an
+	// undefined `url` and sends no Authorization header for an undefined `token`, so the environment is passed as is
 	return {
-		url: env.CUCUMBER_PUBLISH_URL,
-		token: env.CUCUMBER_PUBLISH_TOKEN
+		url: env.CUCUMBER_PUBLISH_URL as string,
+		token: env.CUCUMBER_PUBLISH_TOKEN as string
 	};
 }
 

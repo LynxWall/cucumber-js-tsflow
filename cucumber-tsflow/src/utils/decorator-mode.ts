@@ -10,7 +10,8 @@
  * a copy of the parent's `process.env`. So the environment is the value the transpilers read, on every call
  * rather than when their module loads, and the global is written alongside it for the decorators' hot path.
  */
-const ENVIRONMENT_VARIABLE = 'CUCUMBER_EXPERIMENTAL_DECORATORS';
+/** The environment variable that carries the mode to the loader hooks thread and to each parallel child */
+export const EXPERIMENTAL_DECORATORS_VARIABLE = 'CUCUMBER_EXPERIMENTAL_DECORATORS';
 
 /**
  * Record the decorator mode for this process and for everything it starts: the environment for the
@@ -18,10 +19,10 @@ const ENVIRONMENT_VARIABLE = 'CUCUMBER_EXPERIMENTAL_DECORATORS';
  */
 export function setExperimentalDecorators(enabled: boolean): void {
 	global.experimentalDecorators = enabled;
-	process.env[ENVIRONMENT_VARIABLE] = String(enabled);
+	process.env[EXPERIMENTAL_DECORATORS_VARIABLE] = String(enabled);
 }
 
 /** Whether TypeScript's legacy decorators are in use, as `setExperimentalDecorators` last recorded it. */
 export function experimentalDecorators(): boolean {
-	return process.env[ENVIRONMENT_VARIABLE] === 'true';
+	return process.env[EXPERIMENTAL_DECORATORS_VARIABLE] === 'true';
 }

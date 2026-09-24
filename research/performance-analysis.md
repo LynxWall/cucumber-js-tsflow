@@ -12,7 +12,7 @@ so a `yarn build` is required first. The numbers below come from isolated benchm
 built `lib/runtime/utils.js`, which is current for that file. Everything else is source reading.
 
 The spec suite is only 28 scenarios across 8 feature files, so it would not have exposed the scaling
-behaviour described here regardless. The costs below matter for real-world suites in the hundreds of
+behavior described here regardless. The costs below matter for real-world suites in the hundreds of
 scenarios.
 
 ## Tier 1 — the step-lookup hot path
@@ -49,11 +49,11 @@ Three fixes, in increasing order of payoff, measured at the 200 x 10 shape:
 
 | Approach                                              | Time                |
 | ----------------------------------------------------- | ------------------- |
-| Current behaviour                                     | 8114 ms             |
+| Current behavior                                     | 8114 ms             |
 | Memoize pattern to `RegExp` in a `Map`                | 153 ms (53x faster) |
 | Direct lookup of the context the runner already holds | 1 ms                |
 
-The memoization is the safe immediate win — roughly ten lines, no API change, no behavioural difference
+The memoization is the safe immediate win — roughly ten lines, no API change, no behavioral difference
 since the pattern-to-regex translation is pure.
 
 The real fix is that both call sites already know the answer. `TestCaseRunner` holds `this.pickle`, and

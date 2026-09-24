@@ -123,7 +123,7 @@ one of these services sets `transpileOnly: true`, so the file list is computed a
 What is paid for it is a full recursive `ts.sys.readDirectory` walk of the tsconfig `include`
 (default `**/*`) — in the main process, again in every parallel child process, and again in every
 preload thread. On a large repository this is seconds of pure filesystem traversal per process.
-Removing the option is a no-behaviour-change deletion.
+Removing the option is a no-behavior-change deletion.
 
 ### The esbuild path routes through `ts-node` and pays for it
 
@@ -141,7 +141,7 @@ const sourceMapContent = `//# sourceMappingURL=data:application/json;charset=utf
 ```
 
 ...where `updateSourceMap` is a `JSON.parse` plus a `JSON.stringify`. So for every support file:
-esbuild generates an external map, `ts-node` parses it, re-serialises it, base64-encodes it, and
+esbuild generates an external map, `ts-node` parses it, re-serializes it, base64-encodes it, and
 appends it to the module source — which then roughly doubles the string V8 has to allocate and
 scan.
 
@@ -150,7 +150,7 @@ tsflow does not already do itself. Calling esbuild directly in `load` and keepin
 for resolution (if at all) removes the service creation, the `files` glob, the classification and
 the whole source-map round trip.
 
-### `transformSync` serialises all transpilation
+### `transformSync` serializes all transpilation
 
 `transformSync` is used in every transpile path
 ([esbuild.mjs:164](cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L164),
@@ -265,7 +265,7 @@ will notice.
 thousands of step files transpiles and evaluates every one of them, then discovers it needs three.
 
 At minimum this ordering can be inverted to allow an early exit when the filter matches nothing.
-The more valuable version is a persisted pattern index: the registry already knows how to serialise
+The more valuable version is a persisted pattern index: the registry already knows how to serialize
 bindings (`SerializableBindingDescriptor`) and which files they came from
 (`getDescriptorSourceFiles()`), so a cached `pattern → file` map from the previous run would let a
 filtered run load only the files whose patterns appear in the selected pickles. That needs care —
@@ -331,7 +331,7 @@ produces an unusable volume of untimed output, and the only timing anywhere is t
 Add a `TSFLOW_TIMING` mode that reports wall-clock per phase — glob, preload, transpiler init,
 per-file transpile, per-file evaluate, registration, `updateSupportCodeLibrary` — plus a
 "slowest 25 files" table. Everything below should be validated against real numbers from the
-largest suite available, and this is also the artefact that turns "startup feels slow" into a
+largest suite available, and this is also the artifact that turns "startup feels slow" into a
 regression test.
 
 ### Step 1: persistent, content-addressed transpile cache

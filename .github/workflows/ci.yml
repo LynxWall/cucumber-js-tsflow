@@ -39,6 +39,10 @@ jobs:
         run: yarn
       - name: Build
         run: yarn build
+      - name: Type-check
+        run: yarn typecheck
+      - name: Lint
+        run: yarn lint
       - name: Run unit tests
         run: yarn test:unit
       - name: Run specification tests

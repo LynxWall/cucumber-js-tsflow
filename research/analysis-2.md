@@ -253,7 +253,7 @@ partly explain any perceived ESM/CJS startup difference.
 
 **Recommendations.**
 
-- Drop `files: true` / `TS_NODE_FILES` from the ESM service unless a specific behaviour depends on it, and
+- Drop `files: true` / `TS_NODE_FILES` from the ESM service unless a specific behavior depends on it, and
   if something does, scope it rather than defaulting it on.
 - Resolve tsconfig once per process and share the result across `loader-utils.mjs`, `esbuild.mjs`, and the
   `ts-node` service, rather than three independent loads with three independent caches.

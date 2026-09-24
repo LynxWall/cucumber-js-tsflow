@@ -131,16 +131,21 @@ export default class TestCaseRunner {
 		return getWorstTestStepResult(this.testStepResults);
 	}
 
+	/**
+	 * Run a step or a hook through CucumberJS's `StepRunner`. Its options declare both `step` and `hookParameter`
+	 * as required, but a step definition reads only the step and a hook definition only the hook parameter, so a
+	 * hook passes `null` for the step and a step passes no hook parameter, as CucumberJS's own runner does.
+	 */
 	async invokeStep(
-		step: messages.PickleStep,
+		step: messages.PickleStep | null,
 		stepDefinition: IDefinition,
 		hookParameter?: ITestCaseHookParameter
 	): Promise<RunStepResult> {
 		return await StepRunner.run({
 			defaultTimeout: this.supportCodeLibrary.defaultTimeout,
 			filterStackTraces: this.filterStackTraces,
-			hookParameter,
-			step,
+			hookParameter: hookParameter as ITestCaseHookParameter,
+			step: step as messages.PickleStep,
 			stepDefinition,
 			world: this.world
 		});
@@ -165,7 +170,7 @@ export default class TestCaseRunner {
 		this.eventBroadcaster.emit('envelope', testStepStarted);
 		this.currentTestStepId = testStepId;
 		const testStepResult = await runStepFn();
-		this.currentTestStepId = null;
+		this.currentTestStepId = undefined;
 		this.testStepResults?.push(testStepResult);
 		const testStepFinished: messages.Envelope = {
 			testStepFinished: {
@@ -194,18 +199,17 @@ export default class TestCaseRunner {
 
 	async runAttempt(attempt: number, moreAttemptsRemaining: boolean): Promise<boolean> {
 		this.currentTestCaseStartedId = this.newId();
-		const testCaseStarted: messages.Envelope = {
-			testCaseStarted: {
-				attempt,
-				testCaseId: this.testCase.id,
-				id: this.currentTestCaseStartedId,
-				timestamp: timestamp()
-			}
+		const testCaseStarted: messages.TestCaseStarted = {
+			attempt,
+			testCaseId: this.testCase.id,
+			id: this.currentTestCaseStartedId,
+			timestamp: timestamp()
 		};
 		if (this.workerId) {
-			testCaseStarted.testCaseStarted.workerId = this.workerId;
+			testCaseStarted.workerId = this.workerId;
 		}
-		this.eventBroadcaster.emit('envelope', testCaseStarted);
+		const testCaseStartedEnvelope: messages.Envelope = { testCaseStarted };
+		this.eventBroadcaster.emit('envelope', testCaseStartedEnvelope);
 		// used to determine whether a hook is a Before or After
 		let didWeRunStepsYet = false;
 		for (const testStep of this.testCase.testSteps) {

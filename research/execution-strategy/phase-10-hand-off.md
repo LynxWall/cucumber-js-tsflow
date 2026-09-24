@@ -190,12 +190,12 @@ a bloated heap: everything, including module evaluation, slows as V8 spends its 
   modules by path and stamps them) and watch mode (which evicts and versions by path) would need the bundle's
   `metafile` to map back to sources. Prototype with those two features off, and treat making them compose as part
   of the item's complexity, not an afterthought.
-- Watch-mode behaviour to keep in mind when touching loading: `getSupportCodeLibrary` is now called more than
+- Watch-mode behavior to keep in mind when touching loading: `getSupportCodeLibrary` is now called more than
   once per process by design, so anything registered there must be idempotent or deduplicated (the
   `module.register()` fix in this phase is the example); `BindingRegistry.clear()` runs before every rerun; the
   `SupportReloader` decides from the *previous* run's observations, so a change to what "registered something"
   means must be reflected in `endFile()`.
-- Watch mode's memory behaviour is the suite's, not tsflow's (`utils` flat at 60 MB over four runs; `dim` +1.1 GB
+- Watch mode's memory behavior is the suite's, not tsflow's (`utils` flat at 60 MB over four runs; `dim` +1.1 GB
   live per run). If a future phase wants to help such suites, the candidates are a documented per-run reset hook
   (`AfterAll` is the consumer's tool already) or a `--watch` option to re-evaluate the set-up modules too, at the
   cost of the floor Phase 9 measured; neither was started. A cheap diagnostic that was not built: a heap snapshot

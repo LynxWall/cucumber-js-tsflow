@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter/index';
 import { runCucumber } from '../api/run-cucumber';
 import { loadConfiguration } from '../api/load-configuration';

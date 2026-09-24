@@ -30,8 +30,8 @@ This release focuses on correctness, performance, and code quality improvements 
 
 ### Performance and Efficiency
 
-- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in favour of native `Array.prototype` equivalents.
-- **O(1) binding lookup** — added a `Map` index to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
+- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in favor of native `Array.prototype` equivalents.
+- **O(1) binding lookup** — added a `Map` index to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` lookups, replacing linear scans.
 - **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` with a lookup map.
 - **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext` with a single spread call, removing the previous limit of nine context objects.
 - **Extracted `replaceFormatAlias` helper** — deduplicated two identical format-replacement loops in `load-configuration.ts`.
@@ -59,7 +59,7 @@ This release adds a new API function for incremental support-code reloading and 
 
 - The CJS Vue SFC compiler (previously a 9-file Vite-plugin-derived implementation in `vue-sfc/`) has been replaced by a single shared `vue-sfc-compiler.ts` that both the CJS transpilers and the ESM loaders delegate to.
 - Removed the `rollup` and `@rollup/pluginutils` dependencies, which were only used by the old CJS implementation.
-- Fixed a bug where image assets referenced in Vue templates (e.g. `<img src="...">`) caused a `SyntaxError: Invalid or unexpected token` in CJS mode. Asset URL transforms are now disabled — `src` attributes remain as literal strings, which is the correct behaviour for unit testing Vue components with `@vue/test-utils`.
+- Fixed a bug where image assets referenced in Vue templates (e.g. `<img src="...">`) caused a `SyntaxError: Invalid or unexpected token` in CJS mode. Asset URL transforms are now disabled — `src` attributes remain as literal strings, which is the correct behavior for unit testing Vue components with `@vue/test-utils`.
 - Fixed duplicate **"Using Experimental Decorators."** console message that appeared twice when `experimentalDecorators: true` was set.
 
 ## Release Updates (7.3.0)
@@ -454,7 +454,7 @@ Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output
 [ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm 41/312
 ```
 
-The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms, and its colour walks a twelve-colour wheel (blue, green, yellow, orange, red, purple, with a blend between each pair) one step every five frames. A new colour enters at the left bracket and sweeps across the glyph and the right bracket over three frames, and because five is not a multiple of the four frames in a rotation the sweep starts one glyph later each time, drifting around the turn like an offbeat and coming back into step every twenty frames. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
+The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms, and its color walks a twelve-color wheel (blue, green, yellow, orange, red, purple, with a blend between each pair) one step every five frames. A new color enters at the left bracket and sweeps across the glyph and the right bracket over three frames, and because five is not a multiple of the four frames in a rotation the sweep starts one glyph later each time, drifting around the turn like an offbeat and coming back into step every twenty frames. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
 
 The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over.
 
@@ -479,7 +479,7 @@ TSFLOW_THEME=lotr npx cucumber-tsflow -p default
 
 The spinner, counter and message line are only drawn when stdout is an interactive terminal. In CI logs and when stdout is redirected to a file the output is append-only: the phase line, any messages, and the summary. Anything your support code writes to stdout while a phase is open (for example a `console.log` in a `BeforeAll` hook) lands inside that line and can displace the spinner, exactly as it would land among the formatter's own progress dots.
 
-Before any of that, the `cucumber-tsflow` command prints a plain line as its very first action, `Bootstrapping cucumber-tsflow 7.7.2 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431 ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed grey as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
+Before any of that, the `cucumber-tsflow` command prints a plain line as its very first action, `Bootstrapping cucumber-tsflow 7.7.2 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431 ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed gray as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
 
 ### Startup timing diagnostics
 
@@ -524,7 +524,7 @@ Startup phases with `TSFLOW_TIMING=true`: `selective-load:plan` is the time to r
 
 The point is what the process keeps between runs. A fresh process spends most of a filtered run's startup loading modules that never change between two edits: the test framework, jsdom, Vue and a component library, the project's shared helpers. In watch mode those stay loaded, and a rerun evaluates again only what has to run again:
 
-- support files that registered anything on the previous run — step definitions, hooks, parameter types, a World constructor, a default timeout or a definition wrapper — because CucumberJS's library is rebuilt from scratch for every run and their decorators have to fire again. A set-up file that registered nothing (the jsdom initialisation, say) is evaluated once and kept;
+- support files that registered anything on the previous run — step definitions, hooks, parameter types, a World constructor, a default timeout or a definition wrapper — because CucumberJS's library is rebuilt from scratch for every run and their decorators have to fire again. A set-up file that registered nothing (the jsdom initialization, say) is evaluated once and kept;
 - the files that changed, every project module that imports or requires them, directly or through other modules, and every new file;
 - any module that applies `@binding` decorators without being a support file itself (a helper imported by one).
 
@@ -536,7 +536,7 @@ The same goes for memory. Whatever a run leaves behind in a kept module — comp
 
 ### ESM loader hooks
 
-On Node 22.15 / 23.5 or later the `es-node-esm` and `es-vue-esm` transpilers attach their `resolve` and `load` hooks with `module.registerHooks()`, so they run synchronously on the thread that is importing your support code instead of on a separate loader thread with a message round trip per module. They also transpile TypeScript with esbuild directly rather than through a `ts-node` service. On older Node versions the same loaders fall back to `module.register()`; set `TSFLOW_ESM_HOOKS=async` to force that behaviour. `ts-node-esm` and `ts-vue-esm` always use `module.register()`, because ts-node's hooks are asynchronous.
+On Node 22.15 / 23.5 or later the `es-node-esm` and `es-vue-esm` transpilers attach their `resolve` and `load` hooks with `module.registerHooks()`, so they run synchronously on the thread that is importing your support code instead of on a separate loader thread with a message round trip per module. They also transpile TypeScript with esbuild directly rather than through a `ts-node` service. On older Node versions the same loaders fall back to `module.register()`; set `TSFLOW_ESM_HOOKS=async` to force that behavior. `ts-node-esm` and `ts-vue-esm` always use `module.register()`, because ts-node's hooks are asynchronous.
 
 ## New Configuration options
 

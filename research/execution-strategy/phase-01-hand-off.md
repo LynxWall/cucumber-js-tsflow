@@ -76,9 +76,9 @@ Things to know when reading it:
   report; if one is needed, add a phase with `startTimer()`/`recordPhase()` rather than a new mechanism.
 - Take a `TSFLOW_TIMING` baseline on the large suite _before_ touching item 2, once per profile you care
   about, and keep the output. Nothing in the spec matrix will show the difference.
-- Item 2 changes behaviour, not just speed: today `getStepScenarioContext` can resolve to a _different_
+- Item 2 changes behavior, not just speed: today `getStepScenarioContext` can resolve to a _different_
   scenario's context when a step pattern matches text in another pickle. Any support code that has come to
-  depend on that accident will change behaviour. Say so in the changelog.
+  depend on that accident will change behavior. Say so in the changelog.
 - None of the Phase 2 items touch a loader, the `.mjs` files, or an IPC contract, so the Phase 1 timing
   plumbing should not need to change. If it does, the `.ts` and `.mjs` twins must be edited together.
 - Build with `yarn build`, never bare `tsc`; run `yarn test:all` before calling the phase done; both

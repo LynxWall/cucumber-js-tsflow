@@ -1,6 +1,6 @@
 ---
 name: verify-console-output
-description: Verify terminal UI output (spinners, in-place redraws, progress lines, colours, non-ASCII glyphs) on a REAL Windows console window by reading its screen buffer back, instead of trusting a captured shell, a file descriptor to a file, or a simulated screen. Use whenever code writes escape sequences or redraws lines on stdout, whenever a worker thread or child writes to the terminal, and before telling the user that terminal output "was verified".
+description: Verify terminal UI output (spinners, in-place redraws, progress lines, colors, non-ASCII glyphs) on a REAL Windows console window by reading its screen buffer back, instead of trusting a captured shell, a file descriptor to a file, or a simulated screen. Use whenever code writes escape sequences or redraws lines on stdout, whenever a worker thread or child writes to the terminal, and before telling the user that terminal output "was verified".
 argument-hint: [child-script.js] [--columns 120,80,40,24] [--theme lotr]
 ---
 
@@ -79,7 +79,7 @@ foreach ($w in 120, 80, 40, 24) {
 `-Env` is a `KEY=VALUE;KEY=VALUE` string, not a hashtable (a hashtable does not survive `pwsh -File`).
 `KEY=` with nothing after it removes the variable for the child. The launcher removes `NO_COLOR` by default:
 Claude's PowerShell tool runs with `NO_COLOR=1`, the new console inherits it, and until this was found every
-run through the harness had been colourless without anyone noticing (the dump does not show colour).
+run through the harness had been colorless without anyone noticing (the dump does not show color).
 
 Repeat for every theme or variant the code has. `-Columns 0` (default) keeps the window's own width.
 
@@ -108,7 +108,7 @@ For each dump, check every line, not just the last one:
 - **Animation survived the block.** The spinner frame after the synchronous block differs from before it,
   or frame count in a trace shows ~ms/interval frames during the block.
 
-Anything failing here is a real bug. Do not rationalise it as a harness artefact until the preflight has
+Anything failing here is a real bug. Do not rationalise it as a harness artifact until the preflight has
 been re-run and passes.
 
 ### 6. When the screen contradicts the code: trace the writes
@@ -119,8 +119,8 @@ pwsh -File .../launch.ps1 -Script <scratch>/child.js -Out <scratch>/traced.txt `
 ```
 
 `trace.txt` then holds every TTY write in wall-clock order with the thread that made it and the chunk with
-`ESC`, `\r`, `\n` made visible. Colour codes are stripped unless `TSFLOW_TRACE_COLOURS=1` is also set, which is
-how to check which colour each frame used (the screen dump has no colour information). The tracer appends, so
+`ESC`, `\r`, `\n` made visible. Color codes are stripped unless `TSFLOW_TRACE_COLORS=1` is also set, which is
+how to check which color each frame used (the screen dump has no color information). The tracer appends, so
 delete the file between runs or you will read the previous run's lines. Reconstruct what the console received in order; the bug is almost always in
 the boundary between two consecutive writes (end of one, start of the next) or between two threads.
 **Both paths in `-Env` must use forward slashes**; backslashes are stripped on the way into the new process.
@@ -152,8 +152,8 @@ Learned the hard way; each one cost a round trip with the user.
   after a newline is not a newline problem; look at the following write's leading characters instead.
 - **Blocked main threads freeze main-thread timers.** Anything that must animate through a long synchronous
   `import()`/`require()` has to run on another thread with its own event loop.
-- **A worker has no TTY of its own for colour detection**; pass the main thread's detected level via
-  `FORCE_COLOR` or colours vanish in the worker's output.
+- **A worker has no TTY of its own for color detection**; pass the main thread's detected level via
+  `FORCE_COLOR` or colors vanish in the worker's output.
 
 ## When the harness misbehaves
 
@@ -171,17 +171,17 @@ expected to grow.
 | Dump shows nothing after `columns=`                                  | The child exited before drawing (see log stderr) or wrote to a stream that is not the console.           |
 | Dump stops at the first row of an open phase; nothing beneath it     | The runner used to read rows 0..cursor only, and the renderer parks the cursor at the top of the block it redraws, so the rest was below the cursor. The runner now reads 12 rows past the cursor and drops empty trailing rows; the dump's last line reports `cursor=row N col M`. |
 | `isTTY=false` in the probe                                           | Not running in a console window: you ran `console-run.ps1` directly from a captured shell. Use `launch.ps1`. |
-| No colour codes anywhere in the trace, even from the main thread     | `NO_COLOR=1` reached the child. The launcher now clears it by default; if you set `-Env` with your own `NO_COLOR`, that wins. |
+| No color codes anywhere in the trace, even from the main thread     | `NO_COLOR=1` reached the child. The launcher now clears it by default; if you set `-Env` with your own `NO_COLOR`, that wins. |
 | Trace shows the previous run's timestamps                            | The tracer appends. Delete the trace file before each run.                                              |
 | Claude's PowerShell tool refuses the command over a `\d+` "system path" | The safety filter matched a regex in the command line. Put trace parsing in a script file (see `child-template.js` for the style) and call it with node. |
 | Window opens but stays open / hangs                                  | The child never exited; ensure it ends with `process.exit(0)` after a short sleep so the last writes flush. |
-| `mode con` resize ignored                                            | Some hosts (Windows Terminal as default terminal) may not honour `mode con`. Check the `width=` in the dump; if it is not what you asked, run under `conhost.exe` explicitly or set the default terminal to Windows Console Host for the test. |
+| `mode con` resize ignored                                            | Some hosts (Windows Terminal as default terminal) may not honor `mode con`. Check the `width=` in the dump; if it is not what you asked, run under `conhost.exe` explicitly or set the default terminal to Windows Console Host for the test. |
 
 ## Scope and limits
 
 - Windows only as written; the read-back relies on the Windows console buffer API. On macOS/Linux the
   equivalent would be a pty (`script`/`tmux capture-pane`); add it here when needed.
-- The dump shows the final screen state, not intermediate frames. For intermediate behaviour use the write
+- The dump shows the final screen state, not intermediate frames. For intermediate behavior use the write
   trace, or snapshot from inside the child at chosen moments.
 - Timing-dependent features with long intervals (a 30-second heartbeat) are not exercised by the template;
   either wait them out in the child or unit-test the renderer with a fake clock and say so in the report.

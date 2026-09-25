@@ -86,7 +86,8 @@ export const loadConfiguration = async (
 		msg = 'No configuration file found';
 	}
 
-	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+	// All of cucumber-tsflow's own output goes to stderr; stdout carries only formatter output
+	const consoleLogger = new Console((environment.stderr ?? process.stderr) as any);
 	cucumberLogger.debug(msg);
 	consoleLogger.log(ansis.cyanBright(msg));
 

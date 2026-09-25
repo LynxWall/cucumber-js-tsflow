@@ -17,7 +17,7 @@ The repository is a Yarn 3 workspaces monorepo:
 - `Architecture.md` describes how the library is put together. Read it before a change that is more than local.
 - `cucumber-tsflow/skills/cucumber-tsflow/` is the agent skill that ships with the package (see below).
 - `scripts/` holds the benchmark and the packed-tarball smoke test.
-- `research/` is the working record of the performance work: analyses, the execution strategy and the hand-off of every phase.
+- `research/` holds the research behind the code, one folder per project ([research/README.md](research/README.md) lists them). `research/speed-enhancements/` is the record of the 8.0 performance work: the analyses, the execution strategy, the design decisions and the hand-off of every phase.
 
 ## Local setup
 

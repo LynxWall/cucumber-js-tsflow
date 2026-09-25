@@ -2,7 +2,7 @@
 
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
-Written at the close of the stage (2026-09-24). Stage 12d is [Housekeeping sweeps](phase-12-plan.md#12d-housekeeping-sweeps):
+Written at the close of the stage (2026-09-24). Stage 12d is [Housekeeping sweeps](../plan/phase-12-plan.md#12d-housekeeping-sweeps):
 the strict errors and `strict: true`, the `typecheck` and `lint` gates (findings Q and R), the American English
 spelling pass, the dependency audit, and the leftovers the 12c groups set aside for this stage. **The stage is
 complete and its gate is met.**
@@ -224,7 +224,7 @@ Nothing on the list was reachable from the library's published code path except 
 - **Stage 12d is closed and its gate is met:** `yarn typecheck` and `yarn lint` clean with no new disables (one
   removed), zero British spellings in `src` and the documents, every dependency on the list decided. 12e,
   documentation and packaging, is next; its definition and gate are in
-  [phase-12-plan.md](phase-12-plan.md#12e-documentation-and-packaging).
+  [phase-12-plan.md](../plan/phase-12-plan.md#12e-documentation-and-packaging).
 - **For 12e, from this stage:** `CLAUDE.md`'s command table gained `yarn typecheck`, `yarn lint` (as a gate) and
   `yarn lint:fix`, and its CI line now describes the matrix and the two new steps; the rest of the CLAUDE.md and
   CONTRIBUTE.md review the plan gives 12e still stands (CONTRIBUTE.md lists `yarn test`, which does not exist, and

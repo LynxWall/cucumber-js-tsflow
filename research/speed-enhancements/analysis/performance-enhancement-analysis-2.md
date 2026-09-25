@@ -89,12 +89,12 @@ the document's grade:
 The tsflow-source claims also hold:
 
 - `rewritePathMappings` constructs `new RegExp(...)` inside a loop over every tsconfig path entry, on
-  every file ([esbuild.mjs](../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)). `tsnode-loader.mjs`
+  every file ([esbuild.mjs](../../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)). `tsnode-loader.mjs`
   does the same and additionally runs a `searchRegex.test(code)` full-source pass before the `replace()`
   pass, so the two-scans-per-alias-per-file claim is correct.
 - `shortUuid().new()` appears at nine call sites across
-  [step-decorators.ts](../cucumber-tsflow/src/bindings/step-decorators.ts) and
-  [hook-decorators.ts](../cucumber-tsflow/src/bindings/hook-decorators.ts), constructing a fresh base58
+  [step-decorators.ts](../../../cucumber-tsflow/src/bindings/step-decorators.ts) and
+  [hook-decorators.ts](../../../cucumber-tsflow/src/bindings/hook-decorators.ts), constructing a fresh base58
   translator per binding rather than reusing one.
 - Support code does load before pickles are known: `getSupportCodeLibrary` is called at
   `run-cucumber.ts:131` and `updateSupportCodeLibrary` at `:145`, while `getPicklesAndErrors` does not
@@ -106,17 +106,17 @@ The tsflow-source claims also hold:
 - The hardcoded repository-path check is real:
   `if (!filename.includes('cucumber-tsflow-specs')) return false;` in `esbuild.mjs`'s exported
   `supports()`. The claim that it is currently dead is also correct — `supports` is exported from both
-  `esbuild.mjs` and [esbuild.ts](../cucumber-tsflow/src/transpilers/esbuild.ts) and imported by nothing.
+  `esbuild.mjs` and [esbuild.ts](../../../cucumber-tsflow/src/transpilers/esbuild.ts) and imported by nothing.
   Note that the CJS `esbuild.ts` version does **not** contain the specs check, so the two exported
   predicates disagree, which is a latent trap on its own.
 - `compileVueSFC` does compile each template twice — a `parseOnly: true` pass to obtain the AST for
   `compileScript`, then the real compile
-  ([vue-sfc-compiler.ts](../cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts)).
+  ([vue-sfc-compiler.ts](../../../cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts)).
 - The preload thread cap is `Math.min(availableParallelism(), 4)`.
 
 ### A precision improvement over `analysis-2.md`
 
-`analysis-3.md` states that `source-map-support` memoises by file, so the `SourceMapConsumer`
+`analysis-3.md` states that `source-map-support` memoizes by file, so the `SourceMapConsumer`
 construction is once per support file rather than once per binding. This is correct —
 `sourceMapCache[position.source]` in `node_modules/source-map-support/source-map-support.js` does exactly
 that. `analysis-2.md` was ambiguous on this point: its body reads as though the parse is per decorator
@@ -128,7 +128,7 @@ stack walk is per binding, the map parse is per file.
 
 - **`analysis-2.md`'s grep claim is wrong, and `analysis-3.md`'s is right.** `analysis-2.md` says a
   search for cache writes "returns exactly one unrelated hit in the Gherkin manager."
-  [gherkin-manager.ts](../cucumber-tsflow/src/gherkin/gherkin-manager.ts) contains no cache references at
+  [gherkin-manager.ts](../../../cucumber-tsflow/src/gherkin/gherkin-manager.ts) contains no cache references at
   all, and there are zero `writeFileSync` / `mkdirSync` / `createHash` occurrences anywhere in
   `cucumber-tsflow/src`. `analysis-3.md`'s version — "a search for cache writes finds only `require.cache`
   eviction in `reloadSupport()`" — is accurate.
@@ -163,7 +163,7 @@ Three items appear in no other document and remain worth keeping:
    eliminating loader-thread `postMessage` round trips and the structured-clone copying of transformed
    source. This is a real ESM-specific win that `analysis-3.md` misses entirely, and `analysis-2.md`
    correctly flags the async `loadVue` path as the complication.
-1. **The public barrel drags in the CLI.** [index.ts](../cucumber-tsflow/src/index.ts) does
+1. **The public barrel drags in the CLI.** [index.ts](../../../cucumber-tsflow/src/index.ts) does
    `import { default as _Cli } from './cli'`, so every support file importing a decorator from the package
    root transitively pulls in the runtime, the parallel adapter and the whole formatter tree — in every
    process and every preload thread.
@@ -201,11 +201,11 @@ validation. I verified every line of that chain and it is exact, down to the quo
 
 The same discipline appears throughout: naming the installed `ts-node-maintained` version rather than
 reasoning about "ts-node" generically; identifying that `transformSync` blocks on `Atomics.wait` rather
-than merely asserting IPC cost; recognizing that `source-map-support` memoises per file and therefore
+than merely asserting IPC cost; recognizing that `source-map-support` memoizes per file and therefore
 sizing the callsite prize correctly. The transpile-multiplier table turns a diffuse "work is repeated"
 complaint into four concrete configurations. And its sharpest architectural observation — that the CJS
 path can never be made async because `require` is synchronous, so the ESM loaders are not just the newer
-path but the only one that can ever parallelise transpilation — reframes the entire roadmap and appears
+path but the only one that can ever parallelize transpilation — reframes the entire roadmap and appears
 in neither other document.
 
 It is also the most productive of the three: the ts-node bypass on the esbuild ESM path, the per-file

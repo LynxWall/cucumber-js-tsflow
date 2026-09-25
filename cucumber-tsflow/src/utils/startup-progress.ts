@@ -252,14 +252,14 @@ export function resolveStartupTheme(value: string | undefined = process.env.TSFL
 	return PICKLE_THEME;
 }
 
-/** Minimal writable interface accepted by `StartupProgress` (process.stdout, formatter streams). */
+/** Minimal writable interface accepted by `StartupProgress` (process.stderr, or a test stream). */
 export interface ProgressOutputStream {
 	write(chunk: string): unknown;
 	/** True for an interactive terminal. The spinner is drawn and redrawn in place only when this is set. */
 	isTTY?: boolean;
-	/** File descriptor, when the stream is backed by one (`process.stdout.fd` is 1). Lets the spinner thread write directly. */
+	/** File descriptor, when the stream is backed by one (`process.stderr.fd` is 2). Lets the spinner thread write directly. */
 	fd?: number;
-	/** Terminal width in columns, when known (`process.stdout.columns`). Used to count the rows a wrapped line occupies. */
+	/** Terminal width in columns, when known (`process.stderr.columns`). Used to count the rows a wrapped line occupies. */
 	columns?: number;
 }
 
@@ -659,7 +659,7 @@ export class StartupProgress {
 	private readonly handshakeTimeoutMs: number;
 
 	/**
-	 * @param stream - Where progress is written (the run environment's stdout)
+	 * @param stream - Where progress is written (the run environment's stderr)
 	 * @param theme - Theme from `resolveStartupTheme()`; undefined turns every method into a no-op
 	 * @param options - The clock, the worker factory and the handshake timeout; the defaults are the real ones
 	 */

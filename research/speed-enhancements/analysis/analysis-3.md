@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document analyses only the phase between invoking the `cucumber-tsflow` CLI and the moment
+This document analyzes only the phase between invoking the `cucumber-tsflow` CLI and the moment
 CucumberJS begins emitting step results — the phase where support files are globbed, transpiled,
 evaluated and registered. Runtime step execution, formatters and reporting are out of scope.
 
@@ -15,27 +15,27 @@ For a serial run the sequence is:
 
 1. `run()` → `Cli.run()` → `loadConfiguration()` — reads `cucumber.json`, merges the profile, and
    translates `transpiler` into either a `requireModule` (CJS) or a `loader` (ESM) entry
-   ([load-configuration.ts:170-222](cucumber-tsflow/src/api/load-configuration.ts#L170-L222)).
+   ([load-configuration.ts:170-222](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/load-configuration.ts#L170-L222)).
 1. `runCucumber()` calls `resolvePaths()` (CucumberJS), which runs `glob` over the feature paths
    and then over every `require`/`import` glob to produce the absolute file lists.
 1. If `parallelLoad` is set, `parallelPreload()` forks up to four `worker_threads`, and each one
    requires the transpiler and then `require`s/`import`s its round-robin slice of the support
-   files ([parallel-loader.ts](cucumber-tsflow/src/api/parallel-loader.ts),
-   [loader-worker.ts](cucumber-tsflow/src/api/loader-worker.ts)).
+   files ([parallel-loader.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts),
+   [loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts)).
 1. `getSupportCodeLibrary()` then performs the authoritative load: it requires each transpiler
    module, requires every CJS support path, registers every ESM loader, and `await import`s every
    ESM support path — all strictly one at a time
-   ([support.ts:48-61](cucumber-tsflow/src/api/support.ts#L48-L61)).
+   ([support.ts:48-61](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/support.ts#L48-L61)).
 1. Module evaluation fires the decorators. Each `@given`/`@when`/`@then`/`@before` factory
    captures a callsite and mints a UUID; each `@binding()` registers into `BindingRegistry` and
    calls into CucumberJS's `Given()`/`Before()`/etc.
 1. `BindingRegistry.updateSupportCodeLibrary()` back-patches `uri`/`line` onto every CucumberJS
    definition.
 1. Only *now* are the feature files parsed and the pickles filtered
-   ([run-cucumber.ts:176-190](cucumber-tsflow/src/api/run-cucumber.ts#L176-L190)).
+   ([run-cucumber.ts:176-190](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/run-cucumber.ts#L176-L190)).
 1. In parallel mode, `ChildProcessAdapter.run()` forks all N children at once, and each child
    independently repeats steps 2, 4, 5 and 6 in full
-   ([worker.ts:69-113](cucumber-tsflow/src/runtime/parallel/worker.ts#L69-L113)).
+   ([worker.ts:69-113](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/runtime/parallel/worker.ts#L69-L113)).
 
 Two things stand out from that sequence. Transpilation output is never persisted anywhere, and the
 same transpilation is performed once per process and once per preload thread.
@@ -46,8 +46,8 @@ There is no on-disk transpile cache in the codebase. A search for cache writes f
 `require.cache` eviction in `reloadSupport()`. Neither backend supplies one either:
 
 - `esbuild.transformSync()` is a pure function call — nothing is written to disk
-  ([esbuild.ts:75](cucumber-tsflow/src/transpilers/esbuild.ts#L75),
-  [esbuild.mjs:164](cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L164)).
+  ([esbuild.ts:75](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esbuild.ts#L75),
+  [esbuild.mjs:164](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L164)).
 - `ts-node-maintained` 10.9.6 caches only in memory, per process. In `transpileOnly` mode its
   output cache is a `Map` created inside `create()`; nothing survives the process.
 
@@ -68,16 +68,16 @@ in a row pays the full transpile cost twice.
 This is the most important finding for a project already using `parallelLoad`.
 
 The stated design is "warm transpiler on-disk caches before the main load phase"
-([parallel-loader.ts:1-12](cucumber-tsflow/src/api/parallel-loader.ts#L1-L12), and the Parallel
-Preload section of [Architecture.md](Architecture.md)). There is no on-disk cache to warm. The
+([parallel-loader.ts:1-12](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts#L1-L12), and the Parallel
+Preload section of [Architecture.md](../../../Architecture.md)). There is no on-disk cache to warm. The
 preload threads transpile into their own thread-local memory and are then terminated
-([parallel-loader.ts:163](cucumber-tsflow/src/api/parallel-loader.ts#L163)), after which the main
+([parallel-loader.ts:163](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts#L163)), after which the main
 thread does a completely cold load.
 
 The descriptors the workers return are also discarded. `parallelPreload()` collects them, and both
 call sites use them only to print a count — `result.descriptors.length` in a log line and a
-console message ([load-support.ts:63-68](cucumber-tsflow/src/api/load-support.ts#L63-L68),
-[run-cucumber.ts:118-131](cucumber-tsflow/src/api/run-cucumber.ts#L118-L131)). Nothing is hydrated
+console message ([load-support.ts:63-68](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/load-support.ts#L63-L68),
+[run-cucumber.ts:118-131](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/run-cucumber.ts#L118-L131)). Nothing is hydrated
 from them; there is no `fromDescriptors()` counterpart to `toDescriptors()`.
 
 What the preload phase does cost, on the critical path:
@@ -89,7 +89,7 @@ What the preload phase does cost, on the critical path:
   gets its own.
 - Full module evaluation of the entire support tree N times over, including all module-level side
   effects — which is also why the worker needs the 170-line browser-globals shim at the top of
-  [loader-worker.ts](cucumber-tsflow/src/api/loader-worker.ts).
+  [loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts).
 
 So the phase does the expensive part (evaluating every module) while producing nothing the
 authoritative load can reuse. On a large suite this is a straight addition to startup time.
@@ -101,11 +101,11 @@ Because the ESM loaders are the path in use, these matter most.
 ### `files: true` forces a full project directory walk, for nothing
 
 `files: true` is set in
-[tsnode-loader.mjs:48](cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs#L48) and
-[tsnode-service.mjs:40](cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs#L40), and
+[tsnode-loader.mjs:48](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs#L48) and
+[tsnode-service.mjs:40](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs#L40), and
 `TS_NODE_FILES` is forced on in
-[tsnode-service.mjs:33](cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs#L33) and
-[vue-loader.mjs:23](cucumber-tsflow/src/transpilers/esm/vue-loader.mjs#L23). The comment says
+[tsnode-service.mjs:33](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs#L33) and
+[vue-loader.mjs:23](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/vue-loader.mjs#L23). The comment says
 "Ensure ts-node respects tsconfig.json files", but that is not what the option does.
 
 In `ts-node`'s configuration loader, `files` controls exactly one thing:
@@ -128,7 +128,7 @@ Removing the option is a no-behavior-change deletion.
 ### The esbuild path routes through `ts-node` and pays for it
 
 For the `es-node-esm` transpiler, `.ts` files are handled by
-[loader-utils.mjs:487-497](cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L487-L497), which
+[loader-utils.mjs:487-497](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L487-L497), which
 delegates to `tsNodeHooks.load()`. `ts-node` then calls its configured transpiler, which is the
 tsflow esbuild wrapper. So a single `esbuild.transform` is wrapped in a `ts-node` service, module
 type classification, `ts-node`'s resolver and its source-map plumbing.
@@ -153,10 +153,10 @@ the whole source-map round trip.
 ### `transformSync` serializes all transpilation
 
 `transformSync` is used in every transpile path
-([esbuild.mjs:164](cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L164),
-[esbuild.ts:75](cucumber-tsflow/src/transpilers/esbuild.ts#L75),
-[vue-sfc-compiler.ts:118](cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts#L118) and
-[:258](cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts#L258)). In Node, esbuild implements the
+([esbuild.mjs:164](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L164),
+[esbuild.ts:75](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esbuild.ts#L75),
+[vue-sfc-compiler.ts:118](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts#L118) and
+[:258](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts#L258)). In Node, esbuild implements the
 sync API by posting to an internal worker thread and blocking on `Atomics.wait` until the Go
 service replies. Each file therefore costs a thread hop plus an IPC round trip, and — critically —
 no two files can ever be in flight at once.
@@ -169,21 +169,21 @@ through `ts-node`.
 
 The CJS path cannot be made async (`require` is synchronous), which is worth stating plainly: for
 a large project the ESM loaders are not just the newer path, they are the only path that can ever
-parallelise transpilation.
+parallelize transpilation.
 
 ### Resolution does uncached synchronous filesystem probing
 
 `resolveWithExtensions()` tries seven extensions, then seven `index.*` variants, with an
 `existsSync` for each
-([loader-utils.mjs:66-107](cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L66-L107)). There
+([loader-utils.mjs:66-107](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L66-L107)). There
 is no cache — the same specifier resolved from ten different files probes the disk ten times. The
 only cache present, `pathResolutionCache`, covers tsconfig path aliases only and is keyed on the
 bare specifier.
 
 Also, `createEsbuildLoader`'s `resolve` calls `await getLocalEsmHooks()` on *every* resolve
-([loader-utils.mjs:441-446](cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L441-L446)),
+([loader-utils.mjs:441-446](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L441-L446)),
 including for bare `node_modules` specifiers that will never reach the `.ts` branch. The hooks are
-memoised, but the `async` hop and the eager `ts-node` service construction on the first resolve are
+memoized, but the `async` hop and the eager `ts-node` service construction on the first resolve are
 not.
 
 A resolution cache keyed on `specifier + parentURL` is the single cheapest win in this file.
@@ -191,9 +191,9 @@ A resolution cache keyed on `specifier + parentURL` is the single cheapest win i
 ### Regexes are recompiled per file
 
 `rewritePathMappings()` builds a `new RegExp` for every tsconfig path entry, for every file it
-transpiles ([esbuild.mjs:63](cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L63)), and
+transpiles ([esbuild.mjs:63](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L63)), and
 `tsnode-loader.mjs` does the same in its `load` hook
-([:105](cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs#L105)) — plus a `searchRegex.test()`
+([:105](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs#L105)) — plus a `searchRegex.test()`
 pass over the whole file before the `replace()` pass. With 20 path aliases and 2,000 files that is
 40,000 regex compilations and 80,000 full-source scans. The patterns depend only on
 `tsconfig.json` and can be compiled once.
@@ -217,7 +217,7 @@ const findByKey = (definitions: any[]) => (cucumberKey: string) =>
 	definitions.find(s => (s.options as any).cucumberKey === cucumberKey);
 ```
 
-([binding-registry.ts:232-233](cucumber-tsflow/src/bindings/binding-registry.ts#L232-L233))
+([binding-registry.ts:232-233](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/bindings/binding-registry.ts#L232-L233))
 
 Each of the nine `findByKey` closures does a linear `Array.find` over a definition array, and the
 loop below calls one per registered binding. With B bindings and D step definitions the cost is
@@ -233,12 +233,12 @@ exactly this for the reverse direction.
 
 `Callsite.capture()` is called at *decorator-factory* evaluation time — once per `@given`,
 `@when`, `@then` and hook in every support file
-([step-decorators.ts:14](cucumber-tsflow/src/bindings/step-decorators.ts#L14)). Each call
+([step-decorators.ts:14](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/bindings/step-decorators.ts#L14)). Each call
 overrides `Error.prepareStackTrace`, throws away an `Error`, and calls
 `sourceMapSupport.wrapCallSite()`
-([our-callsite.ts:38-46](cucumber-tsflow/src/utils/our-callsite.ts#L38-L46)).
+([our-callsite.ts:38-46](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/utils/our-callsite.ts#L38-L46)).
 
-`source-map-support` memoises by file, so the `SourceMapConsumer` construction is once per support
+`source-map-support` memoizes by file, so the `SourceMapConsumer` construction is once per support
 file rather than once per binding — but that still means every support file's source map is parsed
 during load, purely to produce a filename and a line number. Since `updateSupportCodeLibrary` needs
 `uri`/`line` for the emitted support-code messages this cannot simply be deleted, but it can be
@@ -259,9 +259,9 @@ will notice.
 ### Support code is loaded before pickles are known
 
 `getSupportCodeLibrary()` runs at
-[run-cucumber.ts:99-137](cucumber-tsflow/src/api/run-cucumber.ts#L99-L137);
+[run-cucumber.ts:99-137](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/run-cucumber.ts#L99-L137);
 `getPicklesAndErrors()` and the tag/name filters do not run until
-[:177](cucumber-tsflow/src/api/run-cucumber.ts#L177). So `--name "one scenario"` on a project with
+[:177](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/run-cucumber.ts#L177). So `--name "one scenario"` on a project with
 thousands of step files transpiles and evaluates every one of them, then discovers it needs three.
 
 At minimum this ordering can be inverted to allow an early exit when the filter matches nothing.
@@ -276,7 +276,7 @@ suite" case it is the difference between a minute and a second.
 ### Parallel children duplicate everything, including the glob
 
 Each child calls `resolvePaths()` again
-([worker.ts:80](cucumber-tsflow/src/runtime/parallel/worker.ts#L80)) even though the coordinator
+([worker.ts:80](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/runtime/parallel/worker.ts#L80)) even though the coordinator
 already has the resolved lists and is sending `supportCodeCoordinates` in the `INITIALIZE` command.
 Sending `requirePaths`/`importPaths` instead of re-globbing removes N full glob passes over the
 project tree.
@@ -287,7 +287,7 @@ irreducible. Their *transpilation* cost is entirely reducible via a shared cache
 ### The preload thread cap is four
 
 `Math.min(availableParallelism(), 4)`
-([parallel-loader.ts:204](cucumber-tsflow/src/api/parallel-loader.ts#L204)) leaves most of a modern
+([parallel-loader.ts:204](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts#L204)) leaves most of a modern
 CI runner or dev machine idle during the phase that is the bottleneck. Whatever the cap becomes it
 should be derived from `availableParallelism()` rather than a constant, and the interaction with
 the `parallel` worker count should be explicit rather than accidental.
@@ -298,12 +298,12 @@ Not the primary concern for a Node ESM project, but worth recording:
 
 - `compileVueSFC` compiles each template twice — once with `parseOnly: true` to obtain the AST for
   `compileScript`, then again for real
-  ([vue-sfc-compiler.ts:76-88](cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts#L76-L88)).
+  ([vue-sfc-compiler.ts:76-88](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/vue-sfc-compiler.ts#L76-L88)).
 - `jsdom-global()` boots a full JSDOM per process and per preload thread
-  ([esvue.ts](cucumber-tsflow/src/transpilers/esvue.ts),
-  [vue-jsdom-setup.mjs](cucumber-tsflow/src/transpilers/esm/vue-jsdom-setup.mjs)).
+  ([esvue.ts](../../../cucumber-tsflow/src/transpilers/esvue.ts),
+  [vue-jsdom-setup.mjs](../../../cucumber-tsflow/src/transpilers/esm/vue-jsdom-setup.mjs)).
 - `loadVue` regex-rewrites every import in the compiled output
-  ([loader-utils.mjs:191-244](cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L191-L244)),
+  ([loader-utils.mjs:191-244](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/loader-utils.mjs#L191-L244)),
   doing one `String.replace` over the whole source per matched import.
 
 ## Also worth fixing while in the area
@@ -314,7 +314,7 @@ Not the primary concern for a Node ESM project, but worth recording:
 if (!filename.includes('cucumber-tsflow-specs')) return false;
 ```
 
-([esbuild.mjs:130](cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L130))
+([esbuild.mjs:130](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/esbuild.mjs#L130))
 
 It is currently dead code — nothing imports `supports` from either esbuild module — so it causes no
 harm today. But if it were ever wired up it would silently disable transpilation for every consumer
@@ -370,7 +370,7 @@ Independent of Step 1, and each individually safe:
 
 With Step 1 in place, make `load` call `esbuild.transform()` directly and asynchronously for
 `.ts`/`.tsx` on the `es-node-esm` path, attaching source maps once rather than routing them
-through `ts-node`'s parse/stringify/base64 cycle. Then parallelise the top-level import loop in
+through `ts-node`'s parse/stringify/base64 cycle. Then parallelize the top-level import loop in
 `getSupportCodeLibrary` — either `Promise.all` outright, or a concurrent transpile-only warm pass
 followed by the existing serial evaluation loop if registration order must stay deterministic.
 Once the cache is warm that second pass is nearly free, so the conservative variant costs little.
@@ -380,7 +380,7 @@ Once the cache is warm that second pass is nearly free, so the conservative vari
 Change `parallelPreload` from "evaluate every module in N threads" to "transpile every module into
 the cache in N threads". Transpiling needs no browser globals, no `BindingRegistry`, no decorator
 execution and no module side effects — which deletes the entire 170-line `window` shim at the top
-of [loader-worker.ts](cucumber-tsflow/src/api/loader-worker.ts) along with the class of bugs it
+of [loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts) along with the class of bugs it
 exists to paper over, and removes the risk of running module-level side effects N+1 times.
 
 The one thing this loses is transitive discovery: evaluating a module naturally pulls in its
@@ -397,7 +397,7 @@ Longer-term, and the biggest win for the everyday "run one feature" case:
    load only the matching step files plus the always-load set (hooks, context classes, anything
    with load-time side effects), falling back to a full load on any unresolved pattern.
 1. Expose `reloadSupport()` through the CLI as a watch mode. The delta-aware eviction logic already
-   exists in [load-support.ts:96-149](cucumber-tsflow/src/api/load-support.ts#L96-L149) but has no
+   exists in [load-support.ts:96-149](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/load-support.ts#L96-L149) but has no
    command-line surface. A long-lived process keeps the transpiled modules, the `ts-node` service
    and the resolution caches hot, which reduces the second and every subsequent run to nothing.
 

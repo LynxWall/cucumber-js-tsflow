@@ -1,5 +1,7 @@
 // Template for the script the harness runs inside the console window. Copy it next to your test, point it at
-// the BUILT library (lib/, never src/), and drive the real component against the real process.stdout.
+// the BUILT library (lib/, never src/), and drive the real component against the real stream: process.stderr,
+// where cucumber-tsflow draws its startup progress since 8.0 (launch with -StderrToConsole), with the formatter's
+// kind of output on process.stdout after it.
 //
 // Keep the things that made earlier bugs visible:
 //  - a detail long enough to wrap at 80 columns (lines are never fitted to the width), and glyphs outside ASCII (— ✓) in what is drawn
@@ -15,8 +17,8 @@ const block = ms => {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
-	process.stdout.write(`columns=${process.stdout.columns} isTTY=${process.stdout.isTTY}\n`);
-	const p = new StartupProgress(process.stdout, resolveStartupTheme(process.env.TSFLOW_THEME));
+	process.stdout.write(`columns=${process.stderr.columns} stdoutTTY=${process.stdout.isTTY} stderrTTY=${process.stderr.isTTY}\n`);
+	const p = new StartupProgress(process.stderr, resolveStartupTheme(process.env.TSFLOW_THEME));
 	p.begin('resolve', 'resolving support-code globs and plugins');
 	await sleep(300);
 	p.end('216 support files, 212 feature files');

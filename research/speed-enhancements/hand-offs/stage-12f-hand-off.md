@@ -2,7 +2,7 @@
 
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
-Opened at the start of the stage (2026-09-24). Stage 12f is [Release](phase-12-plan.md#12f-release): the release
+Opened at the start of the stage (2026-09-24). Stage 12f is [Release](../plan/phase-12-plan.md#12f-release): the release
 checklist, written before anything else as the stage's definition says, the real-console verification of the
 startup output, the version bump, the final matrix run, and the hand-over to the maintainer who tags and
 publishes. **Every box the session owns is closed (2026-09-24); the stage is complete on this branch.** What
@@ -22,10 +22,10 @@ closed it.
   and 24, plus Ubuntu Node 24 with `TSFLOW_ESM_HOOKS=async`) successful. The matrix has therefore already judged
   the current head; the boxes below rerun it only for the tree that is tagged.
 - The 12e gate has one open box, the owner's reading; it is carried into this checklist.
-- The UIS testbed (`C:\Git\Azure\uis-tools\Tools.Web\VueApp`) still holds the two uncommitted changes skills-npm
+- The UIS testbed (`Tools.Web/VueApp` in the UIS Tools repository) still holds the two uncommitted changes skills-npm
   made in 12e (the `.claude/skills/npm-lynxwall-cucumber-tsflow-cucumber-tsflow` symlink and the `**/skills/npm-*`
   `.gitignore` line) beside the `link:` dependency and lockfile changes from
-  [local-consumer-testing.md](../local-consumer-testing.md), which are never committed.
+  [local-consumer-testing.md](../testing/local-consumer-testing.md), which are never committed.
 
 ## The release path
 
@@ -84,6 +84,9 @@ reading), **maintainer** (Lonnie, after the merge). A box is ticked with its evi
   (`cucumber-tsflow/skills/cucumber-tsflow/`, `SKILL.md` and the four references). [owner]
 
 ### B. The version decision
+
+Superseded on 2026-09-25: the [release review](#release-review-2026-09-25) made the release 8.0.0. The box below
+is the decision as it was taken in the stage.
 
 - [x] **7.8.0, a minor release.** Applied on the branch under the standing decision from 12c group 2 (the
   branch ships as a minor release, 7.8; nothing published is removed or made an error; `parallelLoad` is accepted
@@ -205,7 +208,7 @@ reading), **maintainer** (Lonnie, after the merge). A box is ticked with its evi
   line (what a consumer that runs skills-npm ends up with; the symlink stays live once the registry 7.8.0 is
   installed, since the package carries `skills/`), or revert both (delete the symlink, revert the one
   `.gitignore` line). Either way the `link:` dependency and `pnpm-lock.yaml` are restored to the registry
-  version before anything in uis-tools is committed, as [local-consumer-testing.md](../local-consumer-testing.md)
+  version before anything in uis-tools is committed, as [local-consumer-testing.md](../testing/local-consumer-testing.md)
   says. [owner]
 
 ### E. After the merge
@@ -229,33 +232,112 @@ reading), **maintainer** (Lonnie, after the merge). A box is ticked with its evi
 **Gate:** no open box. Boxes in E are ticked when the owner reports them; the stage is complete on this branch
 when A to D are closed, and the phase is complete when E is.
 
+## Release review (2026-09-25)
+
+After the stage closed, the owner asked for an outside-in review of the branch, read two ways: as the long-time
+maintainer would read it (the overarching patterns, not the line-level code, which Phase 12 had covered) and as a
+long-time user would receive the upgrade. It found no correctness problem. What it changed, decided with the owner:
+
+- **The release is 8.0.0, a major version.** The branch already changes what a user can see: a throwing
+  `BeforeAll` fails the run, step locations become relative on Linux and macOS, steps always get the running
+  scenario's context, `loadSupport` and `reloadSupport` start from an empty registry, and one published export is
+  gone. The owner sees the release as a change in how cucumber-tsflow is used. The minor-release rule of 12c
+  group 2 is replaced: breaking changes are allowed, each is listed in the upgrade notes, and the simpler
+  implementation wins over a compatibility shim. `parallelLoad` stays accepted and ignored, so a leftover setting
+  prints its notice instead of failing. Lonnie confirms the number.
+- **Node's compile cache is removed** (finding P, which the 12c closing measurement found neutral):
+  `bin/cucumber-tsflow.js` no longer calls `module.enableCompileCache()` or exports `NODE_COMPILE_CACHE`, and the
+  guide, the skill, Architecture.md and `yarn bench --cold` follow. No published version carried it.
+- **cucumber-tsflow's own output goes to stderr**, and stdout carries only formatter output: the bootstrap pair,
+  `Loading configuration`, the mode banner, the startup progress (its spinner worker draws on fd 2), the
+  `parallelLoad` notice and watch mode's lines. The specs and unit tests that read those lines read stderr, and
+  the step `the standard output holds no escape sequences` became `the output holds no escape sequences`, checking
+  both streams.
+- **The extensionless `bin/cucumber-tsflow` is deleted.** It was a copy of `bin/cucumber-tsflow.js` that the
+  `bin` field never named; it shipped in the tarball and had drifted (the 12d spelling pass missed it).
+- **The CHANGELOG is rewritten for users.** The 8.0.0 entry opens with "Breaking changes", then gives one line per
+  feature, about 7 KB against 35 KB, and links to the guide and to [detailed-changes.md](../detailed-changes.md),
+  where the engineering-level list now lives with the two changes above folded in.
+- **The research folder is reorganized** into `research/speed-enhancements/` with `analysis/`, `plan/`,
+  `hand-offs/`, `testing/`, `scripts/` and `measurements/`, a project README, [decisions.md](../decisions.md) and
+  an index at `research/README.md`. Machine-specific paths are scrubbed; project names stay, since the main
+  audience is the JHU UIS team.
+- **The VS Code extension** has been broken for some time and is not a release gate. The upgrade notes tell its
+  users to stay on 7.x, and the owner tracks updating it to the new loading model as a follow-up.
+- **Kept after discussion:** the startup progress (in the owner's words, core developer experience, with the UIS
+  suites growing fast), the LOTR theme, and the `./lib/*` wildcard export. The library resolves its own
+  transpilers through `lib/*`, so closing it is a Phase 13 item for a later major.
+- **The first full-suite comparison with the version the team runs**, UIS Tools `develop` on 7.5.5 against this
+  build: [measurements/uis-tools-7.5.5-vs-8.0.0.md](../measurements/uis-tools-7.5.5-vs-8.0.0.md). On clean runs 7.5.5 took 15m 28s and 14m 59s, and this build 4m 35s on a warm transpile cache and 6m 12s on a cold one. The wait before the first scenario went from about 6 minutes to 15 to 24 s, and the test run from about 9½ minutes to 4½ to 6, since 7.5.5 spent about 2½ minutes of it on its own work between steps. A busy peer session disturbed about half of the fourteen runs, which are kept and marked; the four step timeouts in two of them were load, since the feature passes alone. The measurement also hit the undeclared-dependency bug 8.0 fixes: after a reinstall, 7.5.5 could not start under pnpm without the `@cucumber/messages` it imports but does not declare.
+
+**Verification on the reviewed tree** (2026-09-25, Windows, Node 24.16.0): `yarn build`, `yarn typecheck` and
+`yarn lint` clean; 262 of 262 unit tests; `yarn test:all` green on all sixteen variants (424 scenarios); `yarn
+smoke:tarball` green in the fresh CommonJS and ESM projects. The startup output was verified on a real console with
+the `verify-console-output` skill, which gained a `-StderrToConsole` switch for it (its runner had appended the
+child's stderr to its log): the progress on stderr at 120, 80, 40 and 24 columns in the default theme and at 80 in
+`lotr`, with formatter-style output on stdout after it, showed every phase on its natural rows, glyphs as single
+cells, and stdout's output starting at column 0 beneath the last phase; a write trace showed the worker redrawing
+every 140 ms on stderr through a 2 s main-thread block; and the real CLI (`-p esnode ../features/basic-test.feature`
+in the `node` workspace) was right at 120 and 80 columns. `yarn bench` was rerun for the guide's reference table,
+which also corrects the table's reading of the cold Vue run: its 29.5 s is the operating system reading files it
+had not read for hours, not V8 compiling them, since runs 2 and 3 took 1.1 s with no compile cache at all.
+
+Nothing is pushed; the review is one local commit on top of `2b84bc2`, for the owner to read before it goes to
+pull request #68.
+
 ## Pull request #68 description (draft for the owner to post)
 
 Written for Lonnie, who reviews the pull request to `master` with an agent and then tags and publishes. The
-owner posts it as the description of pull request #68 and takes the pull request out of draft.
+owner posts it as the description of pull request #68 and takes the pull request out of draft. Rewritten for
+8.0.0 in the release review; it replaces the 7.8.0 draft that stood here.
 
 ---
 
-**7.8.0: a performance release. Startup on a large suite is the target; nothing about writing step definitions
-changes, and every published option, flag and export still works.**
+**8.0.0: a major release for speed.** On UIS Tools the full suite runs in 4½ to 6 minutes against about 15 on 7.5.5, the version the team uses, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes. Writing step definitions does not change.
 
-This branch is the performance-enhancement work planned in `research/performance-enhancement-execution-strategy.md`:
-eleven increments (Phases 1 to 11), then a whole-product review with a test build-out (Phase 12), each with its
-own hand-off document under `research/execution-strategy/`. It is a **minor release**: `parallelLoad` /
-`--parallel-load` is deprecated (accepted, ignored, with a notice naming where to remove it), and the only path
-gone from the `exports` map is the internal `lib/transpilers/esm/esbuild-transpiler` ts-node plugin whose one
-caller was removed with it. The version is already bumped to 7.8.0 in `cucumber-tsflow/package.json`, the
-CHANGELOG heading is `## [7.8.0]`, and the package's README, CHANGELOG and LICENSE copies are the current build's.
+This branch is the performance work planned in `research/speed-enhancements/performance-enhancement-execution-strategy.md`:
+eleven increments (Phases 1 to 11), a whole-product review with a test build-out (Phase 12) and a release review,
+each with its hand-off under `research/speed-enhancements/hand-offs/`. `research/speed-enhancements/decisions.md`
+has the design decisions, with their evidence, in one place.
 
-**Measured effect**, on UIS Tools (a 1,600-scenario Vue suite, `es-vue-esm`, experimental decorators, serial):
-the `dim` profile (334 scenarios, 200 support files) loads its support code in about 2.5 s warm, where 7.7.2
-spent about 24 s, some 20 s of it in `source-map-support`'s synchronous `XMLHttpRequest` per file under jsdom; the
-full suite loads its support code in 4 to 7 s warm; a `--watch` rerun of `dim` starts in about 0.4 s. The test
-runtime itself is untouched (cucumber-tsflow is 0.4% of `runtime:run`; the rest is CucumberJS, jsdom and the
-suite's own steps). The numbers and their discard rules are in `stage-12c-hand-off.md` under "What group 6
-measured".
+**Why 8.0.0.** It was planned as 7.8.0, but the fixes change what a user sees, and the release changes how the
+tool is used, so we propose a major. The version is already 8.0.0 in all ten manifests, the CHANGELOG heading and
+the README section; please confirm, or say if you would rather number it differently (the bump is one commit). The
+breaking changes, all listed first in the CHANGELOG's 8.0.0 entry:
 
-**What changed** (the `## [7.8.0]` CHANGELOG section is the full list):
+- a `BeforeAll` or `AfterAll` hook that throws fails the run, as in CucumberJS (it used to be swallowed under a
+  passing summary);
+- cucumber-tsflow's own output (configuration and mode lines, the new startup progress, notices) goes to stderr,
+  so stdout carries only formatter output;
+- step-definition locations are relative to the working directory on every platform;
+- steps always receive the running scenario's context;
+- `loadSupport()` and `reloadSupport()` start from an empty registry and evaluate every support file again on
+  each call; the VS Code extension has not been updated for this, and its users are told to stay on 7.x;
+- removed: the `lib/transpilers/esm/esbuild-transpiler` export, two internal `BindingRegistry` methods, the
+  `undefined` runtime values of three interfaces in the ES module entry points, and the extensionless
+  `bin/cucumber-tsflow`; `instanceof Cli` no longer matches, and `ts-node-esm` ignores `ts-node.files`.
+
+`parallelLoad` / `--parallel-load`, your 7.7 preload, is accepted and ignored with a notice saying where to remove
+it. Measured on UIS Tools' `dim` profile once the transpile cache existed, the preload cost 5 to 6 s on every run
+and saved at most 1.8 s, cold only, because its threads had to evaluate each support module's graph to reach the
+transpile step and the main thread then evaluated it all again. The transpile cache keeps what it was for.
+
+**Measured effect**, UIS Tools `develop` (1,624 scenarios, 218 support files, `es-vue-esm`, serial), 7.5.5 from
+the registry against this build, same machine, same afternoon:
+
+| | 7.5.5 | 8.0.0, warm transpile cache | 8.0.0, cold transpile cache |
+| --- | --- | --- | --- |
+| Whole run, wall clock | 15m 28s, 14m 59s | 4m 35s | 6m 12s |
+| Before the first scenario | 6m 02s, 5m 27s | 15 s | 24 s |
+| Test run (Cucumber's figure) | 9m 26s, 9m 32s | 4m 20s | 5m 48s |
+
+Most of the gain is startup: `source-map-support` issued a synchronous XMLHttpRequest per support file under
+jsdom, and the ESM loaders routed every file through ts-node on a separate thread. The test run is shorter too:
+7.5.5 spent 2m 26s of it outside the step bodies, in tsflow's per-step lookups, which now take seconds. The full
+record, with the runs a busy machine disturbed, is in `research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md`.
+
+**What changed** (the CHANGELOG's 8.0.0 entry is the user-level list, `research/speed-enhancements/detailed-changes.md`
+the engineering-level one):
 
 - The esbuild ESM loaders run in-thread (`module.registerHooks()`, Node 22.15+) and call esbuild directly, with
   a fallback to `module.register()` on older Node.
@@ -263,28 +345,29 @@ measured".
   (`transpileCache`), keyed on source, path, options and tool versions.
 - Callsite capture is lazy, and callsite resolution no longer triggers the jsdom XHR path.
 - Features are parsed and filtered before the support code loads; parallel workers receive the resolved
-  support-file lists; the CLI enables Node's compile cache.
+  support-file lists; runtime lookups are constant-time.
 - New: selective loading (`selectiveLoad`, off by default), watch mode (`--watch`), startup progress lines with
   `TSFLOW_THEME`, a startup timing report (`TSFLOW_TIMING=true`), the `@lynxwall/cucumber-tsflow/bindings`
   entry point, and an agent skill shipped in `skills/`.
-- Fixed: a throwing `BeforeAll`/`AfterAll` fails the run; steps always receive the running scenario's context;
-  step locations under the ESM loaders map to the TypeScript line; every imported package is declared;
-  `es-node-esm` starts without `vue`; the package ships CHANGELOG and LICENSE for the first time.
+- Fixed: step locations under the ESM loaders map to the TypeScript line; every imported package is declared (the
+  measurement hit this: after a reinstall, 7.5.5 could not start under pnpm because nothing hoisted the
+  `@cucumber/messages` it imports without declaring); `es-node-esm` starts without `vue`; the package ships
+  CHANGELOG and LICENSE for the first time.
 - Housekeeping: `strict: true`, `yarn typecheck` and `yarn lint` gates, American English spelling, dependency
   audit clean.
 
 **How to review.** The aggregate diff is the thing to read, not the commit list (one squashed commit per stage
-or group). Beside it: the CHANGELOG's 7.8.0 section; `Architecture.md`, which describes the product as it now
-ships (execution flow, `BindingRegistry`, the transpiler matrix, the cache rule); `docs/performance-and-diagnostics.md`,
-the user guide for every performance feature, cache and environment variable; and the research map, whose
-"Document map" table says which hand-off answers which question. `CONTRIBUTE.md` and `CLAUDE.md` match the scripts.
+or group). Beside it: the CHANGELOG's 8.0.0 entry; `Architecture.md`, which describes the product as it now ships
+(execution flow, `BindingRegistry`, the transpiler matrix, the cache rule); `docs/performance-and-diagnostics.md`,
+the user guide for every performance feature, cache and environment variable; and
+`research/speed-enhancements/decisions.md`, then the map's "Document map" table for which hand-off answers which
+question. `CONTRIBUTE.md` and `CLAUDE.md` match the scripts.
 
 **Verification.** CI runs the five-job matrix (Ubuntu and Windows, Node 22 and 24, plus Ubuntu with
-`TSFLOW_ESM_HOOKS=async`) on every push to this pull request and is green on the current head. Locally on the
-tagged tree: `yarn build`, `yarn typecheck`, `yarn lint`, 262 unit tests (`node:test`), `yarn test:all` (sixteen
-spec variants), and `yarn smoke:tarball`, which packs the package, installs the tarball into fresh CommonJS and ESM
-projects, runs a feature in each and type-checks the consumer's step files. The startup output was verified on a
-real console (screen buffer read back at 120, 80, 40 and 24 columns).
+`TSFLOW_ESM_HOOKS=async`) on every push to this pull request. Locally on the tagged tree: `yarn build`,
+`yarn typecheck`, `yarn lint`, the unit tests (`node:test`), `yarn test:all` (sixteen spec variants) and
+`yarn smoke:tarball`, which packs the package, installs the tarball into fresh CommonJS and ESM projects, runs a
+feature in each and type-checks the consumer's step files. The startup output was verified on a real console.
 
 **The shipped agent skill.** `cucumber-tsflow/skills/cucumber-tsflow/` (a `SKILL.md` and four references) is
 published with the package in the skills-npm convention, so a consumer's `skills-npm` run links it into each
@@ -292,20 +375,15 @@ coding agent's skill folder. Maintenance rule, also in CLAUDE.md, CONTRIBUTE.md 
 change a consumer can see updates the skill in the same commit, every review checks it against the diff, and it
 stays one skill with references (skills-npm 1.2.0 keeps only the first skill of a package in `--recursive` mode).
 
-**A question on the version number.** We are on 7.5.5 in production and have not taken 7.6 or 7.7, so it
-looked at first as though 7.8 skipped two versions. The registry says otherwise: 7.6.0 (2026-03-27), 7.7.0 and
-7.7.1 (2026-03-29) and 7.7.2 (2026-03-30) are all published, and this branch was cut from `master` at 7.7.2, so
-7.8.0 is the next minor after the last published version. Please confirm that reading, or say if you would rather
-number it differently; the bump is one commit.
-
-**Release steps**, the same as 7.7.2: merge (a squash-merge is fine), then an annotated `v7.8.0` tag on the
+**Release steps**, the same as 7.7.2: merge (a squash-merge is fine), then an annotated `v8.0.0` tag on the
 merge commit, pushed. `publish.yml` runs on the tag: install, `yarn build`, `yarn test:all`,
 `npm publish --provenance --access public ./cucumber-tsflow/`. `release.yml` was not used for 7.7.x and still runs
 `actions/checkout@v2`; it is left alone here and listed for the follow-up.
 
-**Follow-up (Phase 13, planned):** build time and package size (the tarball also carries
-`src/transpilers/esm/README.md` and `lib/tsconfig.node.tsbuildinfo`, both harmless), the ESLint 10 migration, the
-`release.yml` actions, and the dependency-health checks as a CI script.
+**Follow-up (Phase 13, planned):** build time and package size, the ESLint 10 migration, the `release.yml`
+actions, the dependency-health checks as a CI script (including the four `@cucumber/*` pins agreeing with
+CucumberJS's), updating the VS Code extension to the new loading model, and, for a later major, closing the
+`./lib/*` wildcard export and removing `parallelLoad`.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

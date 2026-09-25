@@ -9,8 +9,8 @@
  *
  *   node scripts/benchmark.mjs [--workspace node|node-esm|vue|vue-esm] [--profile bench] [--runs 3] [--cold] [--report]
  *
- * `--cold` gives run 1 an empty transpile cache and an empty Node compile cache (both in a temporary directory
- * that the later runs then share), so one table shows a cold run followed by warm ones. Without it every run uses
+ * `--cold` gives run 1 an empty transpile cache (in a temporary directory that the later runs then share), so
+ * one table shows a cold run followed by warm ones. Without it every run uses
  * the project's own caches. `--report` prints the full timing report of the last run after the table.
  */
 import { spawnSync } from 'node:child_process';
@@ -56,12 +56,11 @@ const environment = { ...process.env, TSFLOW_TIMING: 'true', TSFLOW_THEME: 'off'
 if (options.cold) {
 	temporaryRoot = mkdtempSync(path.join(tmpdir(), 'cucumber-tsflow-bench-'));
 	environment.TSFLOW_TRANSPILE_CACHE_DIR = path.join(temporaryRoot, 'transpile');
-	environment.NODE_COMPILE_CACHE = path.join(temporaryRoot, 'compile');
 }
 
 console.log(
 	`Benchmarking cucumber-tsflow-${options.workspace}, profile "${options.profile}", ${options.runs} run(s)` +
-		(options.cold ? ' (run 1 cold: empty transpile and compile caches)' : ' (project caches)') +
+		(options.cold ? ' (run 1 cold: empty transpile cache)' : ' (project caches)') +
 		` on Node ${process.version}`
 );
 

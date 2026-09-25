@@ -7,7 +7,6 @@ performance features, its caches and its diagnostics.
 
 - [Startup progress](#startup-progress)
 - [Startup timing diagnostics](#startup-timing-diagnostics)
-- [Compile cache](#compile-cache)
 - [Transpile cache](#transpile-cache)
 - [Selective loading](#selective-loading)
 - [Watch mode](#watch-mode)
@@ -49,9 +48,9 @@ The theme is chosen with `TSFLOW_THEME`:
 TSFLOW_THEME=lotr npx cucumber-tsflow -p default
 ```
 
-The spinner, counter and message line are only drawn when stdout is an interactive terminal. In CI logs and when stdout is redirected to a file the output is append-only: the phase line, any messages, and the summary. Nothing of it reaches formatter output or report files. Anything your support code writes to stdout while a phase is open (for example a `console.log` in a hook running inside a parallel worker) lands inside that line and can displace the spinner, exactly as it would land among the formatter's own progress dots.
+All of it is written to stderr, like every other line cucumber-tsflow prints itself (the configuration and mode lines, deprecation notices, the watch-mode status lines), so stdout carries only formatter output and can be piped or redirected on its own. The spinner, counter and message line are only drawn when stderr is an interactive terminal. In CI logs and when stderr is redirected to a file the output is append-only: the phase line, any messages, and the summary. Nothing of it reaches formatter output or report files. Anything your support code prints while a phase is open (for example a `console.log` in a hook running inside a parallel worker) reaches the same terminal, so it can land inside that line and displace the spinner, exactly as it would land among the formatter's own progress dots.
 
-Before any of that, the `cucumber-tsflow` command prints a plain line as its very first action, `Bootstrapping cucumber-tsflow 7.8.0 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed gray as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
+Before any of that, the `cucumber-tsflow` command prints a plain line to stderr as its very first action, `Bootstrapping cucumber-tsflow 8.0.0 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed gray as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
 
 ## Startup timing diagnostics
 
@@ -96,10 +95,6 @@ Slowest 12 files (transpile = transpiler only, load = ESM load hook, evaluate = 
 - **The slowest files.** `transpile` is the transpiler alone (esbuild or the Vue SFC compiler; ts-node's TypeScript compile is not observable and shows as zero), `load` the ESM `load` hook, and `evaluate` the top-level `require` or `import` of the file including everything it imports, which is why the first support file loaded is often the slowest: it pays for the framework, jsdom and the component library that every later file finds already loaded. A cache hit still records a `transpile` entry, for the lookup time, so file counts are comparable between a cold and a warm run.
 
 Read the report before changing anything: on a large suite the cost is almost always module evaluation of the support files' dependency graph, not cucumber-tsflow's own work, and the second run of an unchanged tree should be much faster than the first because of the caches.
-
-## Compile cache
-
-On Node 22.8 or later the `cucumber-tsflow` command enables Node's module compile cache, so the V8 bytecode for the library, its dependencies and your transpiled support code is reused across runs, and parallel child processes share the same cache directory. Set `NODE_DISABLE_COMPILE_CACHE=1` to turn it off, or `NODE_COMPILE_CACHE=<dir>` to choose where it lives (Node's default is a `node-compile-cache` directory under the OS temp directory). Both are Node's own switches. On Node 22.0 to 22.7 the cache is not available and the command skips it.
 
 ## Transpile cache
 
@@ -146,7 +141,7 @@ On Node 22.15 / 23.5 or later the `es-node-esm` and `es-vue-esm` transpilers att
 
 ## Cache operations
 
-cucumber-tsflow keeps two stores of its own on disk and enables a third that belongs to Node. None of them changes what a run computes: a cache can change whether a transpile runs or a file loads, never what the result is, so deleting any of them costs one slower run and nothing else.
+cucumber-tsflow keeps two stores on disk. Neither changes what a run computes: a cache can change whether a transpile runs or a file loads, never what the result is, so deleting either costs one slower run and nothing else.
 
 **Where the cache root is.** Both cucumber-tsflow stores live under one root, `.cache/cucumber-tsflow`, placed inside the nearest `node_modules` directory at or above the working directory the command runs in. When no directory on that walk has a `node_modules`, the root goes under the nearest directory with a `package.json` (as `node_modules/.cache/cucumber-tsflow`, created on first write); when there is neither, it is `cucumber-tsflow` under the OS temp directory. The root is resolved once per process. Run the command from the folder that holds the project's `cucumber.json`, as the README recommends, and the caches land in that project's `node_modules/.cache`, which package managers already ignore and CI systems can restore between builds.
 
@@ -154,15 +149,14 @@ cucumber-tsflow keeps two stores of its own on disk and enables a third that bel
 | --- | --- | --- | --- | --- | --- |
 | Transpile cache | esbuild output and compiled Vue SFCs, one JSON file per entry, content-addressed | `<root>/transpile`, or `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` | `--no-transpile-cache`, `transpileCache: false`, or `TSFLOW_TRANSPILE_CACHE=false` | Yes: 512 MB, least recently written entries deleted first, swept at the end of a run that wrote entries | Delete the directory |
 | Selective-load index | Step patterns, import graphs and file stamps per support file, one JSON file per configuration | `<root>/selective-load` | Leave `selectiveLoad` off (the default) | No; each file is small, and there is one per distinct configuration (working directory, support globs, decorator mode and library version) | Delete the directory |
-| Node compile cache | V8 bytecode for every module the process loads | Node's default under the OS temp directory, or `NODE_COMPILE_CACHE=<dir>` | `NODE_DISABLE_COMPILE_CACHE=1` | Not by cucumber-tsflow, which never deletes anything from it | Delete the directory |
 
-Clearing is never required for correctness. The transpile cache is keyed on everything that shapes its output (source, path, options, tool and library versions), so a stale entry cannot be served; the selective-load index validates every skipped file's import graph against the recorded modification times and sizes before trusting it, and loads the file when anything differs; Node keys its compile cache on the source. Reasons to clear anyway: to reclaim disk space (the transpile cache bounds itself; the index and the compile cache do not, and an upgrade of cucumber-tsflow leaves the previous version's entries behind in both stores until the sweep or a delete removes them), or to rule a cache out while investigating a run that behaves unexpectedly, in which case `--no-transpile-cache` and `--no-selective-load` do the same for one run without deleting anything.
+Clearing is never required for correctness. The transpile cache is keyed on everything that shapes its output (source, path, options, tool and library versions), so a stale entry cannot be served; the selective-load index validates every skipped file's import graph against the recorded modification times and sizes before trusting it, and loads the file when anything differs. Reasons to clear anyway: to reclaim disk space (the transpile cache bounds itself; the index does not, and an upgrade of cucumber-tsflow leaves the previous version's entries behind in both stores until the sweep or a delete removes them), or to rule a cache out while investigating a run that behaves unexpectedly, in which case `--no-transpile-cache` and `--no-selective-load` do the same for one run without deleting anything.
 
 `TSFLOW_TRANSPILE_CACHE_DIR` moves only the transpile cache; the selective-load index stays under the root. `TSFLOW_TRANSPILE_CACHE=false` is how the `transpileCache` option reaches every thread and child process, so setting the variable and the option are the same thing; an environment value acts as the default when the option is not set.
 
 ## Environment variables
 
-Every variable cucumber-tsflow reads, in one place. The `TSFLOW_*` variables are cucumber-tsflow's; the `NODE_*` ones are Node's, listed because the command sets or honors them.
+Every variable cucumber-tsflow reads, in one place. The `TSFLOW_*` variables are cucumber-tsflow's; `NODE_OPTIONS` is Node's own, listed because it is the usual answer to a growing watch-mode heap.
 
 | Variable | Effect |
 | --- | --- |
@@ -173,8 +167,6 @@ Every variable cucumber-tsflow reads, in one place. The `TSFLOW_*` variables are
 | `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` | Where the transpile cache lives, instead of `node_modules/.cache/cucumber-tsflow/transpile` |
 | `TSFLOW_SELECTIVE_LOAD=true` | The environment form of `selectiveLoad: true` |
 | `TSFLOW_ESM_HOOKS=async` | Attach the esbuild ESM loaders with `module.register()` on Node's loader hooks thread instead of in-thread (see [ESM loader hooks](#esm-loader-hooks)) |
-| `NODE_COMPILE_CACHE=<dir>` | Where Node's compile cache lives; the command sets it for its child processes when Node enables the cache |
-| `NODE_DISABLE_COMPILE_CACHE=1` | Do not enable Node's compile cache |
 | `NODE_OPTIONS=--max-old-space-size=<MB>` | Node's heap limit, the usual answer to a watch session whose heap grows because scenarios do not clean up after themselves |
 
 ## Measuring startup on this repository
@@ -184,7 +176,7 @@ The repository has a benchmark script that runs one of the spec workspaces under
 ```bash
 yarn bench                       # the node workspace (CommonJS, es-node), three runs on the project's caches
 yarn bench --workspace node-esm  # the ESM workspace (es-node-esm)
-yarn bench --cold                # run 1 with empty transpile and compile caches, runs 2 and 3 warm
+yarn bench --cold                # run 1 with an empty transpile cache, runs 2 and 3 warm
 yarn bench --runs 5 --report     # more runs, and the full timing report of the last one
 ```
 
@@ -192,23 +184,23 @@ The script is [scripts/benchmark.mjs](../scripts/benchmark.mjs); it needs a buil
 
 Reference numbers from the machine the branch was developed on are in the table below. They are a point of comparison for the shape of a run, not a target; expect different absolute values on a different machine.
 
-Taken on 2026-09-24 with `yarn bench --workspace <name> --cold --runs 3` on Windows 11 and Node 24.16.0, from a built tree with nothing else running. `total` is the time from process start to the end of the run as the report measures it; `support load` is the sum of the support-code phases (`support:require-modules`, `support:require`, `support:import`); `transpile cache` is the number of transpiles served from disk or written to it. Run 1 starts with an empty transpile cache **and** an empty Node compile cache, which is why the Vue workspace's first run spends 25.7 s in `support:require-modules`: that is V8 compiling jsdom and Vue from source, which a project whose compile cache is intact never pays; runs 2 and 3 are the steady state.
+Taken on 2026-09-25, after the release review removed Node's compile cache, with `yarn bench --workspace <name> --cold --runs 3` on Windows 11 and Node 24.16.0, from a built tree, on a machine that was not idle (another session was working in a different repository), so treat differences under about 20% as noise. `total` is the time from process start to the end of the run as the report measures it; `support load` is the sum of the support-code phases (`support:require-modules`, `support:require`, `support:import`); `transpile cache` is the number of transpiles served from disk or written to it. Run 1 starts with an empty transpile cache. The Vue workspace's first run spent 29.5 s in `support:require-modules` loading jsdom and Vue, which runs 2 and 3 did in about 1.1 s with nothing but the transpile cache warm: that time is the operating system reading (and on this machine, scanning) files it had not read for hours, which is what the first run of a day can look like, not compilation. Runs 2 and 3 are the steady state.
 
 | Workspace | Transpiler | Run | total ms | bootstrap | support load | test run | transpile cache |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `node` | `es-node` | 1 (cold) | 1516 | 773 | 612 | 42 | 20 misses |
-| `node` | `es-node` | 2 | 1112 | 688 | 297 | 48 | 20 hits |
-| `node` | `es-node` | 3 | 959 | 536 | 292 | 52 | 20 hits |
-| `node-esm` | `es-node-esm` | 1 (cold) | 1254 | 542 | 462 | 46 | 10 misses |
-| `node-esm` | `es-node-esm` | 2 | 953 | 578 | 138 | 40 | 10 hits |
-| `node-esm` | `es-node-esm` | 3 | 822 | 505 | 111 | 45 | 10 hits |
-| `vue` | `es-vue` | 1 (cold) | 27589 | 504 | 26932 | 69 | 23 misses |
-| `vue` | `es-vue` | 2 | 1905 | 583 | 1182 | 69 | 23 hits |
-| `vue` | `es-vue` | 3 | 1602 | 487 | 979 | 71 | 23 hits |
-| `vue-esm` | `es-vue-esm` | 1 (cold) | 1826 | 491 | 1069 | 66 | 15 misses |
-| `vue-esm` | `es-vue-esm` | 2 | 1869 | 710 | 869 | 76 | 15 hits |
-| `vue-esm` | `es-vue-esm` | 3 | 1526 | 575 | 708 | 64 | 15 hits |
+| `node` | `es-node` | 1 (cold) | 1688 | 853 | 676 | 58 | 20 misses |
+| `node` | `es-node` | 2 | 1266 | 715 | 408 | 50 | 20 hits |
+| `node` | `es-node` | 3 | 1094 | 581 | 369 | 55 | 20 hits |
+| `node-esm` | `es-node-esm` | 1 (cold) | 1677 | 965 | 481 | 66 | 10 misses |
+| `node-esm` | `es-node-esm` | 2 | 964 | 637 | 138 | 63 | 10 hits |
+| `node-esm` | `es-node-esm` | 3 | 840 | 523 | 148 | 54 | 10 hits |
+| `vue` | `es-vue` | 1 (cold) | 31886 | 593 | 31003 | 170 | 23 misses |
+| `vue` | `es-vue` | 2 | 1997 | 541 | 1272 | 95 | 23 hits |
+| `vue` | `es-vue` | 3 | 2090 | 559 | 1355 | 91 | 23 hits |
+| `vue-esm` | `es-vue-esm` | 1 (cold) | 2523 | 637 | 1620 | 91 | 15 misses |
+| `vue-esm` | `es-vue-esm` | 2 | 2169 | 617 | 1297 | 94 | 15 hits |
+| `vue-esm` | `es-vue-esm` | 3 | 2012 | 729 | 1054 | 88 | 15 hits |
 
-What the shape says: on suites this small the fixed costs dominate. `bootstrap`, Node loading the library and its dependencies, is half of a warm run, and the caches turn the support load of a cold run into a fraction of itself (`node`: 612 ms to about 295 ms; `vue`: 1.2 s to 1.0 s once the compile cache is warm, with the rest being jsdom's own start-up). The test run itself is under a tenth of a second in every workspace. A change that moves `bootstrap` or the warm support load by more than the run-to-run noise (about 10%) is visible here; one that only matters at two hundred support files is not, and needs the real suite.
+What the shape says: on suites this small the fixed costs dominate. `bootstrap`, Node loading the library and its dependencies, is about half of a warm run in the Node workspaces, and the transpile cache turns the support load of a cold run into a fraction of itself (`node`: 676 ms to about 390 ms; `node-esm`: 481 ms to about 140 ms). In the Vue workspaces most of the support load is jsdom and Vue themselves, which no cache of cucumber-tsflow's removes. The test run itself is under a tenth of a second in every workspace except the cold `vue` run. A change that moves `bootstrap` or the warm support load by more than the run-to-run noise is visible here; one that only matters at two hundred support files is not, and needs the real suite.
 
-For a real measurement, use a real suite: the notes in [research/local-consumer-testing.md](../research/local-consumer-testing.md) describe how the library was linked into a 1571-scenario Vue project and timed, and the phase hand-offs under [research/execution-strategy/](../research/execution-strategy/) record what each change measured there.
+For a real measurement, use a real suite: [research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md](../research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md) compares the full 1,624-scenario UIS Tools suite on 7.5.5 and 8.0.0, the notes in [research/speed-enhancements/testing/local-consumer-testing.md](../research/speed-enhancements/testing/local-consumer-testing.md) describe how the library is linked into such a project and timed, and the phase hand-offs under [research/speed-enhancements/hand-offs/](../research/speed-enhancements/hand-offs/) record what each change measured there.

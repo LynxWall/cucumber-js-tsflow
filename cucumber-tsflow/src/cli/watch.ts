@@ -96,7 +96,7 @@ export async function watchCucumber(
 
 class WatchSession {
 	private readonly cwd: string;
-	private readonly stdout: WatchOutput;
+	/** Where the loop's own lines go: stderr, with the rest of cucumber-tsflow's own output; stdout is the formatters' */
 	private readonly stderr: WatchOutput;
 	private readonly stdin: KeyInput;
 	private readonly coordinates: ISupportCodeCoordinates;
@@ -119,7 +119,6 @@ class WatchSession {
 	) {
 		const merged = makeEnvironment(environment);
 		this.cwd = merged.cwd;
-		this.stdout = merged.stdout as unknown as WatchOutput;
 		this.stderr = merged.stderr as unknown as WatchOutput;
 		this.stdin = options.stdin ?? process.stdin;
 		this.coordinates = {
@@ -134,20 +133,20 @@ class WatchSession {
 	}
 
 	async run(): Promise<boolean> {
-		this.stdout.write(
+		this.stderr.write(
 			ansis.cyanBright('Watch mode: ') +
 				'the run repeats whenever a feature or support file changes. ' +
 				ansis.dim('Enter reruns, q quits.') +
 				'\n'
 		);
 		if (this.unsupportedReason) {
-			this.stdout.write(
+			this.stderr.write(
 				ansis.dim(
 					`Support code cannot be kept loaded between runs (${this.unsupportedReason}); each run starts a fresh process.`
 				) + '\n'
 			);
 		}
-		this.stdout.write('\n');
+		this.stderr.write('\n');
 		this.listenToKeys();
 
 		const finished = new Promise<void>(resolve => (this.resolveQuit = resolve));
@@ -181,7 +180,7 @@ class WatchSession {
 		this.rerunRequested = false;
 		if (changed.length > 0) {
 			const names = changed.filter(file => file !== UNKNOWN_CHANGE).map(file => path.relative(this.cwd, file));
-			this.stdout.write(
+			this.stderr.write(
 				`${ansis.cyanBright('Changed:')} ${names.length > 0 ? names.join(', ') : 'files in a watched directory'}\n\n`
 			);
 		}
@@ -205,7 +204,7 @@ class WatchSession {
 		// The heap after a run is what the next run starts from: module state the process keeps on purpose,
 		// plus anything the suite left behind (a DOM it mounted into and never cleaned up, say)
 		const heap = this.reloader ? `, heap ${formatBytes(heapUsedAfterCollection())}` : '';
-		this.stdout.write(
+		this.stderr.write(
 			'\n' +
 				ansis.dim(
 					`Run took ${elapsed}${heap}. Watching ${plural(this.known.size, 'file')} in ${directories} for changes. Enter reruns, q quits.`
@@ -337,7 +336,7 @@ class WatchSession {
 		stdin.pause();
 		// A TTY or pipe stdin is a socket that would otherwise keep the event loop alive
 		stdin.unref?.();
-		this.stdout.write(ansis.dim('Watch mode stopped.') + '\n');
+		this.stderr.write(ansis.dim('Watch mode stopped.') + '\n');
 		this.resolveQuit?.();
 	}
 }

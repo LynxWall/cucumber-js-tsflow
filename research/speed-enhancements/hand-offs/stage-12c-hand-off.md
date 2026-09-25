@@ -3,7 +3,7 @@
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
 Written as the groups land (started 2026-09-23), so that a pause after any group can resume cold. Stage 12c is
-[Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **All six groups are complete and the stage is closed (2026-09-24).**
+[Review refactors](../plan/phase-12-plan.md#12c-review-refactors): the triaged findings in six groups, one concern per commit. **All six groups are complete and the stage is closed (2026-09-24).**
 
 ## State of the tree
 
@@ -480,7 +480,7 @@ from the squashed diff by file should a later measurement disagree.
 - **Stage 12c is closed (2026-09-24): every triaged finding landed, moved or closed, the boundary matrix was green
   after each of groups 1 to 5, and the closing measurement is within noise of Phase 10** (the section above). 12d,
   the housekeeping sweeps, is next; its definition and gate are in
-  [phase-12-plan.md](phase-12-plan.md#12d-housekeeping-sweeps) and the items the earlier groups left for it are in
+  [phase-12-plan.md](../plan/phase-12-plan.md#12d-housekeeping-sweeps) and the items the earlier groups left for it are in
   the leftover bullets below. The plan allows the stage to be squashed further now that the measurement is done;
   that is the owner's call and was not done here.
 - **Finding P is closed by measurement**, the compile cache kept as shipped; the numbers, the reasoning and the

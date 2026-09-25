@@ -88,7 +88,7 @@ phase exists at all.
   their own profiles into the same directory. Write the profiles into `research/profiles/<label>/` in this
   repository (gitignored) rather than anywhere under the UIS checkout, whose `.gitignore` has no rule for
   `.cpuprofile` files. The full recipe, with the environment variables, is under "Profiling a run" in
-  [local-consumer-testing.md](../local-consumer-testing.md).
+  [local-consumer-testing.md](../testing/local-consumer-testing.md).
 - **Attribute.** `node research/scripts/attribute-cpuprofile.js <main-thread .cpuprofile>` prints self
   and inclusive time by layer (tsflow, cucumber-js, jsdom, vue, esbuild, source maps, other dependencies by
   package, node internals, V8 pseudo-frames, consumer files), tsflow's share by `lib/` directory, and hot

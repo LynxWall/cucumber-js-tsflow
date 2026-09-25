@@ -15,7 +15,7 @@ or the `package.json` that declares `@lynxwall/cucumber-tsflow`). Pass `--undo` 
 restore the registry package. If no path is given, default to the known consumer
 `C:\Git\Azure\uis-tools\Tools.Web\VueApp` and say so.
 
-Background and prior measurements: [research/local-consumer-testing.md](../../../research/local-consumer-testing.md).
+Background and prior measurements: [research/speed-enhancements/testing/local-consumer-testing.md](../../../research/speed-enhancements/testing/local-consumer-testing.md).
 
 ## Why `link:` (and when not)
 

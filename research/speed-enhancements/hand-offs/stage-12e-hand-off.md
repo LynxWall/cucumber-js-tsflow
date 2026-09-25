@@ -3,7 +3,7 @@
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
 Written at the close of the stage (2026-09-24). Stage 12e is
-[Documentation and packaging](phase-12-plan.md#12e-documentation-and-packaging): the performance guide, the README
+[Documentation and packaging](../plan/phase-12-plan.md#12e-documentation-and-packaging): the performance guide, the README
 reduced to a paragraph that links to it, Architecture.md and the CHANGELOG read as one product, the contributor
 documentation, the repeatable benchmark, the packed-tarball smoke test, and the shipped agent skill checked against
 the tree and linked into the UIS testbed. **The stage is complete and its gate is met, with one box that only the
@@ -162,7 +162,7 @@ exit codes (`cli/run.ts`), the four quoted error messages, the CLI options and t
 variables, the cache paths and the transpiler table match the source. Two things it quotes were wrong in the source
 rather than in the skill and were fixed there (above). One paragraph was added to `running-and-debugging.md`
 pointing at the guide. The skill is linked into the UIS testbed: `corepack pnpm dlx skills-npm@1.2.0 --agents
-claude-code --yes` in `C:\Git\Azure\uis-tools\Tools.Web\VueApp` scanned ten packages, found the one skill and
+claude-code --yes` in `Tools.Web/VueApp` of the UIS Tools repository scanned ten packages, found the one skill and
 created `.claude/skills/npm-lynxwall-cucumber-tsflow-cucumber-tsflow` as a symlink into
 `node_modules/@lynxwall/cucumber-tsflow/skills/cucumber-tsflow` (which is itself the pnpm `link:` to this
 checkout, so the link is live); it also added a `skills/npm-*` pattern to that workspace's `.gitignore`. Both are

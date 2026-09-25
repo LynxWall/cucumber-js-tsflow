@@ -78,7 +78,9 @@ export async function runCucumber(
 Working directory: ${cwd}
 Running from: ${__dirname}
 `);
-	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+	// All of cucumber-tsflow's own output (these lines and the startup progress) goes to stderr; stdout carries
+	// only formatter output, so a formatter writing to stdout can be piped or parsed
+	const consoleLogger = new Console(stderr as any);
 	if (options.runtime.experimentalDecorators) {
 		consoleLogger.info(ansis.yellowBright('Using Experimental Decorators.'));
 	}
@@ -91,7 +93,7 @@ Running from: ${__dirname}
 	}
 
 	// Themed, append-only feedback for the startup phases that used to run silently (TSFLOW_THEME)
-	const progress = new StartupProgress(stdout, resolveStartupTheme());
+	const progress = new StartupProgress(stderr, resolveStartupTheme());
 
 	const newId = IdGenerator.uuid();
 

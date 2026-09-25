@@ -5,8 +5,8 @@
  * messages for the current phase to the terminal on this thread's own event loop, so the spinner keeps
  * moving while the main thread is blocked in synchronous transpile-and-load work.
  *
- * Output goes through a `tty.WriteStream` opened on the terminal's file descriptor, the same path
- * `process.stdout` takes on the main thread. That is not cosmetic: on Windows a raw `fs.writeSync` hands
+ * Output goes through a `tty.WriteStream` opened on the terminal's file descriptor (stderr's), the same path
+ * `process.stderr` takes on the main thread. That is not cosmetic: on Windows a raw `fs.writeSync` hands
  * UTF-8 bytes to the console, which displays them under its OEM code page, so `—` shows as `ΓÇö`, every
  * such character takes three cells instead of one, the line occupies more rows than the renderer counted,
  * and each redraw lands on the wrong row. The TTY stream converts to UTF-16 and uses the console's

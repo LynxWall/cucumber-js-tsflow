@@ -12,5 +12,5 @@ Feature: Support files that fail to load
     Then the load phase failed
     And the error output names "src/fixtures/failing/missing-import.ts"
     And the error output names "src/fixtures/failing/missing-import.ts" exactly once
-    And the standard output holds no escape sequences
+    And the output holds no escape sequences
     And the run exited with code 1

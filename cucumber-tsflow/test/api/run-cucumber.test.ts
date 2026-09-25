@@ -75,7 +75,7 @@ async function run(feature: string) {
 
 describe('runCucumber', () => {
 	it('parses the features before loading support code, then replays them to the formatters in the usual order', async () => {
-		const { result, kinds, stdout } = await run('good.feature');
+		const { result, kinds, stdout, stderr } = await run('good.feature');
 		expect(result.success, stdout).to.equal(true);
 		// The Gherkin envelopes were produced before the support code loaded and emitted after the meta message
 		expect(kinds.slice(0, 4)).to.deep.equal(['meta', 'source', 'gherkinDocument', 'pickle']);
@@ -84,9 +84,10 @@ describe('runCucumber', () => {
 		expect(kinds.indexOf('testRunStarted')).to.be.greaterThan(firstSupport);
 		expect(kinds.at(-1)).to.equal('testRunFinished');
 		expect(kinds.filter(kind => kind === 'testCaseFinished')).to.have.length(1);
-		// The startup phases report on the parsed scenarios before the load phase begins
-		expect(stdout.indexOf('1 scenario to run')).to.be.lessThan(stdout.indexOf('Packing the jars'));
+		// The startup phases (on stderr) report on the parsed scenarios before the load phase begins
+		expect(stderr.indexOf('1 scenario to run')).to.be.lessThan(stderr.indexOf('Packing the jars'));
 		expect(stdout).to.include('1 scenario (1 passed)');
+		expect(stdout, 'stdout carries only formatter output').to.not.include('Packing the jars');
 	});
 
 	it('reports a parse error after loading the support code, without running anything', async () => {
@@ -97,8 +98,8 @@ describe('runCucumber', () => {
 		expect(kinds.indexOf('meta')).to.equal(0);
 		// The support code was loaded (the load phase reports its definitions) but its messages are never emitted
 		expect(kinds).to.not.include('stepDefinition');
-		expect(stdout).to.include('1 parse error');
-		expect(stdout).to.include('3 step definitions');
+		expect(stderr).to.include('1 parse error');
+		expect(stderr).to.include('3 step definitions');
 		expect(stderr).to.include('Parse error in');
 	});
 });

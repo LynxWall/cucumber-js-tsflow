@@ -60,7 +60,6 @@ skipped.
 | --- | --- | --- | --- |
 | Transpile cache (esbuild and Vue SFC output) | `node_modules/.cache/cucumber-tsflow/transpile` | `--no-transpile-cache`, `TSFLOW_TRANSPILE_CACHE=false` | Delete the folder |
 | Selective-load index | `node_modules/.cache/cucumber-tsflow/selective-load` | leave `selectiveLoad` off | Delete the folder |
-| Node compile cache (V8 bytecode) | Node's default under the OS temp directory, or `NODE_COMPILE_CACHE` | `NODE_DISABLE_COMPILE_CACHE=1` | Delete the folder |
 
 The `node_modules` used is the nearest one at or above the working directory. The transpile cache key covers the
 source, the options and every tool version, so a stale entry is never served; clearing it is only needed to
@@ -79,8 +78,10 @@ describes the caches, the timing report, selective loading and watch mode in ful
 | `TSFLOW_SELECTIVE_LOAD=true` | Same as `--selective-load` |
 | `TSFLOW_ESM_HOOKS=async` | Force the ESM loaders onto Node's loader hooks thread (`module.register()`) |
 
-The startup progress lines are drawn in place only on an interactive terminal; in CI and redirected output they
-are plain append-only lines, and they never appear in formatter output or report files.
+Everything cucumber-tsflow prints itself (the bootstrap and configuration lines, the startup progress, notices,
+watch-mode status lines) goes to stderr, so stdout carries only formatter output and can be piped or parsed. The
+startup progress lines are drawn in place only when stderr is an interactive terminal; in CI and redirected output
+they are plain append-only lines, and they never appear in formatter output or report files.
 
 ## Reading common errors
 

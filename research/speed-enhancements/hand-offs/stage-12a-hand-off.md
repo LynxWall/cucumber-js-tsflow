@@ -3,7 +3,7 @@
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
 Written at the end of the 12a session (2026-09-22) so that the pause and 12b can start cold. Stage 12a is the test
-foundation described under [Stages and gates](phase-12-plan.md#stages-and-gates): the unit-test runner, the seams, the unit tests for
+foundation described under [Stages and gates](../plan/phase-12-plan.md#stages-and-gates): the unit-test runner, the seams, the unit tests for
 the risk list, and the CI matrix.
 
 ## State of the tree
@@ -132,10 +132,10 @@ the risk list, and the CI matrix.
 ## Starting 12b
 
 Written for a fresh session, so that it can start without re-deriving anything. 12b is
-[Behavior discovery](phase-12-plan.md#12b-behavior-discovery): three end-to-end scenarios and a failure-path pass. It finds things
+[Behavior discovery](../plan/phase-12-plan.md#12b-behavior-discovery): three end-to-end scenarios and a failure-path pass. It finds things
 and records them; fixes go to 12c.
 
-- **Read first:** [Phase 12 scope](phase-12-plan.md#phase-12-scope), the [12b stage text](phase-12-plan.md#12b-behavior-discovery), this hand-off (the
+- **Read first:** [Phase 12 scope](../plan/phase-12-plan.md#phase-12-scope), the [12b stage text](../plan/phase-12-plan.md#12b-behavior-discovery), this hand-off (the
   runner, the seams and what each test file already covers), and the
   [Phase 10 hand-off](phase-10-hand-off.md) for what watch mode promised and how its spec drives the CLI. The
   `coverage inventory` rows for `api/run-cucumber.ts`, `cli/watch.ts` and `api/support-reloader.ts` list the
@@ -143,7 +143,7 @@ and records them; fixes go to 12c.
 - **Start state:** branch `2026-09-speed-enhancements` at `65d9526`, clean. `yarn`, `yarn build`, then
   `yarn test:unit` (218 green) and `yarn test:all` (sixteen variants green) reproduce the 12a gate. Build with
   `yarn build`, never bare `tsc`.
-- **Scenario 1, ESM watch rerun (risk 3).** The existing spec is [watch-mode-test.feature](../../cucumber-tsflow-specs/features/watch-mode-test.feature)
+- **Scenario 1, ESM watch rerun (risk 3).** The existing spec is [watch-mode-test.feature](../../../cucumber-tsflow-specs/features/watch-mode-test.feature)
   with its steps in `cucumber-tsflow-specs/node/src/step_definitions/watch-mode-test.ts` (a `WatchSession` class that
   spawns `bin/cucumber-tsflow.js -p <profile> --watch` through piped stdin, waits for each `Run took` line, and
   quits with `q`). It runs on the `node` workspace's `watch` profile and is tagged `@watch @node`. The ESM version

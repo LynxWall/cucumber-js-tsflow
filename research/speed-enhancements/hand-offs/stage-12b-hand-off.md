@@ -3,7 +3,7 @@
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
 Written at the end of the 12b session (2026-09-23) so that the pause and 12c can start cold. Stage 12b is
-[Behavior discovery](phase-12-plan.md#12b-behavior-discovery): the end-to-end scenarios the 12a tests left to the spec matrix, and
+[Behavior discovery](../plan/phase-12-plan.md#12b-behavior-discovery): the end-to-end scenarios the 12a tests left to the spec matrix, and
 a failure-path pass whose findings are classified, not fixed. No file under `cucumber-tsflow/src` changed.
 
 ## State of the tree
@@ -144,12 +144,12 @@ a failure-path pass whose findings are classified, not fixed. No file under `cuc
 
 ## Starting 12c
 
-Written for a fresh session. 12c is [Review refactors](phase-12-plan.md#12c-review-refactors): the triaged findings, one concern
+Written for a fresh session. 12c is [Review refactors](../plan/phase-12-plan.md#12c-review-refactors): the triaged findings, one concern
 per commit, then the closing measurement. **The triage is done** (2026-09-23, with the owner) and recorded in
-[12c triage](phase-12-plan.md#12c-triage); the execution session starts with group 1 and does not reopen the dispositions.
+[12c triage](../plan/phase-12-plan.md#12c-triage); the execution session starts with group 1 and does not reopen the dispositions.
 
-- **Read first:** the [12c triage](phase-12-plan.md#12c-triage) table (every letter's disposition, group and verifying test), the
-  [review findings](phase-12-plan.md#review-findings-for-strand-2) A–AH for the detail behind each row, the
+- **Read first:** the [12c triage](../plan/phase-12-plan.md#12c-triage) table (every letter's disposition, group and verifying test), the
+  [review findings](../plan/phase-12-plan.md#review-findings-for-strand-2) A–AH for the detail behind each row, the
   [12a hand-off](stage-12a-hand-off.md) for what each unit-test file covers (the net for every refactor), and this
   hand-off's failure-path table for the reproductions behind group 1.
 - **Start state:** the 12b commit plus the triage commit, clean. `yarn`, `yarn build`, `yarn test:unit` (218) and

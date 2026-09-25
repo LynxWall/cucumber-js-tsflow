@@ -5,9 +5,10 @@
  * Attribute the self time in one or more V8 `.cpuprofile` files (as written by `node --cpu-prof`) to the
  * layers of a cucumber-tsflow run: the tsflow library, CucumberJS, jsdom, Vue, esbuild, other dependencies,
  * Node internals, V8 pseudo-frames and the consumer's own code. Written for item 27 of the performance
- * worklist (research/performance-enhancement-execution-strategy.md), which asks where `runtime:run` goes.
+ * worklist (research/speed-enhancements/performance-enhancement-execution-strategy.md), which asks where
+ * `runtime:run` goes.
  *
- *   node research/scripts/attribute-cpuprofile.js [options] <file.cpuprofile>...
+ *   node research/speed-enhancements/scripts/attribute-cpuprofile.js [options] <file.cpuprofile>...
  *
  * Options
  *   --all                 Attribute every sample. By default the window starts at the first sample whose
@@ -173,7 +174,7 @@ function frameLabel(frame) {
 	return `${frame.functionName || ''} @ ${(frame.url || '').replace(/\\/g, '/')}`;
 }
 
-function analyse(file, opts) {
+function analyze(file, opts) {
 	const profile = JSON.parse(fs.readFileSync(file, 'utf8'));
 	const nodes = new Map();
 	for (const node of profile.nodes) nodes.set(node.id, node);
@@ -424,7 +425,7 @@ function main() {
 		);
 		process.exit(2);
 	}
-	const results = opts.files.map(f => analyse(f, opts));
+	const results = opts.files.map(f => analyze(f, opts));
 	if (opts.json) {
 		process.stdout.write(JSON.stringify(results, null, 2) + '\n');
 		return;

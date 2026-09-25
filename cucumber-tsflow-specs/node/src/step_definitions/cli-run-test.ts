@@ -76,10 +76,10 @@ class CliRun {
 		);
 	}
 
-	/** The load-phase line: how many support files were loaded and any note appended to it. */
+	/** The load-phase line (on stderr): how many support files were loaded and any note appended to it. */
 	loadLine(): string {
-		const line = this.stdout.split(/\r?\n/).find(text => text.includes('transpiling and loading'));
-		expect(line, this.stdout).to.not.equal(undefined);
+		const line = this.stderr.split(/\r?\n/).find(text => text.includes('transpiling and loading'));
+		expect(line, this.stderr).to.not.equal(undefined);
 		return line ?? '';
 	}
 
@@ -140,7 +140,8 @@ export default class CliRunSteps {
 
 	@then('the parse phase reported {int} parse error(s)')
 	verifyParseErrorCount(count: number): void {
-		expect(this.run.stdout).to.include(count === 1 ? '1 parse error' : `${count} parse errors`);
+		// The parse phase's summary, on stderr with the rest of the startup progress
+		expect(this.run.stderr).to.include(count === 1 ? '1 parse error' : `${count} parse errors`);
 	}
 
 	@then('the error output reports a parse error in {string}')
@@ -182,17 +183,18 @@ export default class CliRunSteps {
 
 	@then('the BeforeAll hook output starts on its own line')
 	verifyHookOutputOnOwnLine(): void {
-		// The launch phase line closes before the hooks run, so what a hook prints is not appended to it
-		const launchLine = this.run.stdout.split(/\r?\n/).find(text => text.includes('assembling'));
-		expect(launchLine, this.run.stdout).to.not.equal(undefined);
+		// The launch phase line (stderr) closes before the hooks run, so what a hook prints (stdout) starts its own line
+		const launchLine = this.run.stderr.split(/\r?\n/).find(text => text.includes('assembling'));
+		expect(launchLine, this.run.stderr).to.not.equal(undefined);
 		expect(launchLine).to.not.include('beforeAll was called');
 		expect(this.run.stdout).to.match(/^beforeAll was called/m);
 	}
 
-	@then('the standard output holds no escape sequences')
+	@then('the output holds no escape sequences')
 	verifyNoEscapes(): void {
+		// Neither the formatter's stdout nor the startup progress on stderr redraws anything without a TTY
 		// eslint-disable-next-line no-control-regex
-		expect(this.run.stdout).to.not.match(/\x1b/);
+		expect(this.run.stdout + this.run.stderr).to.not.match(/\x1b/);
 	}
 
 	@after('@cli-run')

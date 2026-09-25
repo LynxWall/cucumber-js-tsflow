@@ -37,7 +37,7 @@ async function load(provided: Partial<ITsflowConfiguration>, file: string | fals
 		{ file, provided: provided as Provided },
 		{ cwd, stdout: stdout.stream, stderr: stderr.stream, env: process.env }
 	);
-	return { ...result, stdout: stdout.text() };
+	return { ...result, stdout: stdout.text(), stderr: stderr.text() };
 }
 
 describe('loadConfiguration', () => {
@@ -71,17 +71,18 @@ describe('loadConfiguration', () => {
 	});
 
 	it('prints the deprecation notice when parallelLoad comes from the command line', async () => {
-		const { stdout } = await load({ parallelLoad: true });
-		expect(stdout).to.include('DEPRECATION NOTICE');
-		expect(stdout).to.include('the --parallel-load flag from the command line');
-		expect((await load({})).stdout).to.not.include('DEPRECATION NOTICE');
+		const { stderr, stdout } = await load({ parallelLoad: true });
+		expect(stderr).to.include('DEPRECATION NOTICE');
+		expect(stderr).to.include('the --parallel-load flag from the command line');
+		expect(stdout, 'stdout carries only formatter output').to.equal('');
+		expect((await load({})).stderr).to.not.include('DEPRECATION NOTICE');
 	});
 
 	it('names the configuration file when parallelLoad comes from it', async () => {
 		writeFileSync(path.join(cwd, 'parallel.json'), JSON.stringify({ default: { parallelLoad: 4 } }));
-		const { stdout, useConfiguration } = await load({}, 'parallel.json');
+		const { stderr, useConfiguration } = await load({}, 'parallel.json');
 		expect(useConfiguration.parallelLoad).to.equal(4);
-		expect(stdout).to.include('"parallelLoad" from "parallel.json"');
+		expect(stderr).to.include('"parallelLoad" from "parallel.json"');
 	});
 
 	it('defaults experimentalDecorators to false and publishes it to the global and the environment', async () => {

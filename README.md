@@ -12,16 +12,28 @@ This is a detached fork of <https://github.com/timjroberts/cucumber-js-tsflow>. 
 
 This fork has been drastically modified from the original and will eventually be moved to a new project. In addition, the SpecFlow project has reached [end of life](https://reqnroll.net/news/2025/01/specflow-end-of-life-has-been-announced/), and this project will be rebranded. Further details will be provided in future updates. However, the new project will support the same functionality as cucumber-tsflow while providing additional tools and extensions.
 
-## Release Updates (7.8.0)
+## Release Updates (8.0.0)
 
-A performance release. Startup on a large suite is the target: nothing about writing step definitions changes, and every published option, flag and export still works. The detail is in the [CHANGELOG](CHANGELOG.md) and in the new [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide.
+A major release for speed. On a large suite most of a run used to be startup, and 8.0 makes it a small part of the run. On UIS Tools, a 1,624-scenario Vue 3 suite, the full run takes 4½ to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes. Writing step definitions does not change. The [CHANGELOG](CHANGELOG.md) lists every change, and the new [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide describes the new features.
+
+### Upgrading from 7.x
+
+Most suites upgrade without changes. What you may notice:
+
+- **A `BeforeAll` or `AfterAll` hook that throws now fails the run**, as it does in CucumberJS. Before 8.0 the error was swallowed and every scenario ran; if a pipeline turns red after upgrading, check these hooks first.
+- **cucumber-tsflow's own output is on stderr**: the configuration and mode lines, the new startup progress and any notices. stdout carries only formatter output. `TSFLOW_THEME=off` turns the startup progress off.
+- **Step-definition locations in reports are relative** to the working directory on every platform (on Linux and macOS they were absolute).
+- **`parallelLoad` / `--parallel-load` does nothing** and prints a notice saying where to remove it; the transpile cache replaces it.
+- **The VS Code extension** has not been updated for 8.0; if you rely on it, stay on 7.x for now.
+
+The CHANGELOG's "Breaking changes" section has the complete list, including the few exports that were removed.
 
 ### Faster startup
 
 - **The esbuild ESM loaders run in-thread** with `module.registerHooks()` on Node 22.15 or later, and they call esbuild directly, without a `ts-node` service or a loader-thread round trip per module.
 - **On-disk transpile cache** for the esbuild transpilers and the Vue SFC compiler (`transpileCache`, on by default): an unchanged tree reads its transpiled code back instead of transpiling it, and parallel workers share one transpile per file.
 - **Callsite capture is lazy**, and callsite resolution no longer issues a synchronous XMLHttpRequest per support file under jsdom, which was the largest single startup cost in Vue suites.
-- Feature files are parsed and filtered before the support code loads; parallel workers receive the resolved support-file lists instead of expanding the globs again; the `cucumber-tsflow` command enables Node's compile cache.
+- Feature files are parsed and filtered before the support code loads; parallel workers receive the resolved support-file lists instead of expanding the globs again.
 
 ### New features
 
@@ -34,16 +46,10 @@ A performance release. Startup on a large suite is the target: nothing about wri
 
 ### Fixed
 
-- A `BeforeAll` or `AfterAll` hook that throws fails the run, as it does in CucumberJS.
 - Steps always receive the running scenario's context; the previous lookup could resolve another scenario's context when a step pattern also matched text in another pickle.
 - Step locations in reports and ambiguity errors under the esbuild ESM loaders map to the TypeScript line; a support file that fails to load is reported once; `reloadSupport()` builds a complete library.
 - Every package the library imports is declared, so strict `node_modules` layouts such as pnpm's resolve them.
 - `es-node-esm` starts in a project that does not have `vue` installed; the Vue SFC compiler now loads on the first `.vue` file.
-
-### Deprecated and removed
-
-- `parallelLoad` / `--parallel-load` is accepted and ignored, with a deprecation notice: the parallel preload it enabled cost more than it saved once the transpile cache existed, and it was removed. The option goes in the next major version.
-- The internal `lib/transpilers/esm/esbuild-transpiler` export, used only by the removed ts-node routing of the esbuild ESM loaders, is gone; use `es-node-esm` or `es-vue-esm`.
 
 ## Release Updates (7.7.0)
 
@@ -59,7 +65,7 @@ This release focuses on correctness, performance, and code quality improvements 
 
 ### New Features
 
-- **Parallel preload** (`parallelLoad` configuration option; removed in 7.8.0, see above) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
+- **Parallel preload** (`parallelLoad` configuration option; removed in 8.0.0, see above) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files, triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
 
 ### Performance and Efficiency
 

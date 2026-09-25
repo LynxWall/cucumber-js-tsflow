@@ -15,7 +15,7 @@ attempt can start from them rather than from the rating.
 - Branch `2026-09-speed-enhancements`; Phase 10 ended at `43269ac` and nothing under `cucumber-tsflow/src`
   changed in this phase. `lib/` is a fresh `yarn build` of that commit (`7.7.2`), which is what the UIS link ran.
   This phase adds only this hand-off, the phased-plan entry above, and a paragraph in
-  [local-consumer-testing.md](../local-consumer-testing.md) about disturbed measurements.
+  [local-consumer-testing.md](../testing/local-consumer-testing.md) about disturbed measurements.
 - The console logs of the three measurement runs, each ending in its `TSFLOW_TIMING` report, are under
   `research/profiles/p11-bundling/startup-{1..3}.log` (gitignored, like every profile directory).
 - The UIS Tools VueApp link is unchanged and must not be committed there.
@@ -51,7 +51,7 @@ earlier notes describe: an orphaned Git Bash process, started the previous morni
 parent shell had already exited, was scanning the entire disk and had accumulated 4.4 CPU-hours:
 
 ```text
-"C:\Program Files\Git\usr\bin\find.exe" / -maxdepth 8 -iname common-library-3.1.0*.jar
+"<Git for Windows>\usr\bin\find.exe" / -maxdepth 8 -iname common-library-3.1.0*.jar
 ```
 
 Module loading is dominated by exactly the calls such a scan competes for (Phase 7's startup attribution:
@@ -83,7 +83,7 @@ What bundling would remove, and what it would not, follows from counts that do n
   on a one-scenario run.
 
 Set against the item's complexity — the highest on the list, for the correctness argument in
-[item 25](ratings.md#25-esbuild-build-bundling-to-replace-per-file-transformsync) and the findings below — the owner closed
+[item 25](../plan/ratings.md#25-esbuild-build-bundling-to-replace-per-file-transformsync) and the findings below — the owner closed
 it. A measured rather than derived ceiling was offered (a throwaway bundle of the 216 support files timed against
 the current loader, about an hour after the stray process is gone) and declined, since it is already the first
 third of the prototype.
@@ -146,7 +146,7 @@ would cost.
 
 ## Notes specific to Phase 12
 
-- Phase 12 is the release gate described under [Phase 12 scope](phase-12-plan.md#phase-12-scope); this phase changed nothing it
+- Phase 12 is the release gate described under [Phase 12 scope](../plan/phase-12-plan.md#phase-12-scope); this phase changed nothing it
   depends on.
 - Before measuring anything on this machine, look for stray filesystem scanners first
   (`Get-Process | Sort-Object CPU -Descending | Select-Object -First 8`); this session's `find` had been running

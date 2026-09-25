@@ -14,7 +14,7 @@ export default async function run(): Promise<void> {
 
 	// Close the notice bin/cucumber-tsflow.js printed before requiring the library, in the same muted gray
 	if (global.__CUCUMBER_TSFLOW_BOOTSTRAP_ANNOUNCED) {
-		process.stdout.write(ansis.dim(`cucumber-tsflow loaded in ${formatDuration(bootstrapMs)}.`) + '\n');
+		process.stderr.write(ansis.dim(`cucumber-tsflow loaded in ${formatDuration(bootstrapMs)}.`) + '\n');
 	}
 
 	logger.checkpoint('Starting cucumber-tsflow', {

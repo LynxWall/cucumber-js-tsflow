@@ -1,6 +1,9 @@
 # Opens a fresh console window, runs console-run.ps1 in it, waits, and prints the log and the rendered screen.
 # Usage (from any shell, including Claude's captured PowerShell tool):
-#   pwsh -File launch.ps1 -Script C:\path\to\child.js -Out C:\path\to\result.txt [-Columns 40] [-Env "TSFLOW_THEME=lotr;OTHER=1"]
+#   pwsh -File launch.ps1 -Script C:\path\to\child.js -Out C:\path\to\result.txt [-Columns 40] [-Env "TSFLOW_THEME=lotr;OTHER=1"] [-StderrToConsole]
+#
+# -StderrToConsole keeps the child's stderr on the console (otherwise it goes to "<Out>.log"). cucumber-tsflow draws
+# its startup progress on stderr since 8.0, so pass it whenever the progress or the real CLI is under test.
 #
 # -Env is a string of KEY=VALUE pairs separated by ";" (a hashtable cannot cross a `pwsh -File` boundary; it
 # arrives as the literal text "System.Collections.Hashtable"). The variables are set for the child and
@@ -11,7 +14,8 @@ param(
 	[Parameter(Mandatory = $true)][string]$Script,
 	[Parameter(Mandatory = $true)][string]$Out,
 	[int]$Columns = 0,
-	[string]$Env = ''
+	[string]$Env = '',
+	[switch]$StderrToConsole
 )
 foreach ($f in @($Out, "$Out.log")) { if (Test-Path $f) { Remove-Item $f } }
 $vars = @{ NO_COLOR = '' }
@@ -27,6 +31,7 @@ try {
 	$runner = Join-Path $PSScriptRoot 'console-run.ps1'
 	# -Command, not -File: -File with these paths exited 1 before the script ran.
 	$cmd = "& '$runner' -Script '$Script' -Out '$Out' -Columns $Columns"
+	if ($StderrToConsole) { $cmd += ' -StderrToConsole' }
 	$p = Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $cmd -PassThru -Wait
 	"launcher exit=$($p.ExitCode)"
 } finally {

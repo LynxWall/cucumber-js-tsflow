@@ -52,7 +52,7 @@ tightening a net and turns the review from a read-through into a hands-on pass.
   name. Record each finding as a one-line entry with the file and the proposed change before changing anything,
   so the list can be pruned with the owner.
 - Land the refactors behind the strand 1 tests and the spec matrix, one concern per commit.
-- Bring [Architecture.md](../../Architecture.md), the README and the CHANGELOG up to the final shape in the same
+- Bring [Architecture.md](../../../Architecture.md), the README and the CHANGELOG up to the final shape in the same
   pass; the layer map and execution flow in Architecture.md describe Phase 9 and 10 correctly but not yet as a
   whole.
 
@@ -181,7 +181,7 @@ Recorded before anything changes, one line each, for pruning with the owner. Let
 - **Q.** The root `lint` script runs the whole test matrix; make it a lint gate and add `typecheck` beside it.
 - **R.** ESLint `no-undef` cannot see the Node global types; `cli/index.ts` and `vue-jsdom-setup.mjs` carry disables. Turn `no-undef` off for TypeScript files and let `tsc` own the check.
 
-Added by the 12a test work (see [Stage 12a hand-off](stage-12a-hand-off.md)); S and T were fixed there because the tests that found them could not otherwise be green:
+Added by the 12a test work (see [Stage 12a hand-off](../hand-offs/stage-12a-hand-off.md)); S and T were fixed there because the tests that found them could not otherwise be green:
 
 - **S.** *(fixed in 12a)* `bindings.mjs` and `wrapper.mjs` exported `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext`, which are interfaces, as runtime values equal to `undefined`; the export-parity test found the three names present in the ESM twins and absent from the CommonJS builds. The lines were removed; a consumer whose tsconfig preserves value imports of these types would now fail at link time instead of receiving `undefined`.
 - **T.** *(fixed in 12a)* `patternKey()` in `api/selective-load.ts` keyed a flagless regular expression and a Cucumber expression with the same source identically (`flags ?? ''`), so the second one registered was matched with the first one's compiled expression and its file could be skipped although a selected step matched it. The key now carries the pattern kind.
@@ -190,7 +190,7 @@ Added by the 12a test work (see [Stage 12a hand-off](stage-12a-hand-off.md)); S 
 - **W.** The fixture support files under `test/fixtures/support/` need a `package.json` with `"type": "commonjs"` (ts-node classifies a `.ts` file's module type from the nearest package scope, and the test tree is `"type": "module"`) and are excluded from `test/tsconfig.json` (their ES import syntax in a CommonJS scope is what the transpiler under test handles); ESLint's project service therefore reports them as not found. The 12d lint pass needs an ESLint configuration for `cucumber-tsflow/test/` that either ignores the fixtures or gives them a project.
 - **X.** In the `TSFLOW_TIMING` file-totals table the `main` family counts the main process and its `esm-hooks` scope as two contexts, so `contexts` reads 2 for a serial run with an in-thread loader that reported hook timings. Cosmetic; note whether that is the intended reading when the report layout is next touched.
 
-Added by the 12b failure-path pass (see [Stage 12b hand-off](stage-12b-hand-off.md)); each is classified there as a fix for 12c, a test, or closed:
+Added by the 12b failure-path pass (see [Stage 12b hand-off](../hand-offs/stage-12b-hand-off.md)); each is classified there as a fix for 12c, a test, or closed:
 
 - **Y.** *(closed)* `--config <absolute path>` fails with `Configuration file "…" failed to load/parse` on Windows and forward-slash forms alike: CucumberJS's `configuration/from_file.js` joins the value onto `cwd` (`path.join(cwd, file)`), so only a cwd-relative path works. Inherited contract; the pass used a configuration file inside the workspace instead.
 - **Z.** *(12c fix)* A `BeforeAll` hook that throws is swallowed. `runtime/worker.ts` `runTestRunHook()` catches the error into a FAILED result; `runtime/serial/adapter.ts` only sets `failing` and runs every scenario; `runtime/parallel/worker.ts` awaits `runBeforeAllHooks()` and discards the results. Nothing is printed, no `testRunHookStarted` / `testRunHookFinished` envelope is emitted, and the CLI exits 2 under `3 scenarios (3 passed)`. Upstream 12.7 emits both envelopes and throws `a BeforeAll hook errored, process exiting: <uri>:<line>` with the cause. Fix both adapters, with a spec on a `before-all-throws` fixture.
@@ -273,7 +273,7 @@ additions are marked **(added)** below.
 **Gate:** `test:unit` and `test:all` green on the full matrix; every risk 1–6 has a test. **Pause:** the review
 findings A–R are pruned with the owner, with the tests open beside them; nothing in 12c is decided before this.
 
-**Status: COMPLETE (2026-09-23), committed as `65d9526`.** See [Stage 12a hand-off](stage-12a-hand-off.md).
+**Status: COMPLETE (2026-09-23), committed as `65d9526`.** See [Stage 12a hand-off](../hand-offs/stage-12a-hand-off.md).
 
 #### 12b: Behavior discovery
 
@@ -290,7 +290,7 @@ findings A–R are pruned with the owner, with the tests open beside them; nothi
 
 **Gate:** `test:all` green with the new scenarios on the matrix; no failure-path finding left unclassified.
 
-**Status: COMPLETE (2026-09-23), committed as `47842ca`.** See [Stage 12b hand-off](stage-12b-hand-off.md).
+**Status: COMPLETE (2026-09-23), committed as `47842ca`.** See [Stage 12b hand-off](../hand-offs/stage-12b-hand-off.md).
 
 #### 12c: Review refactors
 
@@ -309,7 +309,7 @@ covers the change; the full `yarn test:all` matrix at every group boundary and b
 chose this cadence over a full matrix per commit, 2026-09-23: same coverage, far less waiting); the UIS numbers
 within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look before touching anything else.
 
-**Status: COMPLETE (2026-09-24).** Group 1 (the 12b fixes: AA, Z, AB, AC, AD, AE, AF) landed 2026-09-23 as one squashed commit, `a29eb42`, with the boundary matrix green; group 2 (A, B, C, K/V, L) landed the same day as `7a7af28`, boundary matrix green; A keeps the published `--parallel-load` flag, confirmed by the owner (a minor release removes nothing; see the hand-off); group 3 (E, F) landed the same day as `c57ca3f`, boundary matrix green; group 4 (H, I, J) landed the same day as `1c4299b`, boundary matrix green, followed by `fec46e9`, a fix to Z's spec under async ESM hooks (the source-map relay for `module.register()`, closing the item 28 limitation) made by a second session; group 5 (D/U and N) landed the same day as `85dc327`, boundary matrix green, with the reload-support spec moved into a driver child process (a load now replaces the process's bindings, so the API cannot be called from inside the running suite) and N applied to the `node-esm` watch profiles as well as `node`'s. Group 6, the closing measurement, ran 2026-09-24: the UIS numbers are within noise of the Phase 10 reference on every row (`dim` and the full suite, fresh process and one `--watch` rerun), finding P closed by measurement, nothing bisected; the group changed no source and is a documentation commit. See [Stage 12c hand-off](stage-12c-hand-off.md).
+**Status: COMPLETE (2026-09-24).** Group 1 (the 12b fixes: AA, Z, AB, AC, AD, AE, AF) landed 2026-09-23 as one squashed commit, `a29eb42`, with the boundary matrix green; group 2 (A, B, C, K/V, L) landed the same day as `7a7af28`, boundary matrix green; A keeps the published `--parallel-load` flag, confirmed by the owner (a minor release removes nothing; see the hand-off); group 3 (E, F) landed the same day as `c57ca3f`, boundary matrix green; group 4 (H, I, J) landed the same day as `1c4299b`, boundary matrix green, followed by `fec46e9`, a fix to Z's spec under async ESM hooks (the source-map relay for `module.register()`, closing the item 28 limitation) made by a second session; group 5 (D/U and N) landed the same day as `85dc327`, boundary matrix green, with the reload-support spec moved into a driver child process (a load now replaces the process's bindings, so the API cannot be called from inside the running suite) and N applied to the `node-esm` watch profiles as well as `node`'s. Group 6, the closing measurement, ran 2026-09-24: the UIS numbers are within noise of the Phase 10 reference on every row (`dim` and the full suite, fresh process and one `--watch` rerun), finding P closed by measurement, nothing bisected; the group changed no source and is a documentation commit. See [Stage 12c hand-off](../hand-offs/stage-12c-hand-off.md).
 
 #### 12d: Housekeeping sweeps
 
@@ -325,7 +325,7 @@ within noise of Phase 10. **Pause:** the measurement. If it moved, stop and look
 **Gate:** `typecheck` and `lint` clean with no new disables; zero British spellings in `src` and the documents;
 every dependency decided.
 
-**Status: COMPLETE (2026-09-24), committed as `0dcbff3`.** The 21 strict errors fixed and `strict: true` on; `typecheck` (library and unit-test program) and `lint` (no `--fix`; `lint:fix` beside it) added and run by CI after the build; `no-undef` off for TypeScript files and the one disable it caused removed; 169 spelling replacements in 32 files with the three renamed identifiers checked for consumers; `import-sync` and `tslib` removed, `@types/node`, `typescript` and `jsdom` kept with reasons; five packages found imported but undeclared were declared in a follow-up commit the same day at the owner's request, and the audit's nineteen advisories were cleared with it (`short-uuid` replaced by `crypto.randomUUID()`, the unused `@jsdevtools/npm-publish` devDependency removed, ESLint to 9.39, the rest re-resolved inside their ranges; `yarn npm audit` reports none); the 12c leftovers landed. Boundary matrix green on all sixteen variants. See [Stage 12d hand-off](stage-12d-hand-off.md).
+**Status: COMPLETE (2026-09-24), committed as `0dcbff3`.** The 21 strict errors fixed and `strict: true` on; `typecheck` (library and unit-test program) and `lint` (no `--fix`; `lint:fix` beside it) added and run by CI after the build; `no-undef` off for TypeScript files and the one disable it caused removed; 169 spelling replacements in 32 files with the three renamed identifiers checked for consumers; `import-sync` and `tslib` removed, `@types/node`, `typescript` and `jsdom` kept with reasons; five packages found imported but undeclared were declared in a follow-up commit the same day at the owner's request, and the audit's nineteen advisories were cleared with it (`short-uuid` replaced by `crypto.randomUUID()`, the unused `@jsdevtools/npm-publish` devDependency removed, ESLint to 9.39, the rest re-resolved inside their ranges; `yarn npm audit` reports none); the 12c leftovers landed. Boundary matrix green on all sixteen variants. See [Stage 12d hand-off](../hand-offs/stage-12d-hand-off.md).
 
 #### 12e: Documentation and packaging
 
@@ -376,7 +376,7 @@ and the CHANGELOG read as one product, with finding G's cache rule written up; C
 CLAUDE.md updated; `yarn bench` with reference numbers in the guide; `yarn smoke:tarball`, whose first run found
 `es-node-esm` failing in a project without `vue` (fixed: the Vue SFC compiler loads on the first `.vue` file);
 the skill re-read against the tree, two strings it quotes fixed in the source, linked into the UIS testbed with
-skills-npm and loaded by an agent through the link. See [Stage 12e hand-off](stage-12e-hand-off.md).
+skills-npm and loaded by an agent through the link. See [Stage 12e hand-off](../hand-offs/stage-12e-hand-off.md).
 
 #### 12f: Release
 
@@ -394,7 +394,7 @@ skills-npm and loaded by an agent through the link. See [Stage 12e hand-off](sta
 **Gate:** the checklist has no open box.
 
 **Status: COMPLETE ON THE BRANCH (2026-09-24), committed as `9e99c0e`; the tag and publish are the maintainer's.**
-The release checklist is [Stage 12f hand-off](stage-12f-hand-off.md): `publish.yml` (a pushed `v*` tag,
+The release checklist is [Stage 12f hand-off](../hand-offs/stage-12f-hand-off.md): `publish.yml` (a pushed `v*` tag,
 `yarn test:all`, `npm publish --provenance`, the path 7.7.0 to 7.7.2 took) is the release path and `release.yml`
 is not (its stale action versions go to Phase 13). Closed by the session: the real-console verification (four
 widths, both themes, the real CLI), the bump to 7.8.0 in the ten manifests with the CHANGELOG heading and the

@@ -8,11 +8,14 @@
 #   -Out      file to receive the rendered rows; "<Out>.log" receives host info, node's stderr and exit code
 #   -Columns  optional: resize the console to this width first (mode con), to test narrow terminals
 #   -Lines    optional: console height when resizing (default 60)
+#   -StderrToConsole  optional: leave node's stderr on the console instead of appending it to "<Out>.log";
+#             needed for anything that draws on stderr, such as cucumber-tsflow's startup progress since 8.0
 param(
 	[Parameter(Mandatory = $true)][string]$Script,
 	[Parameter(Mandatory = $true)][string]$Out,
 	[int]$Columns = 0,
-	[int]$Lines = 60
+	[int]$Lines = 60,
+	[switch]$StderrToConsole
 )
 $ErrorActionPreference = 'Continue'
 try {
@@ -21,7 +24,7 @@ try {
 		Clear-Host
 	}
 	"host=$($Host.Name) pid=$PID codepage=$([Console]::OutputEncoding.CodePage) width=$($Host.UI.RawUI.BufferSize.Width)" | Set-Content -Path "$Out.log" -Encoding UTF8
-	& node $Script 2>> "$Out.log"
+	if ($StderrToConsole) { & node $Script } else { & node $Script 2>> "$Out.log" }
 	"node exit=$LASTEXITCODE" | Add-Content -Path "$Out.log" -Encoding UTF8
 	$raw = $Host.UI.RawUI
 	$cursor = $raw.CursorPosition

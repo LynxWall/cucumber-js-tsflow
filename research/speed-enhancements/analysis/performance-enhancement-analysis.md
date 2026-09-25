@@ -38,12 +38,12 @@ Three findings appear in both, reached by different routes:
 
 1. **`parallelLoad` warms a cache that does not exist.** `analysis-2.md` item 1 and
    `performance-analysis.md` item 7 independently conclude that the phase described in
-   [parallel-loader.ts](../cucumber-tsflow/src/api/parallel-loader.ts) cannot do what its own header
+   [parallel-loader.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts) cannot do what its own header
    comment claims. Two independent derivations of the same conclusion make this the highest-confidence
    finding across both documents.
 1. **ESM specifier resolution performs up to 14 uncached `existsSync` calls.**
    `analysis-2.md` item 7 and `performance-analysis.md` Tier 4 both identify
-   `resolveWithExtensions` in [loader-utils.mjs](../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs),
+   `resolveWithExtensions` in [loader-utils.mjs](../../../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs),
    and both note that the adjacent `pathResolutionCache` already establishes the fix pattern.
 1. **Every forked parallel child re-transpiles the entire support tree.** `analysis-2.md` item 3
    develops this into an `(N + 1) x` cost model; `performance-analysis.md` reaches it as a consequence
@@ -58,12 +58,12 @@ Both documents cite line numbers, and essentially all of them resolve correctly.
 From `performance-analysis.md`:
 
 - `getStepScenarioContext` does iterate the entire `pickleMap` and every step of every pickle, calling
-  `hasMatchingStep` per comparison ([message-collector.ts](../cucumber-tsflow/src/runtime/message-collector.ts)).
+  `hasMatchingStep` per comparison ([message-collector.ts](../../../cucumber-tsflow/src/runtime/message-collector.ts)).
   `hasMatchingStep` does construct a `new RegExp()` after 14 chained `String.replace()` passes on every
-  call, with no memoization ([utils.ts](../cucumber-tsflow/src/runtime/utils.ts)).
+  call, with no memoization ([utils.ts](../../../cucumber-tsflow/src/runtime/utils.ts)).
 - The two call sites are real and both per-step: the step trampoline in
-  [binding-decorator.ts](../cucumber-tsflow/src/bindings/binding-decorator.ts) and `runStep` in
-  [test-case-runner.ts](../cucumber-tsflow/src/runtime/test-case-runner.ts).
+  [binding-decorator.ts](../../../cucumber-tsflow/src/bindings/binding-decorator.ts) and `runStep` in
+  [test-case-runner.ts](../../../cucumber-tsflow/src/runtime/test-case-runner.ts).
 - The contrast with `getHookScenarioContext` is real and is the strongest single piece of evidence in
   either document: the hook path already does the O(1) `pickle.id` lookup that the step path should do.
 - `hasMatchingTags` does re-map the tag array inside the `lep.parse` predicate callback.
@@ -72,7 +72,7 @@ From `performance-analysis.md`:
 - `findHookDefinition` does rebuild a concatenated array per hook step; `findStepDefinition` does
   linear-scan.
 - `updateSupportCodeLibrary` does use `definitions.find(...)` per binding, giving
-  O(bindings x definitions) ([binding-registry.ts](../cucumber-tsflow/src/bindings/binding-registry.ts)).
+  O(bindings x definitions) ([binding-registry.ts](../../../cucumber-tsflow/src/bindings/binding-registry.ts)).
 - `registerStepBinding` does dedupe with two `Array.some()` scans.
 - `module.enableCompileCache()` appears nowhere in the source tree.
 - The `transformImports` correctness edge is real: `transformed.replace(originalImport, newImport)`
@@ -83,28 +83,28 @@ From `analysis-2.md`:
 - There is no on-disk cache. A search for `writeFileSync`, `mkdirSync`, `createHash`, and
   `node_modules/.cache` across `cucumber-tsflow/src` returns **zero** hits.
 - Both esbuild paths call `transformSync` per file
-  ([esbuild.ts](../cucumber-tsflow/src/transpilers/esbuild.ts),
-  [esbuild.mjs](../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)).
+  ([esbuild.ts](../../../cucumber-tsflow/src/transpilers/esbuild.ts),
+  [esbuild.mjs](../../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)).
 - Support files are loaded strictly serially — a `for` loop over `importPaths` with `await import()`
-  inside it, in [support.ts](../cucumber-tsflow/src/api/support.ts), repeated in
-  [worker.ts](../cucumber-tsflow/src/runtime/parallel/worker.ts).
+  inside it, in [support.ts](../../../cucumber-tsflow/src/api/support.ts), repeated in
+  [worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts).
 - Each parallel child does call `resolvePaths` again despite the coordinator already holding the
-  resolved lists ([worker.ts](../cucumber-tsflow/src/runtime/parallel/worker.ts)).
+  resolved lists ([worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts)).
 - `Callsite.capture()` does mutate `Error.prepareStackTrace` twice per binding, materialize a full
   stack, and call `sourceMapSupport.wrapCallSite` eagerly
-  ([our-callsite.ts](../cucumber-tsflow/src/utils/our-callsite.ts)). It is reached from nine decorator
+  ([our-callsite.ts](../../../cucumber-tsflow/src/utils/our-callsite.ts)). It is reached from nine decorator
   factories, i.e. every step and hook decorator.
 - The adjacent portability bug is real: the `filename.replace(...)` call interpolates `cwd` followed by
   a hard-coded backslash, so the path is never made relative on Linux or macOS.
 - `TS_NODE_FILES` and `files: true` are set on the ESM path only
-  ([tsnode-service.mjs](../cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs),
-  [tsnode-loader.mjs](../cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs),
-  [vue-loader.mjs](../cucumber-tsflow/src/transpilers/esm/vue-loader.mjs)) and not on the CJS path, which
+  ([tsnode-service.mjs](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs),
+  [tsnode-loader.mjs](../../../cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs),
+  [vue-loader.mjs](../../../cucumber-tsflow/src/transpilers/esm/vue-loader.mjs)) and not on the CJS path, which
   supports the document's hypothesis about an ESM-versus-CJS startup difference.
 - The eager service construction is real and subtle: `tsNodeHooks: await getLocalEsmHooks()` is
   evaluated as an argument on every `resolve` call, including for `node:` builtins that will never reach
-  the ts-node branch ([loader-utils.mjs](../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs)).
-- [index.ts](../cucumber-tsflow/src/index.ts) does `import { default as _Cli } from './cli'`, so every
+  the ts-node branch ([loader-utils.mjs](../../../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs)).
+- [index.ts](../../../cucumber-tsflow/src/index.ts) does `import { default as _Cli } from './cli'`, so every
   support file that imports a decorator from the package root pulls in the CLI, the runtime, the parallel
   adapter, and the whole formatter tree.
 - Preload thread count is capped at `Math.min(availableParallelism(), 4)`, and worker descriptors are

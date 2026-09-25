@@ -2,7 +2,7 @@
 
 Part of the [Performance Enhancement Execution Strategy](../performance-enhancement-execution-strategy.md).
 
-The two rating scales, the summary table, the rating of every item on the worklist with its reasoning, what the ratings reveal about ordering, and the re-rating taken after Phase 5. Item numbers are those of the consolidated worklist in [performance-enhancement-analysis-2.md](../performance-enhancement-analysis-2.md), unchanged.
+The two rating scales, the summary table, the rating of every item on the worklist with its reasoning, what the ratings reveal about ordering, and the re-rating taken after Phase 5. Item numbers are those of the consolidated worklist in [performance-enhancement-analysis-2.md](../analysis/performance-enhancement-analysis-2.md), unchanged.
 
 ## Rating scales
 
@@ -95,8 +95,8 @@ argument against doing it first.
 
 **Complexity 4.** The mechanical work is easy but the placement is not. Timings have to be collected in
 the main process, in each forked child of
-[worker.ts](../../cucumber-tsflow/src/runtime/parallel/worker.ts), and in each preload thread of
-[loader-worker.ts](../../cucumber-tsflow/src/api/loader-worker.ts), then aggregated so the N+1 multiplication
+[worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts), and in each preload thread of
+[loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts), then aggregated so the N+1 multiplication
 is visible rather than inferred. That means another cross-boundary channel alongside the existing
 `global.__CUCUMBER_TSFLOW_BINDINGREGISTRY` and `global.__LOADER_WORKER` singletons, and per-file timing
 inside the ESM `load` hook has to cost nothing when the mode is off — the same discipline item 12 is about.
@@ -104,7 +104,7 @@ inside the ESM `load` hook has to cost nothing when the mode is off — the same
 ### 2. Track the running pickle's context on `MessageCollector`
 
 **Impact 10.** This is the only item in the directory with measured numbers behind it, and they are large:
-`getStepScenarioContext` in [message-collector.ts](../../cucumber-tsflow/src/runtime/message-collector.ts)
+`getStepScenarioContext` in [message-collector.ts](../../../cucumber-tsflow/src/runtime/message-collector.ts)
 walks every entry of `pickleMap` — the whole run, not the running scenario — and calls `hasMatchingStep`
 per step, which builds a fresh `RegExp` on every comparison. The measured cost was 8.5 s at 200 scenarios
 and 51.9 s at 500, per call site, and there are two call sites. The fix is an O(1) field read. Nothing else
@@ -127,7 +127,7 @@ per process, and it multiplies by the same 1/2/9/10 table as transpilation. Beca
 create a `ts-node` service, this hits the esbuild ESM path as well as the `ts-node` one.
 
 **Complexity 1.** This is the cleanest item on the list, and the reason is the proof
-[analysis-3.md](../analysis-3.md) supplies rather than any property of tsflow's own code. `config.fileNames`
+[analysis-3.md](../analysis/analysis-3.md) supplies rather than any property of tsflow's own code. `config.fileNames`
 is consumed at exactly one place, inside an `if (!transpileOnly)` branch, and every tsflow ESM service
 sets `transpileOnly: true`. The result of the walk is therefore unreachable, which makes the removal a
 deletion with no behavior to change and nothing to validate beyond confirming the services still
@@ -139,7 +139,7 @@ construct.
 item 2's figures showed the memoization taking the 200-scenario shape from 8114 ms to 153 ms, a 53x
 improvement, with no API change. The rating is 6 rather than 9 because the two items overlap almost
 entirely — once item 2 removes the dominant caller, the surviving callers of `hasMatchingStep` are the two
-in [gherkin-manager.ts](../../cucumber-tsflow/src/gherkin/gherkin-manager.ts), which are on the `--debug-file`
+in [gherkin-manager.ts](../../../cucumber-tsflow/src/gherkin/gherkin-manager.ts), which are on the `--debug-file`
 path only. As sequenced defense in depth it is cheap insurance; as a standalone change it is a large win.
 
 **Complexity 2.** `getRegTextForStep` is a pure function of its input — seventeen chained `String.replace`
@@ -150,11 +150,11 @@ in the suite, which is bounded by the binding count.
 ### 5. `Map` lookups in `updateSupportCodeLibrary`
 
 **Impact 7.** The nine `findByKey` closures in
-[binding-registry.ts](../../cucumber-tsflow/src/bindings/binding-registry.ts) each do a linear `Array.find`
+[binding-registry.ts](../../../cucumber-tsflow/src/bindings/binding-registry.ts) each do a linear `Array.find`
 over a definition array, and the loop below calls one per registered binding, giving O(bindings ×
 definitions). At three thousand bindings that is roughly nine million property reads; at ten thousand it
 is a hundred million, which is seconds of CPU. It is also worse than any single document reported: the
-verification in [performance-enhancement-analysis-2.md](../performance-enhancement-analysis-2.md) found three
+verification in [performance-enhancement-analysis-2.md](../analysis/performance-enhancement-analysis-2.md) found three
 non-worker call sites (`load-support.ts:88`, `load-support.ts:148`, `run-cucumber.ts:145`) plus
 `worker.ts:109`, so a `parallel: 8` run pays it well over a dozen times.
 
@@ -166,8 +166,8 @@ reads.
 ### 6. Precompile the tsconfig path-mapping regexes
 
 **Impact 5.** `rewritePathMappings` constructs a `new RegExp` per tsconfig path entry per transpiled file
-in [esbuild.mjs](../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs), and
-[tsnode-loader.mjs](../../cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs) does the same and adds a
+in [esbuild.mjs](../../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs), and
+[tsnode-loader.mjs](../../../cucumber-tsflow/src/transpilers/esm/tsnode-loader.mjs) does the same and adds a
 `searchRegex.test(code)` full-source pass before the `replace()` pass. Twenty aliases across two thousand
 files is forty thousand compilations and eighty thousand whole-file scans. The compilations are cheap
 individually; the repeated scans over megabytes of source are the larger half. Held below 7 because it
@@ -181,7 +181,7 @@ layer.
 ### 7. Resolution cache on `specifier + parentURL`; thunk the ESM hooks
 
 **Impact 7.** `resolveWithExtensions` in
-[loader-utils.mjs](../../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs) tries seven extensions and
+[loader-utils.mjs](../../../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs) tries seven extensions and
 then seven `index.*` variants with a synchronous `existsSync` for each, giving up to fourteen stat
 syscalls per extensionless specifier and no cache of either outcome — the same specifier resolved from ten
 files probes the disk ten times. Resolves number in the tens of thousands on a large support tree, and
@@ -198,11 +198,11 @@ a documented lifetime rather than process-lifetime by default.
 
 ### 8. Lazy callsite resolution, `Error.stackTraceLimit`, backslash fix
 
-**Impact 6.** `Callsite.capture()` in [our-callsite.ts](../../cucumber-tsflow/src/utils/our-callsite.ts) runs
+**Impact 6.** `Callsite.capture()` in [our-callsite.ts](../../../cucumber-tsflow/src/utils/our-callsite.ts) runs
 at decorator-factory evaluation time for every `@given`, `@when`, `@then` and hook in every support file.
 Each call mutates the global `Error.prepareStackTrace` twice — a known V8 stack-trace deoptimization
 trigger — and materializes a full structured stack with the default `stackTraceLimit` purely to read frame
-`[2]`. `source-map-support` memoises per file, so the `SourceMapConsumer` parse is once per support file
+`[2]`. `source-map-support` memoizes per file, so the `SourceMapConsumer` parse is once per support file
 rather than once per binding, which correctly sizes the prize: thousands of stack walks plus one map parse
 per file, all on the load critical path, in every process and every preload thread.
 
@@ -210,7 +210,7 @@ per file, all on the load critical path, in every process and every preload thre
 values for different reasons. `updateSupportCodeLibrary` reads `callsite.filename` and
 `callsite.lineNumber` to back-patch `uri`/`line` onto the CucumberJS definitions, which is batchable after
 loading. Harder, `isSameStepBinding` in
-[binding-registry.ts](../../cucumber-tsflow/src/bindings/binding-registry.ts) compares
+[binding-registry.ts](../../../cucumber-tsflow/src/bindings/binding-registry.ts) compares
 `callsite.filename` when deduplicating, so the deferred representation has to preserve whatever identity
 the dedupe currently relies on or duplicate detection changes shape. The bundled backslash fix is a
 one-line change with an outsized validation surface: any spec expectation containing a path becomes
@@ -219,9 +219,9 @@ platform-dependent in a way it previously was not.
 ### 9. Hoist tag lowercasing, step-hook filtering, definition lookups
 
 **Impact 5.** Three separate per-step costs. `hasMatchingTags` in
-[utils.ts](../../cucumber-tsflow/src/runtime/utils.ts) puts `tags.map(tag => tag.toLowerCase())` inside the
+[utils.ts](../../../cucumber-tsflow/src/runtime/utils.ts) puts `tags.map(tag => tag.toLowerCase())` inside the
 predicate handed to `lep.parse`, so the whole array is re-mapped for every token the expression parser
-evaluates. In [test-case-runner.ts](../../cucumber-tsflow/src/runtime/test-case-runner.ts),
+evaluates. In [test-case-runner.ts](../../../cucumber-tsflow/src/runtime/test-case-runner.ts),
 `getBeforeStepHookDefinitions` and `getAfterStepHookDefinitions` re-filter the support library by
 `appliesToTestCase(this.pickle)` on every step, and the "after" variant allocates a fresh
 `.slice(0).reverse()` each time; `findHookDefinition` rebuilds a concatenated array of all before and
@@ -236,7 +236,7 @@ identity of the returned arrays.
 
 ### 10. Send resolved paths to parallel children instead of re-globbing
 
-**Impact 4.** [worker.ts](../../cucumber-tsflow/src/runtime/parallel/worker.ts) calls `resolvePaths` again at
+**Impact 4.** [worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts) calls `resolvePaths` again at
 line 81 even though the coordinator already holds the resolved lists and is already sending
 `supportCodeCoordinates` in the `INITIALIZE` command, so a `parallel: 8` run performs nine full glob
 passes over the project tree instead of one. The rating is held at 4 rather than higher because the
@@ -244,7 +244,7 @@ children fork at once and glob concurrently, so the wall-clock saving is roughly
 the contention, not N globs' worth — the win is real but it is a fixed cost, not a scaling one.
 
 **Complexity 4.** This extends the coordinator-to-child IPC contract in
-[adapter.ts](../../cucumber-tsflow/src/runtime/parallel/adapter.ts), which is the kind of change that has to
+[adapter.ts](../../../cucumber-tsflow/src/runtime/parallel/adapter.ts), which is the kind of change that has to
 be right in both directions or the child silently loads a different support set than the coordinator
 registered. The worker's `resolvePaths` result is also used for more than the support lists, so the
 feature-coordinate path has to keep working, and the change needs testing under every transpiler in the
@@ -253,8 +253,8 @@ matrix because the CJS and ESM branches consume different fields of it.
 ### 11. Hoist `shortUuid()`; index the `registerStepBinding` dedupe
 
 **Impact 3.** Two small per-binding allocations. `shortUuid().new()` appears at eight call sites across
-[step-decorators.ts](../../cucumber-tsflow/src/bindings/step-decorators.ts) and
-[hook-decorators.ts](../../cucumber-tsflow/src/bindings/hook-decorators.ts), constructing a fresh base58
+[step-decorators.ts](../../../cucumber-tsflow/src/bindings/step-decorators.ts) and
+[hook-decorators.ts](../../../cucumber-tsflow/src/bindings/hook-decorators.ts), constructing a fresh base58
 translator for every binding rather than reusing one. `registerStepBinding` uses `Array.some` twice —
 once over the pattern-and-tag group and once over the class's own bindings — making registration quadratic
 in bindings per group. Both are genuinely marginal: the translator is a small object, and the quadratic
@@ -268,7 +268,7 @@ and the spec matrix's `validations` coverage is the only thing that would catch 
 
 ### 12. Guard hot-path `logger.checkpoint` arguments behind `isVerbose()`
 
-**Impact 3.** `createLogger` in [tsflow-logger.ts](../../cucumber-tsflow/src/utils/tsflow-logger.ts) reads
+**Impact 3.** `createLogger` in [tsflow-logger.ts](../../../cucumber-tsflow/src/utils/tsflow-logger.ts) reads
 `TSFLOW_VERBOSE` once and early-returns, but the early return is inside the function, so every call site
 still allocates its detail object and evaluates its template strings first. Most of that is small garbage
 on the hottest loop in the system, which is why this is a 3 rather than a 1 — and one case is worse than
@@ -283,9 +283,9 @@ the discarded values are already discarded.
 ### 13. Delete the hardcoded `cucumber-tsflow-specs` check in `supports()`
 
 **Impact 1.** Zero, and honestly so. The `if (!filename.includes('cucumber-tsflow-specs')) return false;`
-guard in [esbuild.mjs](../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)'s exported `supports()` is dead
+guard in [esbuild.mjs](../../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)'s exported `supports()` is dead
 code — `supports` is exported from both that file and
-[esbuild.ts](../../cucumber-tsflow/src/transpilers/esbuild.ts) and imported by nothing — so removing it
+[esbuild.ts](../../../cucumber-tsflow/src/transpilers/esbuild.ts) and imported by nothing — so removing it
 changes no timing at all. It is on the worklist because it would silently disable transpilation for every
 consumer project the moment anyone wired it up, and because the two exported predicates currently
 disagree (the CJS version has no such check), which is a trap independent of performance.
@@ -301,7 +301,7 @@ cost rather than TypeScript-to-JavaScript cost and therefore composes with item 
 it. Given the size of the module graph — `@cucumber/cucumber`, the formatter tree, the transpilers, and the
 whole support tree in every one of N+1 processes — the ceiling is high. The rating is held to 4 because
 the ceiling is unverified in the one configuration that matters: whether sources produced by a custom ESM
-loader are cacheable at all is exactly what [analysis-3.md](../analysis-3.md) flags as unknown, and if they
+loader are cacheable at all is exactly what [analysis-3.md](../analysis/analysis-3.md) flags as unknown, and if they
 are not, the win collapses to the library's own modules.
 
 **Complexity 2.** A few guarded lines at the top of the CLI entry. The `NODE_COMPILE_CACHE` environment variable
@@ -313,7 +313,7 @@ difficulty.
 ### 15. Derive the preload thread count from `availableParallelism()`
 
 **Impact 3.** `Math.min(availableParallelism(), 4)` in
-[parallel-loader.ts](../../cucumber-tsflow/src/api/parallel-loader.ts) leaves most of a modern CI runner idle
+[parallel-loader.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts) leaves most of a modern CI runner idle
 during what is claimed to be the bottleneck phase. But as the phase currently stands it produces nothing
 the authoritative load can reuse, so raising the cap scales up work whose output is discarded — the honest
 rating today is that lifting the cap makes startup slower. The 3 is the value this has _after_ item 17
@@ -339,7 +339,7 @@ payoff is conditional on unchanged sources, so a cold CI run gets comparatively 
 stale code and reports a passing or failing suite that does not correspond to the source on disk. The key
 has to include source bytes, transpiler identity, resolved compiler options, `global.experimentalDecorators`,
 the Vue style flag, the tsflow version, and the esbuild, `ts-node` and Vue compiler versions — and, per
-[analysis-3.md](../analysis-3.md), the `absoluteBaseUrl`, because `rewritePathMappings` bakes absolute
+[analysis-3.md](../analysis/analysis-3.md), the `absoluteBaseUrl`, because `rewritePathMappings` bakes absolute
 `file://` URLs into the output so entries are not portable across checkout paths. On top of the key there
 are two integration points to cover both module systems (`EsbuildTranspiler.transpile` for CJS and the ESM
 `load` hook), a size-bounded eviction policy, a `--no-transpile-cache` escape hatch, and the
@@ -353,14 +353,14 @@ terminated so their thread-local transpilation output is discarded before the ma
 completely cold load. Reshaping it from "evaluate every module in N threads" to "transpile every module
 into the cache in N threads" turns that cost into a real parallel warm pass. The rating is 6 rather than
 higher because most of what it recovers is the cold-run half of item 16's win — on a warm cache there is
-little left to parallelise.
+little left to parallelize.
 
 **Complexity 7.** It cannot be started before item 16 exists, since the cache is the thing being written.
 The substantive difficulty is that evaluating a module naturally pulls in its imports whereas a
 transpile-only pass has to discover them, which means an esbuild `metafile` scan over the support entry
 points as a replacement for transitive discovery. Against that, transpiling needs no browser globals, so
 the change deletes the roughly 160-line `window` shim at the top of
-[loader-worker.ts](../../cucumber-tsflow/src/api/loader-worker.ts) and removes the hazard of running
+[loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts) and removes the hazard of running
 module-level side effects N+1 times — a genuine simplification, but one that changes behavior on the Vue
 paths and therefore needs the `*-vue*` workspaces run deliberately.
 
@@ -373,7 +373,7 @@ encode per file, appended to the module source so it roughly doubles the string 
 scan. Removing that is worth real time on its own. The larger half is that it unblocks the async
 `transform()` API: `transformSync` posts to an internal `worker_threads` service and blocks on
 `Atomics.wait`, so no two files can be in flight at once, and since `require` is synchronous the ESM
-loaders are the only path that can ever parallelise transpilation at all.
+loaders are the only path that can ever parallelize transpilation at all.
 
 **Complexity 6.** The `load` hook has to take over everything `ts-node` was contributing — the CJS-versus-ESM
 format decision, source-map attachment, and any resolution behavior consumers have come to rely on — and
@@ -391,7 +391,7 @@ fix, and the early exit it enables fires only when the filter matches _nothing_,
 rather than a workflow. Reordering alone skips no loading. The win this framing points at belongs to item 24.
 
 **Complexity 5.** Reordering the top-level phases of
-[run-cucumber.ts](../../cucumber-tsflow/src/api/run-cucumber.ts) means pickle parsing and filtering happen
+[run-cucumber.ts](../../../cucumber-tsflow/src/api/run-cucumber.ts) means pickle parsing and filtering happen
 before support code has been evaluated, and support code is what registers parameter types, the snippet
 syntax and the `supportCodeIds` the runtime and formatters consume. Establishing which of those the filter
 path genuinely needs, and in what order, is the work. Orchestrator reordering is also where subtle
@@ -400,7 +400,7 @@ metadata.
 
 ### 20. Lightweight `bindings` entry point; drop `./cli` from the barrel
 
-**Impact 4.** [index.ts](../../cucumber-tsflow/src/index.ts) does `import { default as _Cli } from './cli'`
+**Impact 4.** [index.ts](../../../cucumber-tsflow/src/index.ts) does `import { default as _Cli } from './cli'`
 for the deprecated `Cli` export, so every support file importing a decorator from the package root
 transitively pulls in `run-cucumber`, `make-runtime`, the parallel adapter, the Gherkin manager, the whole
 `@cucumber/cucumber` formatter tree, `ansis` and `debug` — none of which is needed to evaluate a
@@ -410,9 +410,9 @@ cost rather than a scaling one, and because the new entry point only pays off fo
 their imports.
 
 **Complexity 4.** The new entry point needs a matching key in the `exports` map of
-[package.json](../../cucumber-tsflow/package.json), and following the pattern already there it needs a
+[package.json](../../../cucumber-tsflow/package.json), and following the pattern already there it needs a
 hand-written `.mjs` wrapper copied into `lib/` by the build, which puts this in contact with the build
-rules in [CLAUDE.md](../../CLAUDE.md) rather than just the source. Dropping `./cli` from the root barrel is
+rules in [CLAUDE.md](../../../CLAUDE.md) rather than just the source. Dropping `./cli` from the root barrel is
 the sharper part: `Cli` is a deprecated public export, so removing it is a breaking change that needs a
 deprecation path rather than a deletion.
 
@@ -425,7 +425,7 @@ thousands of round trips plus megabytes of copying, and `module.registerHooks()`
 the hooks synchronously on the main thread. It landed in Node 23.5.0 and was backported to 22.15.0, which
 is above the package's current `>=22.0.0` `engines` floor — so this item carries either an `engines` bump
 or a runtime fallback to `register()` as part of its scope. This is the one substantial finding unique to
-[analysis-2.md](../analysis-2.md).
+[analysis-2.md](../analysis/analysis-2.md).
 
 **Complexity 7.** Synchronous hooks and item 18's async `transform()` pull in opposite directions, and that
 conflict has to be resolved deliberately rather than discovered: whichever lands second constrains the
@@ -435,7 +435,7 @@ period, which doubles the surface the matrix has to cover on the four ESM worksp
 
 ### 22. Concurrent `import()` of support files
 
-**Impact 5.** [support.ts](../../cucumber-tsflow/src/api/support.ts) awaits each `import()` to completion —
+**Impact 5.** [support.ts](../../../cucumber-tsflow/src/api/support.ts) awaits each `import()` to completion —
 resolve round trip, load round trip, transform, evaluate — before starting the next, so the loader thread
 sits idle between modules and the esbuild service sits idle between transforms. Pipelining that is a
 sizeable cold-load win on the ESM paths. It is a 5 rather than a 7 because it overlaps items 16 and 18:
@@ -445,7 +445,7 @@ CPU-bound on one thread either way.
 **Complexity 6.** Registration order changes, and registration order is load-bearing here in two places:
 it determines the order in which ambiguity errors surface, which the `validations` specs assert, and
 `isSameStepBinding` deduplication compares callsites in whatever order bindings arrive.
-[analysis-3.md](../analysis-3.md)'s variant — a concurrent transpile-only warm pass followed by the existing
+[analysis-3.md](../analysis/analysis-3.md)'s variant — a concurrent transpile-only warm pass followed by the existing
 serial evaluation loop — is the safer shape and keeps order deterministic, but it only helps if the warm
 pass writes somewhere durable, which makes it dependent on item 16.
 
@@ -486,7 +486,7 @@ actually saves.
 ### 25. esbuild `build()` bundling to replace per-file `transformSync`
 
 **Impact 6.** One `build()` invocation with `bundle: true`, `packages: 'external'` and a `metafile` would
-replace N × (resolution + IPC + transform) and let esbuild parallelise internally across cores, which is
+replace N × (resolution + IPC + transform) and let esbuild parallelize internally across cores, which is
 the only proposal that recovers esbuild's actual advantages rather than working around the fact that the
 current architecture discards them. The rating is 6, not higher, for two reasons: the figure is entirely
 derived, and items 16, 18 and 22 between them capture much of the same ground by safer routes, so the

@@ -22,7 +22,7 @@ measurement of the full UIS suite, which items 16 and 24 are priced against.
 
 ## Method
 
-Every run is the recipe under "Profiling a run" in [local-consumer-testing.md](../local-consumer-testing.md):
+Every run is the recipe under "Profiling a run" in [local-consumer-testing.md](../testing/local-consumer-testing.md):
 the CLI's bin file run directly under `node --cpu-prof` from the UIS `test` directory, `TSFLOW_TIMING=true`,
 `TSFLOW_THEME=off`, stdout captured (so no spinner thread), one `.cpuprofile` per run. `dim` (334
 scenarios, 1396 steps, 200 files through the ESM hooks) was sampled at the default 1 ms; `default` — the

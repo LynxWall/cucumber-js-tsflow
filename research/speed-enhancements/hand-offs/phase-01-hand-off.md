@@ -21,14 +21,14 @@ workers`). At the time of writing the Phase 1 changes were **uncommitted, pendin
 
 ## What Phase 1 landed
 
-- **Item 1.** New [tsflow-timing.ts](../../cucumber-tsflow/src/utils/tsflow-timing.ts) with an `.mjs` twin
+- **Item 1.** New [tsflow-timing.ts](../../../cucumber-tsflow/src/utils/tsflow-timing.ts) with an `.mjs` twin
   for the ESM loaders. Both share one store per thread on `globalThis.__TSFLOW_TIMING`, the same singleton
   pattern as the registry, so the bundled `esbuild-transpiler-cjs.js` records into the same store as the
   loader that bundled it. Cross-boundary channels: the ESM hooks thread reports over a `MessageChannel` port
   passed as `module.register()` `data` and received by a new `initialize` export on all four loaders;
   preload workers add a `timing` field to their `LOADED` response; parallel children send a new `TIMING`
   IPC message before `READY`, handled in
-  [adapter.ts](../../cucumber-tsflow/src/runtime/parallel/adapter.ts) via the widened
+  [adapter.ts](../../../cucumber-tsflow/src/runtime/parallel/adapter.ts) via the widened
   `TsFlowWorkerToCoordinatorEvent` union in `runtime/types.ts`. The report prints to stderr from
   `runCucumber()` so both the CLI and the programmatic API get it.
 - **Item 12.** Per-file `logger.checkpoint` calls in `loader-utils.mjs`, `esbuild.mjs`,
@@ -64,7 +64,7 @@ Things to know when reading it:
 - `calls` on the `support:*` phases in the `node` CJS profile is 8, not 1, because the `@reload` scenarios
   call `loadSupport`/`reloadSupport` repeatedly inside the run. Read `calls` before comparing `ms`.
 - The spec suites are tiny (15–31 scenarios, under a dozen support files), so they validate the report's
-  shape, not the ratings in [ratings.md](ratings.md). The large real-world testbed is the UIS Tools VueApp, wired in
+  shape, not the ratings in [ratings.md](../plan/ratings.md). The large real-world testbed is the UIS Tools VueApp, wired in
   with the project skill `pnpm-link-consumer` (see `.claude/skills/`). Phase 2's item 2 figures in
   particular can only be reproduced at hundreds of scenarios.
 

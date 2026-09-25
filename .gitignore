@@ -17,8 +17,5 @@ cucumber-tsflow-specs/reports/*
 /.pnp.*
 .DS_Store
 
-# CPU profiles captured for the performance work (read with research/scripts/attribute-cpuprofile.js)
-research/profiles/
-
 # Broken support files the syntax-error spec writes for one run and removes afterwards
 cucumber-tsflow-specs/*/src/fixtures/failing/generated/

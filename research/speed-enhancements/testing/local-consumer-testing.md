@@ -2,12 +2,12 @@
 
 The spec matrix in this repository is 28 scenarios across 8 feature files. None of the costs identified in
 the performance analyses are visible at that size, so every change on the
-[execution strategy](performance-enhancement-execution-strategy.md) worklist needs a large real consumer
+[execution strategy](../performance-enhancement-execution-strategy.md) worklist needs a large real consumer
 to be measured against. This document describes how the local build is wired into one.
 
 ## The consumer
 
-`C:\Git\Azure\uis-tools\Tools.Web\VueApp` is a pnpm 11 workspace (`packageManager: pnpm@11.13.1`) with
+`Tools.Web/VueApp` in the UIS Tools repository is a pnpm 11 workspace (`packageManager: pnpm@11.13.1`) with
 three member packages: `e2e`, `test` and `tools`. The `test` package (`uis-tools-test`) is the relevant
 one:
 
@@ -49,7 +49,7 @@ specifier instead of a version range:
 It was added with:
 
 ```sh
-cd C:\Git\Azure\uis-tools\Tools.Web\VueApp
+# in Tools.Web/VueApp of the UIS Tools repository
 corepack pnpm add -D -w "@lynxwall/cucumber-tsflow@link:../../../../GitHub/cucumber-js-tsflow/cucumber-tsflow"
 ```
 
@@ -62,7 +62,7 @@ picks up the pinned version from the `packageManager` field.
 ### Why `link:` and not a tarball
 
 `link:` makes `node_modules/@lynxwall/cucumber-tsflow` a symlink to
-`C:\Git\GitHub\cucumber-js-tsflow\cucumber-tsflow`. Node resolves through the symlink to the real path, so:
+this repository's `cucumber-tsflow` folder. Node resolves through the symlink to the real path, so:
 
 - **The inner loop is `yarn build` and rerun.** No pack, no reinstall. For performance work that is
   rebuilt many times a session this is the deciding factor.
@@ -94,7 +94,7 @@ refused on trust grounds, the escape hatch is a `trustPolicyExclude` entry for
 # in this repository — after any source change
 yarn build
 
-# in C:\Git\Azure\uis-tools\Tools.Web\VueApp
+# in Tools.Web/VueApp of the UIS Tools repository
 corepack pnpm -F uis-tools-test testUtils      # 49 scenarios, ~30 s — inner loop
 corepack pnpm -F uis-tools-test testDim        # 334 scenarios, ~40 s warm
 corepack pnpm -F uis-tools-test test           # full 1571 scenarios, ~4 min warm — the real measurement
@@ -155,7 +155,7 @@ support files always load — `test-setup.mjs`, `steps/world-context.ts` and the
 hooks — and the rest are candidates to skip. To measure a filtered run with and without it:
 
 ```sh
-cd C:/Git/Azure/uis-tools/Tools.Web/VueApp/test
+# in Tools.Web/VueApp/test of the UIS Tools repository
 TSFLOW_TIMING=true TSFLOW_THEME=off node ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js \
   -p default --name "Loading indicator displays while reviews are loading"                   # baseline
 TSFLOW_TIMING=true TSFLOW_THEME=off node ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js \
@@ -174,7 +174,7 @@ below spawns the CLI with `--watch`, waits for the `Run took` status line after 
 for a rerun and `q` to quit, and can edit a file between runs. Its essentials, for a one-scenario inner loop:
 
 ```sh
-cd C:/Git/Azure/uis-tools/Tools.Web/VueApp/test
+# in Tools.Web/VueApp/test of the UIS Tools repository
 # stdin is a pipe: each "\n" is a rerun, "q" quits; TSFLOW_THEME left on so the rerun note appears on the load line
 printf '\n\nq' | TSFLOW_TIMING=true node ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js \
   -p default --watch --name "Loading indicator displays while reviews are loading"
@@ -186,15 +186,17 @@ writing the next key gets the exact count. Read each run's `TSFLOW_TIMING` repor
 per run, so every report covers one run) and the load-phase line's `(rerun N: A evaluated again, B kept
 loaded, C other modules)` note. The Phase 10 hand-off in the execution strategy has the numbers.
 
-The driver is committed as `research/scripts/watch-driver.js` (stage 12c). It spawns the CLI with `--watch` and
-`TSFLOW_TIMING=true TSFLOW_THEME=off` in the UIS `test` directory, logs stdout and stderr to the file given, waits
-for each `Run took` line, writes a newline for a rerun until the requested number of runs is reached, then `q`, and
-prints each run's status line with its time since spawn. Node arguments go before `--`, CLI arguments after it:
+The driver is committed as `research/speed-enhancements/scripts/watch-driver.js` (stage 12c). It spawns the CLI
+with `--watch` and `TSFLOW_TIMING=true TSFLOW_THEME=off` in the UIS `test` directory, logs stdout and stderr to the
+file given, waits for each `Run took` line, writes a newline for a rerun until the requested number of runs is
+reached, then `q`, and prints each run's status line with its time since spawn. Node arguments go before `--`, CLI
+arguments after it:
 
 ```sh
-cd C:/Git/GitHub/cucumber-js-tsflow
-node research/scripts/watch-driver.js research/profiles/<series>/dim-watch.log 2 -- -p dim
-node research/scripts/watch-driver.js research/profiles/<series>/full-watch.log 2 --max-old-space-size=8192 -- -p default
+# in this repository; TSFLOW_WATCH_CWD is Tools.Web/VueApp/test of the UIS Tools repository
+export TSFLOW_WATCH_CWD=/path/to/uis-tools/Tools.Web/VueApp/test
+node research/speed-enhancements/scripts/watch-driver.js research/speed-enhancements/profiles/<series>/dim-watch.log 2 -- -p dim
+node research/speed-enhancements/scripts/watch-driver.js research/speed-enhancements/profiles/<series>/full-watch.log 2 --max-old-space-size=8192 -- -p default
 ```
 
 `TSFLOW_WATCH_CWD` overrides the directory the CLI runs in. The full suite's rerun needs the raised heap: the first
@@ -203,7 +205,7 @@ where Phase 10's rerun died.
 
 ## Profiling a run
 
-Item 27 of the [execution strategy](execution-strategy/ratings.md#re-rating-after-phase-5) asks where the time
+Item 27 of the [execution strategy](../plan/ratings.md#re-rating-after-phase-5) asks where the time
 inside `runtime:run` goes. `TSFLOW_TIMING` cannot answer that — it brackets the whole runtime as one
 phase — so the tool is V8's sampling profiler, `node --cpu-prof`, and a script in this repository that
 splits the samples by layer.
@@ -216,11 +218,12 @@ and write their own profiles into the same directory. The bin does not respawn N
 profiled is the one that runs the steps.
 
 ```sh
-# profiles are gitignored under research/profiles/ in this repository; never write them under the UIS checkout
-OUT=C:/Git/GitHub/cucumber-js-tsflow/research/profiles/dim-run1
+# in this repository: profiles are gitignored under research/speed-enhancements/profiles/; never write them under
+# the UIS checkout
+OUT="$PWD/research/speed-enhancements/profiles/dim-run1"
 mkdir -p "$OUT"
 
-cd C:/Git/Azure/uis-tools/Tools.Web/VueApp/test
+# then in Tools.Web/VueApp/test of the UIS Tools repository, in the same shell
 TSFLOW_TIMING=true TSFLOW_THEME=off \
   node --cpu-prof --cpu-prof-dir="$OUT" \
   ../node_modules/@lynxwall/cucumber-tsflow/bin/cucumber-tsflow.js --profile dim \
@@ -240,8 +243,8 @@ TSFLOW_TIMING=true TSFLOW_THEME=off \
 ### Attribute
 
 ```sh
-cd C:/Git/GitHub/cucumber-js-tsflow
-node research/scripts/attribute-cpuprofile.js research/profiles/dim-run1/CPU.*.0.*.cpuprofile
+# in this repository
+node research/speed-enhancements/scripts/attribute-cpuprofile.js research/speed-enhancements/profiles/dim-run1/CPU.*.0.*.cpuprofile
 ```
 
 The script prints, for the `runtime:run` window, self and inclusive time by layer — `tsflow`
@@ -272,7 +275,7 @@ The `link:` entry and the corresponding `pnpm-lock.yaml` changes are in the UIS 
 be committed. To restore the registry package:
 
 ```sh
-cd C:\Git\Azure\uis-tools\Tools.Web\VueApp
+# in Tools.Web/VueApp of the UIS Tools repository
 git checkout -- package.json pnpm-lock.yaml
 corepack pnpm install
 ```

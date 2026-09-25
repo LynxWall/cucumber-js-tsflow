@@ -15,24 +15,24 @@ model both of them sit on.
 
 ## The pre-run timeline
 
-Reading [cucumber-tsflow/src/cli/run.ts](cucumber-tsflow/src/cli/run.ts) →
-[cucumber-tsflow/src/cli/index.ts](cucumber-tsflow/src/cli/index.ts) →
-[cucumber-tsflow/src/api/run-cucumber.ts](cucumber-tsflow/src/api/run-cucumber.ts), the sequence before any
+Reading [cucumber-tsflow/src/cli/run.ts](../../../cucumber-tsflow/src/cli/run.ts) →
+[cucumber-tsflow/src/cli/index.ts](../../../cucumber-tsflow/src/cli/index.ts) →
+[cucumber-tsflow/src/api/run-cucumber.ts](../../../cucumber-tsflow/src/api/run-cucumber.ts), the sequence before any
 scenario runs is:
 
 1. `loadConfiguration` — locate and parse `cucumber.json`, merge profiles, then push a transpiler
-   `requireModule` or `loader` onto the config ([cucumber-tsflow/src/api/load-configuration.ts](cucumber-tsflow/src/api/load-configuration.ts)).
+   `requireModule` or `loader` onto the config ([cucumber-tsflow/src/api/load-configuration.ts](../../../cucumber-tsflow/src/api/load-configuration.ts)).
 2. `resolvePaths` — glob feature files, `require` paths, and `import` paths.
 3. Optional `parallelPreload` — spawn worker threads that load a slice of the support files
-   ([cucumber-tsflow/src/api/parallel-loader.ts](cucumber-tsflow/src/api/parallel-loader.ts)).
+   ([cucumber-tsflow/src/api/parallel-loader.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts)).
 4. `getSupportCodeLibrary` — install the transpiler hook, then `require()` every CJS support file and
    `await import()` every ESM support file, **one at a time**
-   ([cucumber-tsflow/src/api/support.ts](cucumber-tsflow/src/api/support.ts)).
+   ([cucumber-tsflow/src/api/support.ts](../../../cucumber-tsflow/src/api/support.ts)).
 5. Decorator evaluation during (4) — every `@given`/`@when`/`@then`/`@before`/… captures a stack trace and
-   resolves it through a source map ([cucumber-tsflow/src/utils/our-callsite.ts](cucumber-tsflow/src/utils/our-callsite.ts)).
+   resolves it through a source map ([cucumber-tsflow/src/utils/our-callsite.ts](../../../cucumber-tsflow/src/utils/our-callsite.ts)).
 6. Gherkin parsing, formatter init, runtime construction.
 7. If `parallel > 0`, fork N child processes, each of which **repeats steps 2, 4 and 5 in full**
-   ([cucumber-tsflow/src/runtime/parallel/worker.ts](cucumber-tsflow/src/runtime/parallel/worker.ts)).
+   ([cucumber-tsflow/src/runtime/parallel/worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts)).
 
 Steps 4, 5 and 7 are where the time goes.
 
@@ -49,10 +49,10 @@ Consequences:
 - **Every invocation is a cold start.** Changing one step file re-transpiles the entire support tree.
   A developer running the same suite ten times pays the full transpilation cost ten times.
 - **`ts-node-maintained` caches in memory only.** `transpileOnly: true` means output is held in the
-  process's own module registry ([cucumber-tsflow/src/transpilers/tsnode.ts](cucumber-tsflow/src/transpilers/tsnode.ts),
-  [cucumber-tsflow/src/transpilers/esnode.ts](cucumber-tsflow/src/transpilers/esnode.ts)). It dies with the process.
+  process's own module registry ([cucumber-tsflow/src/transpilers/tsnode.ts](../../../cucumber-tsflow/src/transpilers/tsnode.ts),
+  [cucumber-tsflow/src/transpilers/esnode.ts](../../../cucumber-tsflow/src/transpilers/esnode.ts)). It dies with the process.
 - **The `parallelLoad` feature cannot deliver what its own comments claim.** The header of
-  [cucumber-tsflow/src/api/parallel-loader.ts](cucumber-tsflow/src/api/parallel-loader.ts) states that workers
+  [cucumber-tsflow/src/api/parallel-loader.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/parallel-loader.ts) states that workers
   "warm the transpiler's on-disk cache" and that the main thread's subsequent load "hits warm caches."
   There is no on-disk cache to warm. Worker threads are separate V8 isolates with independent module
   registries; the transpiled output they produce is discarded when `worker.terminate()` is called.
@@ -76,10 +76,10 @@ staleness window and no need for a watch/mtime story.
 ### 2. Per-file `transformSync` against esbuild's out-of-process service
 
 Both the CJS and ESM esbuild paths call `transformSync` once per file
-([cucumber-tsflow/src/transpilers/esbuild.ts](cucumber-tsflow/src/transpilers/esbuild.ts),
-[cucumber-tsflow/src/transpilers/esm/esbuild.mjs](cucumber-tsflow/src/transpilers/esm/esbuild.mjs)), driven
+([cucumber-tsflow/src/transpilers/esbuild.ts](../../../cucumber-tsflow/src/transpilers/esbuild.ts),
+[cucumber-tsflow/src/transpilers/esm/esbuild.mjs](../../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)), driven
 by `ts-node`'s synchronous `Transpiler` interface
-([cucumber-tsflow/src/transpilers/esbuild-transpiler.ts](cucumber-tsflow/src/transpilers/esbuild-transpiler.ts)).
+([cucumber-tsflow/src/transpilers/esbuild-transpiler.ts](../../../cucumber-tsflow/src/transpilers/esbuild-transpiler.ts)).
 
 esbuild is a Go binary reached over a pipe. `transformSync` pays a fixed per-call round-trip and, worse,
 **blocks the Node event loop for its entire duration**. The actual TypeScript-to-JavaScript work is
@@ -108,9 +108,9 @@ Worth prototyping against the existing spec matrix before committing.
 
 In parallel mode the main process performs a complete support load in `runCucumber` (it needs the
 finalized library for `supportCodeIds` and support-code messages), and then
-[cucumber-tsflow/src/runtime/parallel/adapter.ts](cucumber-tsflow/src/runtime/parallel/adapter.ts) forks N
+[cucumber-tsflow/src/runtime/parallel/adapter.ts](../../../cucumber-tsflow/src/runtime/parallel/adapter.ts) forks N
 children, each of which calls `resolvePaths` again, installs the transpiler again, and `require`s /
-`import`s every support file again ([cucumber-tsflow/src/runtime/parallel/worker.ts](cucumber-tsflow/src/runtime/parallel/worker.ts)).
+`import`s every support file again ([cucumber-tsflow/src/runtime/parallel/worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts)).
 
 So total pre-run transpilation work is `(N + 1) × full support tree`, and each of those N + 1 loads is
 internally serial. With `parallel: 8` on a large suite this is the dominant term in wall-clock startup, and
@@ -137,7 +137,7 @@ Additional waste in the same path:
 
 ### 4. Stack capture and source-map resolution on every decorator
 
-[cucumber-tsflow/src/utils/our-callsite.ts](cucumber-tsflow/src/utils/our-callsite.ts) does this for every
+[cucumber-tsflow/src/utils/our-callsite.ts](../../../cucumber-tsflow/src/utils/our-callsite.ts) does this for every
 single decorated method, at module-evaluation time:
 
 ```ts
@@ -170,8 +170,8 @@ Three separate costs, paid per binding:
   an ambiguity or missing-step error is later reported. For most runs that string is never read.
 
 `capture()` is invoked from every factory in
-[cucumber-tsflow/src/bindings/step-decorators.ts](cucumber-tsflow/src/bindings/step-decorators.ts) and
-[cucumber-tsflow/src/bindings/hook-decorators.ts](cucumber-tsflow/src/bindings/hook-decorators.ts). On a
+[cucumber-tsflow/src/bindings/step-decorators.ts](../../../cucumber-tsflow/src/bindings/step-decorators.ts) and
+[cucumber-tsflow/src/bindings/hook-decorators.ts](../../../cucumber-tsflow/src/bindings/hook-decorators.ts). On a
 suite with several thousand bindings this is several thousand stack walks and up to one source-map parse
 per support file, all in the critical path.
 
@@ -181,7 +181,7 @@ per support file, all in the critical path.
   small constant, and set `Error.prepareStackTrace` once at module scope rather than per call.
 - Store the unresolved frame on the `StepBinding` and only run `wrapCallSite` inside `Callsite.toString()`
   — i.e. at the moment an ambiguity message, a snippet, or a definition-location message actually needs it.
-  `updateSupportCodeLibrary` in [cucumber-tsflow/src/bindings/binding-registry.ts](cucumber-tsflow/src/bindings/binding-registry.ts)
+  `updateSupportCodeLibrary` in [cucumber-tsflow/src/bindings/binding-registry.ts](../../../cucumber-tsflow/src/bindings/binding-registry.ts)
   reads `callsite.filename` / `callsite.lineNumber` for Cucumber's definition metadata, so resolution still
   needs to happen for that path — but it can be batched per file, after loading, instead of interleaved
   with it, and it can be skipped entirely for formatters that do not consume it.
@@ -193,7 +193,7 @@ hard-codes a Windows path separator, so the path is never made relative on Linux
 
 ### 5. Support files are loaded strictly serially
 
-[cucumber-tsflow/src/api/support.ts](cucumber-tsflow/src/api/support.ts) does:
+[cucumber-tsflow/src/api/support.ts](../../../cucumber-tsflow/src/api/support.ts) does:
 
 ```ts
 for (const path of importPaths) {
@@ -214,13 +214,13 @@ await Promise.all(importPaths.map(p => import(pathToFileURL(p).toString())));
 
 lets the loader thread pipeline resolution and transformation of many modules at once. The
 `BindingRegistry` is keyed by step pattern and tag, and duplicate detection in
-[cucumber-tsflow/src/bindings/binding-registry.ts](cucumber-tsflow/src/bindings/binding-registry.ts) compares
+[cucumber-tsflow/src/bindings/binding-registry.ts](../../../cucumber-tsflow/src/bindings/binding-registry.ts) compares
 callsites rather than relying on insertion order, so this is likely safe — but it changes the order in
 which ambiguity errors surface, so it should be validated against the `validations.feature` specs.
 
 The same serial pattern is repeated in
-[cucumber-tsflow/src/runtime/parallel/worker.ts](cucumber-tsflow/src/runtime/parallel/worker.ts) and in
-[cucumber-tsflow/src/api/loader-worker.ts](cucumber-tsflow/src/api/loader-worker.ts).
+[cucumber-tsflow/src/runtime/parallel/worker.ts](../../../cucumber-tsflow/src/runtime/parallel/worker.ts) and in
+[cucumber-tsflow/src/api/loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts).
 
 CJS `require` cannot be parallelized this way, which is a further argument for the bundling approach in
 item 2 as the general fix.
@@ -231,10 +231,10 @@ Config discovery happens independently in at least four places per process:
 
 | Location                                                                                                                                        | Mechanism                                                                |
 | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [cucumber-tsflow/src/transpilers/tsnode.ts](cucumber-tsflow/src/transpilers/tsnode.ts) / [esnode.ts](cucumber-tsflow/src/transpilers/esnode.ts) | `tsconfig-paths.register()` — patches `Module._resolveFilename` globally |
-| [cucumber-tsflow/src/transpilers/esm/loader-utils.mjs](cucumber-tsflow/src/transpilers/esm/loader-utils.mjs)                                    | `tsconfig-paths.loadConfig(process.cwd())`                               |
-| [cucumber-tsflow/src/transpilers/esm/esbuild.mjs](cucumber-tsflow/src/transpilers/esm/esbuild.mjs)                                              | `tsconfig-paths.loadConfig(process.cwd())` again, separate cache         |
-| [cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs](cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs)                                | `ts-node`'s own tsconfig resolution                                      |
+| [cucumber-tsflow/src/transpilers/tsnode.ts](../../../cucumber-tsflow/src/transpilers/tsnode.ts) / [esnode.ts](../../../cucumber-tsflow/src/transpilers/esnode.ts) | `tsconfig-paths.register()` — patches `Module._resolveFilename` globally |
+| [cucumber-tsflow/src/transpilers/esm/loader-utils.mjs](../../../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs)                                    | `tsconfig-paths.loadConfig(process.cwd())`                               |
+| [cucumber-tsflow/src/transpilers/esm/esbuild.mjs](../../../cucumber-tsflow/src/transpilers/esm/esbuild.mjs)                                              | `tsconfig-paths.loadConfig(process.cwd())` again, separate cache         |
+| [cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/transpilers/esm/tsnode-service.mjs)                                | `ts-node`'s own tsconfig resolution                                      |
 
 Each reads and parses the tsconfig chain (including `extends`) from disk. On a large project with a deep
 extends chain this is not free, and it is repeated in every parallel child and every preload worker.
@@ -261,7 +261,7 @@ partly explain any perceived ESM/CJS startup difference.
 
 ### 7. The ESM loader hot path
 
-Three issues in [cucumber-tsflow/src/transpilers/esm/loader-utils.mjs](cucumber-tsflow/src/transpilers/esm/loader-utils.mjs):
+Three issues in [cucumber-tsflow/src/transpilers/esm/loader-utils.mjs](../../../cucumber-tsflow/src/transpilers/esm/loader-utils.mjs):
 
 **Filesystem probing.** `resolveWithExtensions` tries seven extensions, then seven `index.*` variants,
 each with a synchronous `existsSync`. That is up to 14 stat syscalls per extensionless relative specifier,
@@ -287,7 +287,7 @@ value defers it correctly.
 
 ### 8. Logging allocates in hot paths even when disabled
 
-[cucumber-tsflow/src/utils/tsflow-logger.ts](cucumber-tsflow/src/utils/tsflow-logger.ts) reads
+[cucumber-tsflow/src/utils/tsflow-logger.ts](../../../cucumber-tsflow/src/utils/tsflow-logger.ts) reads
 `TSFLOW_VERBOSE` once and returns early when off — but the early return happens _inside_ the function.
 Every call site of the form:
 
@@ -315,7 +315,7 @@ Every support file starts with something like:
 import { binding, given, when, then } from '@lynxwall/cucumber-tsflow';
 ```
 
-[cucumber-tsflow/src/index.ts](cucumber-tsflow/src/index.ts) resolves that to a barrel that imports
+[cucumber-tsflow/src/index.ts](../../../cucumber-tsflow/src/index.ts) resolves that to a barrel that imports
 `./cli` — which transitively pulls in `run-cucumber`, `make-runtime`, the parallel adapter, the Gherkin
 manager, every built-in and custom formatter, `ansis`, `debug`, and the `@cucumber/cucumber` formatter
 tree. None of that is needed to evaluate a decorator.
@@ -327,7 +327,7 @@ before the first file is transpiled.
 **Recommendation.** Add a lightweight entry point (for example `@lynxwall/cucumber-tsflow/bindings`)
 exporting only `binding`, the step and hook decorators, and the context types, and recommend it for
 support code. New entry points need a matching key in the `exports` map of
-[cucumber-tsflow/package.json](cucumber-tsflow/package.json). The existing barrel stays for compatibility.
+[cucumber-tsflow/package.json](../../../cucumber-tsflow/package.json). The existing barrel stays for compatibility.
 Removing `./cli` from the root barrel would also help and is arguably correct regardless — a library's
 public API surface should not drag in its own command-line driver.
 
@@ -337,14 +337,14 @@ Beyond the cache issue in item 1:
 
 - Workers collect and serialize `SerializableBindingDescriptor[]` back to the main thread. The header
   comment says these are "used for validation." Tracing the return value through
-  [cucumber-tsflow/src/api/load-support.ts](cucumber-tsflow/src/api/load-support.ts) and
-  [cucumber-tsflow/src/api/run-cucumber.ts](cucumber-tsflow/src/api/run-cucumber.ts), they are only counted
+  [cucumber-tsflow/src/api/load-support.ts](../../../cucumber-tsflow/src/api/load-support.ts) and
+  [cucumber-tsflow/src/api/run-cucumber.ts](../../../cucumber-tsflow/src/api/run-cucumber.ts), they are only counted
   for a log line. This is structured-clone cost for nothing.
 - Thread count auto-detection caps at 4 (`Math.min(availableParallelism(), 4)`). On the developer and CI
   machines where a large suite is actually run, that is likely leaving cores idle. The cap should be
   reconsidered once the preload phase does something durable.
 - The browser-global shim block at the top of
-  [cucumber-tsflow/src/api/loader-worker.ts](cucumber-tsflow/src/api/loader-worker.ts) constructs a full
+  [cucumber-tsflow/src/api/loader-worker.ts](https://github.com/LynxWall/cucumber-js-tsflow/blob/a9f7946fc3a51937746878692f47b2526c605835/cucumber-tsflow/src/api/loader-worker.ts) constructs a full
   `window` stand-in by copying every own property of `globalThis` — per worker, at worker startup, before
   any useful work begins.
 

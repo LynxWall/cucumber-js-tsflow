@@ -160,7 +160,7 @@ during load. The key now uses `callsite.rawPosition`, the `file:line:column` of 
 Two different decorator expressions can never share a raw position, and the same expression evaluated
 twice always does, so duplicate detection is unchanged in practice.
 
-The path-relativising now uses `path.sep`, so Linux and macOS produce cwd-relative `uri`s like Windows
+The path-relativizing now uses `path.sep`, so Linux and macOS produce cwd-relative `uri`s like Windows
 always has. This is the only intentional behavior change in the callsite code.
 
 Microbenchmark (plain Node, 30-deep stack, 5,000 iterations): the old `capture()` costs 21.5 µs, the new

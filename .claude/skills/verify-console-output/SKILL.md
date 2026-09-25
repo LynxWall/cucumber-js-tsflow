@@ -76,6 +76,11 @@ foreach ($w in 120, 80, 40, 24) {
 }
 ```
 
+Pass `-StderrToConsole` whenever the startup progress or the real CLI is under test: since 8.0 cucumber-tsflow
+draws its own output on stderr, and without the switch the runner appends the child's stderr to `<Out>.log`, so the
+progress lands there in plain mode and the screen shows only stdout. The dump's first line from the template
+reports `stderrTTY`, which must be `true`.
+
 `-Env` is a `KEY=VALUE;KEY=VALUE` string, not a hashtable (a hashtable does not survive `pwsh -File`).
 `KEY=` with nothing after it removes the variable for the child. The launcher removes `NO_COLOR` by default:
 Claude's PowerShell tool runs with `NO_COLOR=1`, the new console inherits it, and until this was found every
@@ -170,6 +175,8 @@ expected to grow.
 | Claude's PowerShell tool refuses the command (`Remove-Item ... blocked`) | The tool's safety filter matched regex-looking text in the command. Keep regexes out of the command line; use `foreach ($f in ...) { if (Test-Path $f) { Remove-Item $f } }` and post-process dumps in a script file. |
 | Dump shows nothing after `columns=`                                  | The child exited before drawing (see log stderr) or wrote to a stream that is not the console.           |
 | Dump stops at the first row of an open phase; nothing beneath it     | The runner used to read rows 0..cursor only, and the renderer parks the cursor at the top of the block it redraws, so the rest was below the cursor. The runner now reads 12 rows past the cursor and drops empty trailing rows; the dump's last line reports `cursor=row N col M`. |
+| `launcher exit=0` and "no log: the runner never started" | The folder named in `-Out` does not exist, so the runner cannot create its log. Create the folder first. |
+| The screen shows the formatter output but no startup phases; the log holds them, with escape codes | The progress is on stderr (8.0 and later) and the runner sent the child's stderr to the log. Launch with `-StderrToConsole`; the template's first line must say `stderrTTY=true`. |
 | `isTTY=false` in the probe                                           | Not running in a console window: you ran `console-run.ps1` directly from a captured shell. Use `launch.ps1`. |
 | No color codes anywhere in the trace, even from the main thread     | `NO_COLOR=1` reached the child. The launcher now clears it by default; if you set `-Env` with your own `NO_COLOR`, that wins. |
 | Trace shows the previous run's timestamps                            | The tracer appends. Delete the trace file before each run.                                              |

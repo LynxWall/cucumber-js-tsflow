@@ -6,3 +6,4 @@ export const loadSupport = api.loadSupport;
 export const reloadSupport = api.reloadSupport;
 export const loadSources = api.loadSources;
 export const runCucumber = api.runCucumber;
+export const SupportReloader = api.SupportReloader;

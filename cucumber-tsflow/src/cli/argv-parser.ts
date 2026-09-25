@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import merge from 'lodash.merge';
 import path from 'path';
 import { dialects } from '@cucumber/gherkin';
@@ -18,7 +18,15 @@ export interface ITsflowConfiguration extends IConfiguration {
 	transpiler: string;
 	enableVueStyle: boolean;
 	experimentalDecorators: boolean;
-	parallelLoad: boolean | number;
+	/**
+	 * @deprecated Parallel preloading was removed in 7.8; the value is accepted (the flag shipped in 7.7.0) and
+	 * read only by the deprecation notice in `loadConfiguration`. It goes with the next major version.
+	 */
+	parallelLoad?: boolean | number;
+	transpileCache: boolean;
+	selectiveLoad: boolean;
+	/** Stay running after the run and rerun on changes; a CLI concern, not part of the run configuration */
+	watch?: boolean;
 }
 
 export interface IParsedArgv {
@@ -153,20 +161,35 @@ const ArgvParser = {
 				'only execute the features or scenarios with tags matching the expression (repeatable)',
 				ArgvParser.mergeTags
 			)
-			.option(
-				'--parallel-load [THREADS]',
-				'Pre-warm transpiler caches in parallel worker threads before loading support code. ' +
-					'Pass a number to control thread count, or omit for auto-detect.',
-				val => {
-					if (val === undefined || val === '') return true;
-					return ArgvParser.validateCountOption(val, '--parallel-load');
-				}
+			// Deprecated and ignored; still accepted so existing scripts keep working, and hidden from --help.
+			.addOption(
+				new Option('--parallel-load [THREADS]', 'Deprecated and ignored: parallel preloading was removed.')
+					.argParser(() => true)
+					.hideHelp()
 			)
 			.option(
-				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|TS-VUE-ESM|ES-NODE-ESM|ES-VUE-ESM>',
+				'--selective-load',
+				'Load only the support files whose step definitions the selected scenarios use, plus every file that registers hooks, parameter types or other support code, using an index written by earlier runs (node_modules/.cache/cucumber-tsflow/selective-load). Defaults to false.'
+			)
+			.option('--no-selective-load', 'Load every support file on this run.')
+			.option(
+				'--transpile-cache',
+				'Cache esbuild and Vue SFC transpiler output on disk between runs (node_modules/.cache/cucumber-tsflow). Defaults to true.'
+			)
+			.option(
+				'--no-transpile-cache',
+				'Transpile every support file from source on this run, neither reading nor writing the on-disk cache.'
+			)
+			.option(
+				'-w, --watch',
+				'Stay running after the run and rerun whenever a feature file, support file or module it loaded changes, keeping the support code loaded between runs. Enter reruns, q quits. Defaults to false.'
+			)
+			.option('--no-watch', 'Run once and exit, overriding a profile that sets watch.')
+			.option(
+				'--transpiler <ES-NODE|TS-NODE|ES-VUE|TS-VUE|ES-NODE-ESM|TS-NODE-ESM|ES-VUE-ESM|TS-VUE-ESM>',
 				`built-in transpiler to use. ESxxx transpilers use esbuild and TSxxx transpilers use typescript.\n
 				Vue versions of the transpilers add a hook for .vue transforms and initialize jsdom globally.\n
-				Default: ESNODE (esbuild without Vue support)`
+				Without one, no built-in transpiler is registered and a user-provided loader is expected.`
 			)
 			.option(
 				'--world-parameters <JSON>',

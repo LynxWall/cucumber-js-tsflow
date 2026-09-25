@@ -16,3 +16,6 @@ cucumber-tsflow-specs/reports/*
 #!/.yarn/cache
 /.pnp.*
 .DS_Store
+
+# Broken support files the syntax-error spec writes for one run and removes afterwards
+cucumber-tsflow-specs/*/src/fixtures/failing/generated/

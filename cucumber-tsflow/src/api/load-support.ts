@@ -2,27 +2,29 @@ import { IdGenerator } from '@cucumber/messages';
 import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { ILoadSupportOptions, ISupportCodeLibrary } from '@cucumber/cucumber/lib/api/types';
-import type { ISupportCodeCoordinates } from '@cucumber/cucumber/lib/support_code_library_builder/types';
 import { getSupportCodeLibrary } from './support';
 import { initializeForLoadSupport } from '@cucumber/cucumber/lib/api/plugins';
 import { BindingRegistry } from '../bindings/binding-registry';
-import { parallelPreload } from './parallel-loader';
-import { createLogger } from '../utils/tsflow-logger';
-
-const logger = createLogger('load-support');
+import { setExperimentalDecorators } from '../utils/decorator-mode';
+import { dependentProjectModules } from '../utils/module-graph';
+import { canonicalPath } from '../utils/paths';
+import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 /**
- * Options extending the standard load-support options with parallelLoad control.
+ * Options extending the standard load-support options with the decorator mode.
  */
 export interface ITsFlowLoadSupportOptions extends ILoadSupportOptions {
-	/** Pre-warm transpiler caches in parallel worker threads. true = auto threads, number = explicit count. */
-	parallelLoad?: boolean | number;
-	/** Whether experimental decorators are enabled */
+	/**
+	 * The decorator mode the support files are written for (TypeScript's `experimentalDecorators`). When
+	 * given, it is recorded for this process's decorators and transpilers before anything loads, as
+	 * `loadConfiguration` records the configured mode for the CLI.
+	 */
 	experimentalDecorators?: boolean;
 }
 
 /**
- * Load support code for use in test runs
+ * Load support code for use in test runs. A second call in the same process evaluates every support file
+ * again (see `getSupportCodeLibrary`), so the library is the one a fresh process would build.
  *
  * @public
  * @param options - Options required to find the support code
@@ -32,8 +34,38 @@ export async function loadSupport(
 	options: ITsFlowLoadSupportOptions,
 	environment: IRunEnvironment = {}
 ): Promise<ISupportCodeLibrary> {
+	return loadSupportCode(options, [], environment);
+}
+
+/**
+ * Load the support code again in a process that has loaded it before, after `changedPaths` changed on disk.
+ * Every support file evaluates again, as does each changed module and every project module that imports or
+ * requires one, directly or through others, so that no re-evaluated file keeps a stale dependency; everything
+ * else stays loaded, and unchanged files come back from the transpile caches rather than being compiled
+ * again. With no changed paths this is `loadSupport`. Intended for a persistent worker process that runs
+ * more than once, such as the companion VS Code extension.
+ *
+ * @public
+ * @param options - The same options used for the original `loadSupport` call
+ * @param changedPaths - Files changed since the last load, absolute or relative to the working directory
+ * @param environment - Project environment
+ */
+export async function reloadSupport(
+	options: ITsFlowLoadSupportOptions,
+	changedPaths: readonly string[],
+	environment: IRunEnvironment = {}
+): Promise<ISupportCodeLibrary> {
+	return loadSupportCode(options, changedPaths, environment);
+}
+
+async function loadSupportCode(
+	options: ITsFlowLoadSupportOptions,
+	changedPaths: readonly string[],
+	environment: IRunEnvironment
+): Promise<ISupportCodeLibrary> {
+	if (options.experimentalDecorators !== undefined) setExperimentalDecorators(options.experimentalDecorators);
 	const mergedEnvironment = makeEnvironment(environment);
-	const { cwd, logger: cucumberLogger } = mergedEnvironment;
+	const { cwd, logger } = mergedEnvironment;
 	const newId = IdGenerator.uuid();
 	const supportCoordinates = Object.assign(
 		{
@@ -45,175 +77,37 @@ export async function loadSupport(
 		options.support
 	);
 	const pluginManager = await initializeForLoadSupport(mergedEnvironment);
-	const resolvedPaths = await resolvePaths(cucumberLogger, cwd, options.sources, supportCoordinates);
+	const resolvedPaths = await resolvePaths(logger, cwd, options.sources, supportCoordinates);
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { requirePaths, importPaths } = resolvedPaths;
 
-	// Parallel preload phase: warm transpiler caches in worker threads
-	if (options.parallelLoad) {
-		logger.checkpoint('Running parallel preload phase');
-		try {
-			const result = await parallelPreload({
-				requirePaths,
-				importPaths,
-				requireModules: supportCoordinates.requireModules,
-				loaders: supportCoordinates.loaders,
-				experimentalDecorators: options.experimentalDecorators ?? false,
-				threadCount: options.parallelLoad
-			});
-			logger.checkpoint('Parallel preload completed', {
-				descriptors: result.descriptors.length,
-				files: result.loadedFiles.length,
-				durationMs: result.durationMs
-			});
-		} catch (err: any) {
-			logger.error('Parallel preload failed, falling back to serial load', err);
-		}
-	}
-
-	let supportCodeLibrary = await getSupportCodeLibrary({
-		logger: cucumberLogger,
-		cwd,
-		newId,
-		requireModules: supportCoordinates.requireModules,
-		requirePaths,
-		loaders: supportCoordinates.loaders,
-		importPaths
-	});
-	await pluginManager.cleanup();
-
-	// Set support to the updated step and hook definitions
-	// in the supportCodeLibrary. We also need to initialize originalCoordinates
-	// to support parallel execution.
-	supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
-	supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
-
-	return supportCodeLibrary;
-}
-
-/**
- * Incrementally reload support code. Evicts support modules from Node's
- * require cache so they are re-evaluated (re-running decorator registrations).
- * Transpiler caches (ts-node, swc, etc.) handle skipping recompilation for
- * unchanged files, making this significantly faster than a full loadSupport.
- *
- * @public
- * @param options - The same run options used for the original loadSupport call
- * @param changedPaths - Absolute paths to files that have changed since the
- *                       last load. If empty, all support modules are evicted
- *                       and re-evaluated (equivalent to a full reload).
- * @param environment - Project environment
- */
-export async function reloadSupport(
-	options: ITsFlowLoadSupportOptions,
-	changedPaths: string[],
-	environment: IRunEnvironment = {}
-): Promise<ISupportCodeLibrary> {
-	const mergedEnvironment = makeEnvironment(environment);
-	const { cwd, logger: cucumberLogger } = mergedEnvironment;
-	const newId = IdGenerator.uuid();
-	const supportCoordinates: ISupportCodeCoordinates = Object.assign(
-		{
-			requireModules: [],
-			requirePaths: [],
-			loaders: [],
-			importPaths: []
-		},
-		options.support
-	);
-	const pluginManager = await initializeForLoadSupport(mergedEnvironment);
-	const resolvedPaths = await resolvePaths(cucumberLogger, cwd, options.sources, supportCoordinates);
-	pluginManager.emit('paths:resolve', resolvedPaths);
-	const { requirePaths, importPaths } = resolvedPaths;
-
-	// Evict support modules from require.cache so they re-evaluate on next require().
-	// Transpiler caches ensure unchanged files don't pay recompilation cost.
+	// In a process that has loaded before, every support file evaluates again (a cached module registers
+	// nothing), and so do the changed modules and every project module that depends on one of them
+	const reevaluate = new Set<string>([...requirePaths, ...importPaths].map(canonicalPath));
 	if (changedPaths.length > 0) {
-		evictChangedAndDependents(changedPaths, requirePaths);
-	} else {
-		evictAllSupportModules(requirePaths);
+		const changed = new Set(changedPaths.map(canonicalPath));
+		for (const file of changed) reevaluate.add(file);
+		for (const dependent of dependentProjectModules(changed)) reevaluate.add(dependent);
 	}
 
 	let supportCodeLibrary = await getSupportCodeLibrary({
-		logger: cucumberLogger,
+		logger,
 		cwd,
 		newId,
 		requireModules: supportCoordinates.requireModules,
 		requirePaths,
 		loaders: supportCoordinates.loaders,
-		importPaths
+		importPaths,
+		reevaluate
 	});
 	await pluginManager.cleanup();
 
+	// The registry patches the definitions with the decorator callsites, and originalCoordinates is what lets
+	// runCucumber hand the loaded library to parallel child processes
+	const updateStart = startTimer();
 	supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(supportCodeLibrary);
 	supportCodeLibrary = { ...supportCodeLibrary, ...{ originalCoordinates: supportCoordinates } };
+	recordPhase('registry:update', updateStart);
 
 	return supportCodeLibrary;
-}
-
-/**
- * Evict changed files and any support modules that depend on them
- * from Node's require cache.
- */
-function evictChangedAndDependents(changedPaths: string[], allSupportPaths: string[]): void {
-	// Resolve all changed paths
-	const changedResolved = new Set<string>();
-	for (const p of changedPaths) {
-		try {
-			changedResolved.add(require.resolve(p));
-		} catch {
-			// File may have been deleted — skip
-		}
-	}
-
-	// Build set of modules to evict: changed files + any support module
-	// whose dependency subtree includes a changed file
-	const toEvict = new Set<string>(changedResolved);
-
-	// Walk require.cache to find transitive dependents
-	let found = true;
-	while (found) {
-		found = false;
-		for (const [key, mod] of Object.entries(require.cache)) {
-			if (!toEvict.has(key) && mod?.children?.some(child => toEvict.has(child.id))) {
-				toEvict.add(key);
-				found = true;
-			}
-		}
-	}
-
-	// Only evict modules that are changed or in the support paths set
-	// (don't evict node_modules or unrelated files)
-	const supportResolved = new Set(
-		allSupportPaths
-			.map(p => {
-				try {
-					return require.resolve(p);
-				} catch {
-					return '';
-				}
-			})
-			.filter(Boolean)
-	);
-
-	for (const key of toEvict) {
-		if (changedResolved.has(key) || supportResolved.has(key)) {
-			delete require.cache[key];
-		}
-	}
-}
-
-/**
- * Evict all support modules from Node's require cache.
- * Used when no specific changed paths are provided.
- */
-function evictAllSupportModules(supportPaths: string[]): void {
-	for (const filePath of supportPaths) {
-		try {
-			const resolved = require.resolve(filePath);
-			delete require.cache[resolved];
-		} catch {
-			// File may not be resolvable — skip
-		}
-	}
 }

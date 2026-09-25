@@ -2,6 +2,13 @@ import lep from '@jeanbenitez/logical-expression-parser';
 import logger from '../utils/logger';
 
 /**
+ * Compiled step-pattern regular expressions keyed by the original step text.
+ * `getRegTextForStep` is a pure function of its input and the key space is
+ * bounded by the number of distinct step patterns in the suite.
+ */
+const stepRegExpCache = new Map<string, RegExp>();
+
+/**
  * Uses a regular expression to match a step expression with
  * the feature text passed in
  * @param stepText
@@ -12,7 +19,11 @@ export const hasMatchingStep = (stepText: string, featureText: string): boolean 
 	if (stepText.trim().length === 0) return false;
 
 	try {
-		const regexStep = new RegExp(getRegTextForStep(stepText));
+		let regexStep = stepRegExpCache.get(stepText);
+		if (!regexStep) {
+			regexStep = new RegExp(getRegTextForStep(stepText));
+			stepRegExpCache.set(stepText, regexStep);
+		}
 		const match = featureText.match(regexStep);
 		return match !== null && match.length > 0;
 	} catch (err) {
@@ -29,7 +40,8 @@ export const hasMatchingStep = (stepText: string, featureText: string): boolean 
  * @returns
  */
 export const hasMatchingTags = (tagPattern: string, tags: string[]): boolean => {
-	return lep.parse(tagPattern.toLowerCase(), (t: string) => tags.map(tag => tag.toLowerCase()).includes(t));
+	const lowerTags = tags.map(tag => tag.toLowerCase());
+	return lep.parse(tagPattern.toLowerCase(), (t: string) => lowerTags.includes(t));
 };
 
 const getRegTextForStep = (step: string): string => {

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { IdGenerator } from '@cucumber/messages';
-import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
+import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
 import { ILogger } from '@cucumber/cucumber/lib/environment/index';
 import { SourcedPickle } from '@cucumber/cucumber/lib/assemble/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
@@ -24,8 +24,9 @@ export async function makeRuntime({
 	newId,
 	supportCodeLibrary,
 	options,
-	coordinates,
-	snippetOptions = {}
+	resolvedSupportPaths,
+	snippetOptions = {},
+	onWorkerReady
 }: {
 	environment: IRunEnvironment;
 	logger: ILogger;
@@ -34,8 +35,10 @@ export async function makeRuntime({
 	sourcedPickles: ReadonlyArray<SourcedPickle>;
 	supportCodeLibrary: SupportCodeLibrary;
 	options: ITsFlowRunOptionsRuntime;
-	coordinates: ISourcesCoordinates;
+	resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>;
 	snippetOptions?: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>;
+	/** Parallel mode only: called when a child process has loaded its support code and reports READY */
+	onWorkerReady?: (workerId: string) => void;
 }): Promise<Runtime> {
 	const testRunStartedId = newId();
 	const adapter: RuntimeAdapter =
@@ -48,7 +51,8 @@ export async function makeRuntime({
 					options,
 					snippetOptions,
 					supportCodeLibrary,
-					coordinates
+					resolvedSupportPaths,
+					onWorkerReady
 				)
 			: new InProcessAdapter(testRunStartedId, eventBroadcaster, newId, options, supportCodeLibrary);
 	return new Coordinator(testRunStartedId, eventBroadcaster, newId, sourcedPickles, supportCodeLibrary, adapter);

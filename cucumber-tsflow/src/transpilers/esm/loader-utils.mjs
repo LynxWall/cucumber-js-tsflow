@@ -1,15 +1,42 @@
-import { compileVueSFC } from './vue-sfc-compiler.mjs';
+import { transpileCode } from './esbuild.mjs';
 import { fileURLToPath, pathToFileURL } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
-import { createEsmHooks } from './tsnode-service.mjs';
-import { createLogger } from '../../utils/tsflow-logger.mjs';
+import { createRequire } from 'node:module';
+import { createLogger, describeThrowable, isVerbose } from '../../utils/tsflow-logger.mjs';
+import { startTimer, recordPhase, recordFile } from '../../utils/tsflow-timing.mjs';
+
+// The import-graph recorder is a CJS module shared with the main process (selective loading reads what
+// the in-thread resolve hook records here, and watch mode's module versions are applied to every URL the
+// hook resolves); loaded the way esbuild.mjs loads the transpile cache.
+const require = createRequire(import.meta.url);
+const { recordImportEdge, versionedUrl, withoutQuery, addReloadListener } = require('../../utils/module-graph.js');
+const { toPosixPath } = require('../../utils/paths.js');
+// The Vue SFC compiler and the transpile cache are the CJS build's too, so every transpiler in a thread shares
+// one compiler instance and one set of cache counters; `loadVue` caches the compiled component together with
+// its import transform, which is why it takes the uncached compile and the key and wraps them itself. The
+// compiler is required on the first `.vue` load rather than here: it imports `vue/compiler-sfc`, and `vue` is an
+// optional peer dependency that a Node-only project running `es-node-esm` does not have.
+let vueSfcCompiler;
+function getVueSfcCompiler() {
+	return (vueSfcCompiler ??= require('../vue-sfc-compiler.js'));
+}
+const { withTranspileCache } = require('../transpile-cache.js');
+
+// Every helper in this file is synchronous and never inspects the value returned by `nextResolve` /
+// `nextLoad`, so the same hook functions work under both registration mechanisms: `module.registerHooks()`
+// (synchronous, in-thread - `next*` returns a value) and `module.register()` (asynchronous, on the loader
+// hooks thread - `next*` returns a promise that is handed straight back to Node).
 
 // Create loggers for different concerns
 const loggerUtils = createLogger('loader-utils');
 const loggerResolve = createLogger('resolve');
 const loggerLoad = createLogger('load');
+
+// Per-file checkpoints in the resolve/load hot paths are guarded so their detail
+// objects and template strings are never built when verbose logging is off.
+const verbose = isVerbose();
 
 // Shared asset extensions
 export const ASSET_EXTENSIONS = [
@@ -27,8 +54,22 @@ export const ASSET_EXTENSIONS = [
 ];
 export const CODE_EXTENSIONS = ['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
+/**
+ * True when the hook was invoked for a CommonJS `require()`. Synchronous hooks registered with
+ * `module.registerHooks()` see every `require()` in the thread as well as every `import`; the
+ * transpilation, extension probing and `format: 'module'` short-circuits here are only correct for
+ * `import`, so `require()` requests must be handed straight to the default loader. Hooks registered with
+ * `module.register()` never receive `require()` calls, so this is always false there.
+ */
+export function isRequire(context) {
+	return context?.conditions?.includes('require') === true;
+}
+
 // TSConfig paths initialization
 let matchPath;
+// The `baseUrl` and `paths` behind `matchPath`, for cache keys: what `transformImports` writes into a module
+// depends on them. Empty until a tsconfig with paths has been loaded.
+let tsconfigPaths = {};
 export function initializeTsconfigPaths() {
 	if (matchPath) return matchPath;
 
@@ -42,6 +83,7 @@ export function initializeTsconfigPaths() {
 		});
 
 		if (configLoaderResult.resultType === 'success') {
+			tsconfigPaths = { absoluteBaseUrl: configLoaderResult.absoluteBaseUrl, paths: configLoaderResult.paths };
 			matchPath = createMatchPath(
 				configLoaderResult.absoluteBaseUrl,
 				configLoaderResult.paths,
@@ -62,9 +104,42 @@ export function initializeTsconfigPaths() {
 	return matchPath;
 }
 
+// Extension-probe cache: absolute extensionless path (plus the extension list when it is not the
+// default) -> resolved file URL, or null when nothing matched. Keying on the resolved path rather
+// than on specifier + parentURL means `../fixtures/context` imported from ten files in one directory
+// and `@fixtures/context` mapped to the same location all share a single set of existsSync probes.
+// Negative results are cached too. Both caches live for the process lifetime, which is correct for a
+// one-shot CLI run; a long-lived process that adds, removes or moves files must call
+// clearResolutionCaches() before resolving again.
+const extensionResolutionCache = new Map();
+
+function probeExtensions(resolvedPath, extensions) {
+	// Try various extensions
+	for (const ext of extensions) {
+		const fullPath = resolvedPath + ext;
+		if (existsSync(fullPath)) {
+			const result = pathToFileURL(fullPath).href;
+			if (verbose) loggerResolve.checkpoint('Resolved with extension', { ext, result });
+			return result;
+		}
+	}
+
+	// Try index files
+	for (const ext of extensions) {
+		const indexPath = path.join(resolvedPath, 'index' + ext);
+		if (existsSync(indexPath)) {
+			const result = pathToFileURL(indexPath).href;
+			if (verbose) loggerResolve.checkpoint('Resolved as index file', { ext, result });
+			return result;
+		}
+	}
+
+	return null;
+}
+
 // Extension resolution helper
-export async function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
-	loggerResolve.checkpoint('resolveWithExtensions', { specifier, parentURL });
+export function resolveWithExtensions(specifier, parentURL, extensions = CODE_EXTENSIONS) {
+	if (verbose) loggerResolve.checkpoint('resolveWithExtensions', { specifier, parentURL });
 
 	let resolvedPath;
 
@@ -76,37 +151,35 @@ export async function resolveWithExtensions(specifier, parentURL, extensions = C
 			const parentDir = path.dirname(parentPath);
 			resolvedPath = path.resolve(parentDir, specifier);
 		}
-		loggerResolve.checkpoint('Resolved base path', { resolvedPath });
+		if (verbose) loggerResolve.checkpoint('Resolved base path', { resolvedPath });
 	} catch (error) {
 		loggerResolve.error('Failed to resolve base path', error, { specifier, parentURL });
 		return null;
 	}
 
-	// Try various extensions
-	for (const ext of extensions) {
-		const fullPath = resolvedPath + ext;
-		if (existsSync(fullPath)) {
-			const result = pathToFileURL(fullPath).href;
-			loggerResolve.checkpoint('Resolved with extension', { ext, result });
-			return result;
-		}
+	const cacheKey = extensions === CODE_EXTENSIONS ? resolvedPath : `${resolvedPath}\0${extensions.join(',')}`;
+	let result = extensionResolutionCache.get(cacheKey);
+
+	if (result === undefined) {
+		result = probeExtensions(resolvedPath, extensions);
+		extensionResolutionCache.set(cacheKey, result);
+	} else if (verbose) {
+		loggerResolve.checkpoint('Resolved from extension cache', { resolvedPath, result });
 	}
 
-	// Try index files
-	for (const ext of extensions) {
-		const indexPath = path.join(resolvedPath, 'index' + ext);
-		if (existsSync(indexPath)) {
-			const result = pathToFileURL(indexPath).href;
-			loggerResolve.checkpoint('Resolved as index file', { ext, result });
-			return result;
-		}
-	}
-
-	loggerResolve.checkpoint('No resolution found', { specifier });
-	return null;
+	if (result === null && verbose) loggerResolve.checkpoint('No resolution found', { specifier });
+	return result;
 }
 
 const pathResolutionCache = new Map();
+
+// Drops every cached resolution result. Never needed by a one-shot run; watch mode calls it (through the
+// reload listener below) before each rerun, since files may have been added, removed or moved.
+export function clearResolutionCaches() {
+	extensionResolutionCache.clear();
+	pathResolutionCache.clear();
+}
+addReloadListener(clearResolutionCaches);
 
 export function resolveTsconfigPaths(specifier) {
 	// Fast path: skip what we know won't match
@@ -124,7 +197,7 @@ export function resolveTsconfigPaths(specifier) {
 		return pathResolutionCache.get(specifier);
 	}
 
-	loggerResolve.checkpoint('resolveTsconfigPaths', { specifier });
+	if (verbose) loggerResolve.checkpoint('resolveTsconfigPaths', { specifier });
 
 	const matchPath = initializeTsconfigPaths();
 	if (!matchPath) {
@@ -141,7 +214,7 @@ export function resolveTsconfigPaths(specifier) {
 				format: 'module',
 				shortCircuit: true
 			};
-			loggerResolve.checkpoint('tsconfig path matched', { specifier, mapped });
+			if (verbose) loggerResolve.checkpoint('tsconfig path matched', { specifier, mapped });
 			pathResolutionCache.set(specifier, result);
 			return result;
 		}
@@ -160,11 +233,13 @@ export function resolveTsconfigPaths(specifier) {
 						format: 'module',
 						shortCircuit: true
 					};
-					loggerResolve.checkpoint('tsconfig path matched with extension', {
-						specifier,
-						ext,
-						mapped: mappedWithExt
-					});
+					if (verbose) {
+						loggerResolve.checkpoint('tsconfig path matched with extension', {
+							specifier,
+							ext,
+							mapped: mappedWithExt
+						});
+					}
 					pathResolutionCache.set(specifier, result);
 					return result;
 				}
@@ -178,9 +253,15 @@ export function resolveTsconfigPaths(specifier) {
 	return null;
 }
 
+// Reads a module's source from disk. The hooks read files themselves rather than asking `nextLoad`,
+// because the default `nextLoad` returns a value under registerHooks() and a promise under register().
+function readSource(url) {
+	return readFileSync(fileURLToPath(url), 'utf8');
+}
+
 // Asset loader helper
 export function loadAsset(url) {
-	loggerLoad.checkpoint('loadAsset', { url });
+	if (verbose) loggerLoad.checkpoint('loadAsset', { url });
 	const filePath = fileURLToPath(url);
 	return {
 		format: 'module',
@@ -195,19 +276,19 @@ export function shouldEnableVueStyle() {
 		global.enableVueStyle === true ||
 		process.env.CUCUMBER_ENABLE_VUE_STYLE === 'true' ||
 		process.env.enableVueStyle === 'true';
-	loggerUtils.checkpoint('shouldEnableVueStyle', { enabled });
+	if (verbose) loggerUtils.checkpoint('shouldEnableVueStyle', { enabled });
 	return enabled;
 }
 
-async function transformImports(code, parentURL) {
-	loggerLoad.checkpoint('transformImports', { parentURL, codeLength: code?.length });
+function transformImports(code, parentURL) {
+	if (verbose) loggerLoad.checkpoint('transformImports', { parentURL, codeLength: code?.length });
 
 	try {
 		const importRegex =
 			/(?:import|export)\s+(?:(?:\{[^}]*\}|\*\s+as\s+\w+|\w+|type\s+\{[^}]*\}|type\s+\w+)\s+from\s+)?['"]([^'"]+)['"]/g;
 
 		const matches = [...code.matchAll(importRegex)];
-		loggerLoad.checkpoint('Found import matches', { count: matches.length });
+		if (verbose) loggerLoad.checkpoint('Found import matches', { count: matches.length });
 
 		let transformed = code;
 
@@ -223,7 +304,7 @@ async function transformImports(code, parentURL) {
 				try {
 					const parentDir = path.dirname(fileURLToPath(parentURL));
 					const resolvedPath = fileURLToPath(resolved.url);
-					let relativePath = path.relative(parentDir, resolvedPath).replace(/\\/g, '/');
+					let relativePath = toPosixPath(path.relative(parentDir, resolvedPath));
 
 					if (!relativePath.startsWith('.')) {
 						relativePath = './' + relativePath;
@@ -232,7 +313,7 @@ async function transformImports(code, parentURL) {
 					const originalImport = match[0];
 					const newImport = originalImport.replace(specifier, relativePath);
 					transformed = transformed.replace(originalImport, newImport);
-					loggerLoad.checkpoint('Transformed import', { from: specifier, to: relativePath });
+					if (verbose) loggerLoad.checkpoint('Transformed import', { from: specifier, to: relativePath });
 				} catch (error) {
 					loggerLoad.error('Failed to transform import', error, { specifier });
 				}
@@ -241,48 +322,54 @@ async function transformImports(code, parentURL) {
 
 		return transformed;
 	} catch (error) {
-		loggerLoad.error('transformImports failed', error, { parentURL });
+		if (verbose) loggerLoad.checkpoint('transformImports failed', { parentURL, error: describeThrowable(error) });
 		throw new Error(`Failed to transform imports: ${error.message}`, { cause: error });
 	}
 }
 
-export async function loadVue(url, context, nextLoad) {
-	loggerLoad.checkpoint('loadVue', { url });
+export function loadVue(url) {
+	if (verbose) loggerLoad.checkpoint('loadVue', { url });
+	const { compileVueSFCUncached, resolveVueSFCOptions, vueSfcCacheKey } = getVueSfcCompiler();
 
-	let source;
+	let code;
 	try {
-		loggerLoad.checkpoint('Loading Vue source');
-		const result = await nextLoad(url, { ...context, format: 'module' });
-		source = result.source;
-		loggerLoad.checkpoint('Vue source loaded', { sourceLength: source?.toString()?.length });
+		if (verbose) loggerLoad.checkpoint('Loading Vue source');
+		code = readSource(url);
+		if (verbose) loggerLoad.checkpoint('Vue source loaded', { sourceLength: code.length });
 	} catch (error) {
-		loggerLoad.error('Failed to load Vue source', error, { url });
+		if (verbose) loggerLoad.checkpoint('Failed to load Vue source', { url, error: describeThrowable(error) });
 		throw new Error(`Failed to load Vue source from ${url}: ${error.message}`, { cause: error });
 	}
 
-	const code = source.toString();
 	const filename = fileURLToPath(url);
+	const options = resolveVueSFCOptions({ enableStyle: shouldEnableVueStyle(), format: 'esm' });
 
-	let compiled;
-	try {
-		loggerLoad.checkpoint('Compiling Vue SFC', { filename, enableStyle: shouldEnableVueStyle() });
-		compiled = compileVueSFC(code, filename, {
-			enableStyle: shouldEnableVueStyle()
-		});
-		loggerLoad.checkpoint('Vue SFC compiled', { outputLength: compiled?.code?.length });
-	} catch (error) {
-		loggerLoad.error('Vue SFC compilation failed', error, { filename });
-		throw new Error(`Failed to compile Vue SFC ${filename}: ${error.message}`, { cause: error });
-	}
+	// Cached on the .vue source with the import transform inside, so a warm load reads one entry and runs
+	// nothing. The key carries what transformImports bakes into the output beyond the compiler's inputs: the
+	// tsconfig baseUrl and paths it rewrites bare specifiers through (the rewritten paths are relative to this
+	// file's directory, which the file name in the key covers).
+	initializeTsconfigPaths();
+	const configuration = vueSfcCacheKey(options) + JSON.stringify(tsconfigPaths);
+	const { code: transformed } = withTranspileCache('vue-sfc-esm', filename, code, configuration, () => {
+		let compiled;
+		try {
+			if (verbose) loggerLoad.checkpoint('Compiling Vue SFC', { filename, enableStyle: options.enableStyle });
+			compiled = compileVueSFCUncached(code, filename, options);
+			if (verbose) loggerLoad.checkpoint('Vue SFC compiled', { outputLength: compiled?.code?.length });
+		} catch (error) {
+			if (verbose) loggerLoad.checkpoint('Vue SFC compilation failed', { filename, error: describeThrowable(error) });
+			throw new Error(`Failed to compile Vue SFC ${filename}: ${error.message}`, { cause: error });
+		}
 
-	let transformed;
-	try {
-		transformed = await transformImports(compiled.code, url);
-		loggerLoad.checkpoint('Vue imports transformed');
-	} catch (error) {
-		loggerLoad.error('Failed to transform Vue imports', error, { url });
-		throw new Error(`Failed to transform imports in ${url}: ${error.message}`, { cause: error });
-	}
+		try {
+			const result = { code: transformImports(compiled.code, url) };
+			if (verbose) loggerLoad.checkpoint('Vue imports transformed');
+			return result;
+		} catch (error) {
+			if (verbose) loggerLoad.checkpoint('Failed to transform Vue imports', { url, error: describeThrowable(error) });
+			throw new Error(`Failed to transform imports in ${url}: ${error.message}`, { cause: error });
+		}
+	});
 
 	return {
 		format: 'module',
@@ -291,53 +378,77 @@ export async function loadVue(url, context, nextLoad) {
 	};
 }
 
-// Common load handlers
-export async function loadJson(url, context, nextLoad) {
-	loggerLoad.checkpoint('loadJson', { url });
+/**
+ * Source maps of the TypeScript modules this thread has transpiled, keyed by module URL, for
+ * `Callsite.resolve()` in `utils/our-callsite.ts`. A step definition's callsite is a V8 frame whose file
+ * name is the module URL and whose position is in the transpiled output; the file on disk is the `.ts`
+ * source, so `source-map-support` finds no map for it. With the hooks attached in-thread
+ * (`module.registerHooks()`) this map is on the same global object the resolver reads; under
+ * `module.register()` it lives on the hooks thread, the resolver never sees it and falls back to
+ * `source-map-support`.
+ */
+const sourceMaps = (globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS ??= new Map());
+
+/**
+ * Transpile a `.ts`/`.tsx` module with esbuild and return it as an ES module with an inline source
+ * map, keeping the map for callsite resolution. This replaces the `ts-node` service the esbuild
+ * loaders used to route every TypeScript file through: ts-node contributed only its own wrapper around
+ * the same `transpileCode()` call, a JSON.parse/stringify/base64 round trip to attach the map, and a
+ * module-format decision that these loaders already fix at `'module'`.
+ */
+export function loadTypeScript(url) {
+	if (verbose) loggerLoad.checkpoint('loadTypeScript', { url });
+	const filename = fileURLToPath(url);
+	const code = readSource(url);
+	// 'both': the inline map for Node (--enable-source-maps) and the map text for our own resolver.
+	const { output, sourceMap } = transpileCode(code, filename, undefined, { esbuild: { sourcemap: 'both' } });
+	if (sourceMap) sourceMaps.set(url, sourceMap);
+	return {
+		format: 'module',
+		source: output,
+		shortCircuit: true
+	};
+}
+
+// JSON is returned with `format: 'json'` so consumers can import it without an import attribute, as before.
+export function loadJson(url) {
+	if (verbose) loggerLoad.checkpoint('loadJson', { url });
 
 	try {
-		const result = await nextLoad(url, {
-			...context,
-			format: 'json',
-			importAttributes: { type: 'json' }
-		});
-
 		return {
-			...result,
 			format: 'json',
+			source: readSource(url),
 			shortCircuit: true
 		};
 	} catch (error) {
-		loggerLoad.error('loadJson failed', error, { url });
+		if (verbose) loggerLoad.checkpoint('loadJson failed', { url, error: describeThrowable(error) });
 		throw new Error(`Failed to load JSON ${url}: ${error.message}`, { cause: error });
 	}
 }
 
-export function handleCommonFileTypes(url, context, nextLoad, loaderName = 'loader') {
+// Common load handlers: assets and JSON. Returns null for anything else.
+export function handleCommonFileTypes(url) {
 	const ext = path.extname(url).toLowerCase();
 
 	if (ASSET_EXTENSIONS.includes(ext)) {
-		loggerLoad.checkpoint('Handling asset', { url, ext });
+		if (verbose) loggerLoad.checkpoint('Handling asset', { url, ext });
 		return loadAsset(url);
 	}
 
-	if (url.endsWith('.json')) {
-		loggerLoad.checkpoint('Handling JSON', { url });
-		try {
-			return loadJson(url, context, nextLoad);
-		} catch (error) {
-			loggerLoad.error(`Failed to compile ${url}`, error);
-			throw new Error(`Failed to compile ${url}: ${error.message}`, { cause: error });
-		}
+	if (ext === '.json') {
+		if (verbose) loggerLoad.checkpoint('Handling JSON', { url });
+		return loadJson(url);
 	}
 
 	return null;
 }
 
-export async function resolveSpecifier(specifier, context, options = {}) {
-	const { checkExtensions = true, handleTsFiles = false, tsNodeHooks = null, nextResolve } = options;
+// tsconfig `paths` mapping first, then extension probing for relative / absolute / file: specifiers.
+// Returns a resolve result or null; the caller decides how to fall through.
+export function resolveSpecifier(specifier, context, options = {}) {
+	const { checkExtensions = true } = options;
 
-	loggerResolve.checkpoint('resolveSpecifier', { specifier, checkExtensions, handleTsFiles });
+	if (verbose) loggerResolve.checkpoint('resolveSpecifier', { specifier, checkExtensions });
 
 	// 1. Handle TypeScript path mappings first
 	try {
@@ -345,9 +456,9 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 		if (mappedResult) {
 			const mappedUrl = mappedResult.url;
 			if (checkExtensions && !path.extname(mappedUrl)) {
-				const resolved = await resolveWithExtensions(mappedUrl, context.parentURL);
+				const resolved = resolveWithExtensions(mappedUrl, context.parentURL);
 				if (resolved) {
-					loggerResolve.checkpoint('Resolved via tsconfig paths + extension', { specifier, resolved });
+					if (verbose) loggerResolve.checkpoint('Resolved via tsconfig paths + extension', { specifier, resolved });
 					return {
 						url: resolved,
 						format: 'module',
@@ -356,33 +467,22 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 				}
 			}
 
-			loggerResolve.checkpoint('Resolved via tsconfig paths', { specifier, url: mappedResult.url });
+			if (verbose) loggerResolve.checkpoint('Resolved via tsconfig paths', { specifier, url: mappedResult.url });
 			return mappedResult;
 		}
 	} catch (error) {
 		loggerResolve.error('tsconfig path resolution failed', error, { specifier });
 	}
 
-	// 2. Handle TypeScript files if requested
-	if (handleTsFiles && tsNodeHooks && (specifier.endsWith('.ts') || specifier.endsWith('.tsx'))) {
-		try {
-			loggerResolve.checkpoint('Delegating .ts to ts-node hooks', { specifier });
-			const resolved = await tsNodeHooks.resolve(specifier, context, nextResolve);
-			return { ...resolved, format: 'module' };
-		} catch (error) {
-			loggerResolve.checkpoint('ts-node resolution failed, falling through', { specifier, error: error.message });
-		}
-	}
-
-	// 3. Extension resolution for relative imports and file:// URLs
+	// 2. Extension resolution for relative imports and file:// URLs
 	if (checkExtensions && (specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('file://'))) {
 		const hasExtension = path.extname(specifier) !== '';
 
 		if (!hasExtension && context.parentURL) {
 			try {
-				const resolved = await resolveWithExtensions(specifier, context.parentURL);
+				const resolved = resolveWithExtensions(specifier, context.parentURL);
 				if (resolved) {
-					loggerResolve.checkpoint('Resolved with extension', { specifier, resolved });
+					if (verbose) loggerResolve.checkpoint('Resolved with extension', { specifier, resolved });
 					return {
 						url: resolved,
 						format: 'module',
@@ -395,133 +495,111 @@ export async function resolveSpecifier(specifier, context, options = {}) {
 		}
 	}
 
-	loggerResolve.checkpoint('No resolution found', { specifier });
+	if (verbose) loggerResolve.checkpoint('No resolution found', { specifier });
 	return null;
 }
 
-// Cache for different ESM hooks by transpiler path
-const esmHooksCache = new Map();
-
-export async function getEsmHooks(transpilerPath, loaderName = 'loader') {
-	loggerUtils.checkpoint('getEsmHooks', { transpilerPath, loaderName });
-
-	if (esmHooksCache.has(transpilerPath)) {
-		loggerUtils.checkpoint('Returning cached ESM hooks', { transpilerPath });
-		return esmHooksCache.get(transpilerPath);
-	}
-
-	try {
-		loggerUtils.checkpoint('Creating ESM hooks', { transpilerPath });
-		const hooks = await createEsmHooks(transpilerPath);
-		esmHooksCache.set(transpilerPath, hooks);
-		loggerUtils.checkpoint('ESM hooks created and cached');
-		return hooks;
-	} catch (error) {
-		loggerUtils.error(`Failed to load ESM hooks with transpiler ${transpilerPath}`, error);
-		throw new Error(`Failed to load ESM hooks: ${error.message}`, { cause: error });
-	}
-}
-
-// Helper to create hook exports
-export function createHookExports(getHooksFn) {
-	return {
-		getFormat: async (...args) => {
-			loggerUtils.checkpoint('getFormat called', { url: args[0] });
-			return (await getHooksFn()).getFormat(...args);
-		},
-		transformSource: async (...args) => {
-			loggerUtils.checkpoint('transformSource called', { url: args[1]?.url });
-			return (await getHooksFn()).transformSource(...args);
-		}
-	};
-}
-
-// Common loader factory for esbuild-based loaders
+// Common loader factory for esbuild-based loaders. The returned hooks are synchronous and work under
+// both `module.registerHooks()` and `module.register()`; see the note at the top of this file.
 export function createEsbuildLoader(options = {}) {
-	const {
-		loaderName = 'loader',
-		handleVue = false,
-		transpilerPath = '@lynxwall/cucumber-tsflow/lib/transpilers/esm/esbuild-transpiler-cjs'
-	} = options;
+	const { loaderName = 'loader', handleVue = false } = options;
 
-	loggerUtils.checkpoint('createEsbuildLoader', { loaderName, handleVue, transpilerPath });
+	loggerUtils.checkpoint('createEsbuildLoader', { loaderName, handleVue });
 
 	// Create a loader-specific logger
 	const loaderLogger = createLogger(loaderName);
 
-	const getLocalEsmHooks = () => getEsmHooks(transpilerPath, loaderName);
-
 	return {
-		resolve: async (specifier, context, nextResolve) => {
-			loaderLogger.checkpoint('resolve', { specifier, parentURL: context?.parentURL });
+		resolve: (specifier, context, nextResolve) => {
+			if (isRequire(context)) return nextResolve(specifier, context);
+
+			if (verbose) loaderLogger.checkpoint('resolve', { specifier, parentURL: context?.parentURL });
+			const resolveStart = startTimer();
 
 			try {
-				const resolved = await resolveSpecifier(specifier, context, {
-					checkExtensions: true,
-					handleTsFiles: true,
-					tsNodeHooks: await getLocalEsmHooks(),
-					nextResolve
-				});
+				let result = resolveSpecifier(specifier, context, { checkExtensions: true });
 
-				if (resolved) {
-					loaderLogger.checkpoint('resolve success', { specifier, url: resolved.url });
-					return resolved;
+				if (result) {
+					if (verbose) loaderLogger.checkpoint('resolve success', { specifier, url: result.url });
+				} else {
+					// Everything else, including explicit `.ts`/`.tsx` specifiers, is resolved by Node; `load`
+					// decides what to do with the URL.
+					if (verbose) loaderLogger.checkpoint('resolve delegating to nextResolve', { specifier });
+					result = nextResolve(specifier, context);
 				}
 
-				loaderLogger.checkpoint('resolve delegating to nextResolve', { specifier });
-				return nextResolve(specifier, context);
+				// In-thread, `result` is the resolution itself: a module watch mode has decided to evaluate again
+				// gets its version query here, and the import edge is recorded for selective loading. On the hooks
+				// thread it is a promise (no `url`) and neither happens.
+				if (result && typeof result.url === 'string') {
+					const url = versionedUrl(result.url);
+					if (url !== result.url) result = { ...result, url };
+					recordImportEdge(context?.parentURL, url);
+				}
+				return result;
 			} catch (error) {
-				loaderLogger.error('resolve failed', error, { specifier });
+				if (verbose) loaderLogger.checkpoint('resolve failed', { specifier, error: describeThrowable(error) });
 				throw new Error(`Failed to resolve ${specifier}: ${error.message}`, { cause: error });
+			} finally {
+				recordPhase('esm:resolve', resolveStart);
 			}
 		},
 
-		load: async (url, context, nextLoad) => {
-			loaderLogger.checkpoint('load', { url });
+		load: (url, context, nextLoad) => {
+			if (isRequire(context)) return nextLoad(url, context);
+
+			if (verbose) loaderLogger.checkpoint('load', { url });
+			const loadStart = startTimer();
+
+			// The extension is judged without any query: in watch mode a module being evaluated again has a
+			// `?tsflow=<n>` version appended. The full `url` is what the module is loaded and mapped under.
+			const file = withoutQuery(url);
 
 			try {
 				// Check common file types first
-				const commonResult = await handleCommonFileTypes(url, context, nextLoad, loaderName);
+				const commonResult = handleCommonFileTypes(file);
 				if (commonResult) {
-					loaderLogger.checkpoint('load handled as common file type', { url });
+					if (verbose) loaderLogger.checkpoint('load handled as common file type', { url });
 					return commonResult;
 				}
 
 				// Handle Vue files if enabled
-				if (handleVue && url.endsWith('.vue')) {
-					loaderLogger.checkpoint('load handling Vue file', { url });
+				if (handleVue && file.endsWith('.vue')) {
+					if (verbose) loaderLogger.checkpoint('load handling Vue file', { url });
 					try {
-						const result = await loadVue(url, context, nextLoad);
-						loaderLogger.checkpoint('Vue file loaded successfully', { url });
+						const result = loadVue(url);
+						recordFile('load', file, loadStart);
+						if (verbose) loaderLogger.checkpoint('Vue file loaded successfully', { url });
 						return result;
 					} catch (error) {
-						loaderLogger.error(`Failed to compile Vue SFC ${url}`, error);
+						if (verbose)
+							loaderLogger.checkpoint(`Failed to compile Vue SFC ${url}`, { error: describeThrowable(error) });
 						throw new Error(`Failed to compile Vue SFC ${url}: ${error.message}`, { cause: error });
 					}
 				}
 
 				// Handle TypeScript files
-				if (url.endsWith('.ts') || url.endsWith('.tsx')) {
-					loaderLogger.checkpoint('load handling TypeScript file', { url });
+				if (file.endsWith('.ts') || file.endsWith('.tsx')) {
+					if (verbose) loaderLogger.checkpoint('load handling TypeScript file', { url });
 					try {
-						const tsNodeHooks = await getLocalEsmHooks();
-						const result = await tsNodeHooks.load(url, context, nextLoad);
-						loaderLogger.checkpoint('TypeScript file loaded successfully', { url });
+						const result = loadTypeScript(url);
+						recordFile('load', file, loadStart);
+						if (verbose) loaderLogger.checkpoint('TypeScript file loaded successfully', { url });
 						return result;
 					} catch (error) {
-						loaderLogger.error(`ts-node failed for ${url}`, error);
+						if (verbose) loaderLogger.checkpoint(`esbuild failed for ${url}`, { error: describeThrowable(error) });
 						throw error;
 					}
 				}
 
-				loaderLogger.checkpoint('load delegating to nextLoad', { url });
+				if (verbose) loaderLogger.checkpoint('load delegating to nextLoad', { url });
 				return nextLoad(url, context);
 			} catch (error) {
-				loaderLogger.error('load failed', error, { url });
+				if (verbose) loaderLogger.checkpoint('load failed', { url, error: describeThrowable(error) });
 				throw error;
+			} finally {
+				recordPhase('esm:load', loadStart);
 			}
-		},
-
-		...createHookExports(getLocalEsmHooks)
+		}
 	};
 }

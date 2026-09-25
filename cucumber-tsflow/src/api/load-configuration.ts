@@ -11,13 +11,14 @@ import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/vali
 import { convertConfiguration } from './convert-configuration';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { ITsflowConfiguration } from '../cli/argv-parser';
+import { setExperimentalDecorators } from '../utils/decorator-mode';
 import { hasStringValue } from '../utils/helpers';
 import GherkinManager from '../gherkin/gherkin-manager';
 import ansis from 'ansis';
 import { ITsFlowRunConfiguration } from '../runtime/types';
 import { Console } from 'console';
 import { join } from 'path';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, describeThrowable } from '../utils/tsflow-logger';
 
 const logger = createLogger('config');
 
@@ -60,7 +61,8 @@ export const loadConfiguration = async (
 		cucumberLogger = made.logger;
 		logger.checkpoint('Environment created', { cwd });
 	} catch (error: any) {
-		logger.error('Failed to create environment', error);
+		// Each error below propagates to the CLI, which reports it once; only the verbose trail keeps a copy here
+		logger.checkpoint('Failed to create environment', { error: describeThrowable(error) });
 		throw new Error(`Failed to create environment: ${error.message}`, { cause: error });
 	}
 
@@ -71,7 +73,7 @@ export const loadConfiguration = async (
 		configFile = options.file ?? locateFile(cwd);
 		logger.checkpoint('Config file resolved', { configFile });
 	} catch (error: any) {
-		logger.error('Failed to locate config file', error);
+		logger.checkpoint('Failed to locate config file', { error: describeThrowable(error) });
 		throw new Error(`Failed to locate configuration file: ${error.message}`, { cause: error });
 	}
 
@@ -84,7 +86,8 @@ export const loadConfiguration = async (
 		msg = 'No configuration file found';
 	}
 
-	const consoleLogger = new Console(environment.stdout as any, environment.stderr);
+	// All of cucumber-tsflow's own output goes to stderr; stdout carries only formatter output
+	const consoleLogger = new Console((environment.stderr ?? process.stderr) as any);
 	cucumberLogger.debug(msg);
 	consoleLogger.log(ansis.cyanBright(msg));
 
@@ -103,7 +106,7 @@ export const loadConfiguration = async (
 				paths: (profileConfiguration as any).paths
 			});
 		} catch (error: any) {
-			logger.error('Failed to load configuration from file', error, { configFile });
+			logger.checkpoint('Failed to load configuration from file', { configFile, error: describeThrowable(error) });
 			throw new Error(`Failed to load configuration from "${configFile}": ${error.message}`, { cause: error });
 		}
 	}
@@ -130,7 +133,7 @@ export const loadConfiguration = async (
 			pathCount: original.paths?.length
 		});
 	} catch (error: any) {
-		logger.error('Failed to merge configurations', error);
+		logger.checkpoint('Failed to merge configurations', { error: describeThrowable(error) });
 		throw new Error(`Failed to merge configurations: ${error.message}`, { cause: error });
 	}
 
@@ -139,16 +142,37 @@ export const loadConfiguration = async (
 		original.experimentalDecorators = false;
 	}
 	const experimentalDecorators = original.experimentalDecorators;
-	global.experimentalDecorators = experimentalDecorators;
-	process.env.CUCUMBER_EXPERIMENTAL_DECORATORS = String(experimentalDecorators);
+	setExperimentalDecorators(experimentalDecorators);
 
 	logger.checkpoint('Experimental decorators configured', { experimentalDecorators });
 
-	// Configure parallel loading
-	if (original.parallelLoad === undefined) {
-		original.parallelLoad = false;
+	// parallelLoad is accepted for compatibility and ignored: the preload phase it enabled was removed.
+	if (original.parallelLoad) {
+		const setBy =
+			(options.provided as Partial<ITsflowConfiguration> | undefined)?.parallelLoad !== undefined
+				? 'the --parallel-load flag from the command line'
+				: `"parallelLoad" from ${configFile ? `"${configFile}"` : 'the cucumber configuration file'}`;
+		consoleLogger.log(parallelLoadDeprecationNotice(setBy));
+		logger.checkpoint('parallelLoad is set but ignored', { parallelLoad: original.parallelLoad });
 	}
-	logger.checkpoint('Parallel load configured', { parallelLoad: original.parallelLoad });
+
+	// Configure the on-disk transpile cache. The environment variable is how the setting reaches the
+	// transpilers, the ESM loader hooks (in-thread or on the hooks thread) and parallel children; an
+	// environment value already present acts as the default when the option is not set.
+	if (original.transpileCache === undefined) {
+		original.transpileCache = process.env.TSFLOW_TRANSPILE_CACHE !== 'false';
+	}
+	process.env.TSFLOW_TRANSPILE_CACHE = String(original.transpileCache);
+	logger.checkpoint('Transpile cache configured', { transpileCache: original.transpileCache });
+
+	// Selective support loading is opt-in; `TSFLOW_SELECTIVE_LOAD=true` is the default when the option is unset.
+	// Unlike `transpileCache`, the value is not written back to the environment: nothing reads it there. It travels
+	// in the run configuration (`runtime.selectiveLoad`), and parallel children are sent the chosen subset of
+	// support files by the coordinator rather than deciding it themselves.
+	if (original.selectiveLoad === undefined) {
+		original.selectiveLoad = process.env.TSFLOW_SELECTIVE_LOAD === 'true';
+	}
+	logger.checkpoint('Selective load configured', { selectiveLoad: original.selectiveLoad });
 
 	/**
 	 * Ensures JSDOM environment is initialized before any test files are loaded.
@@ -222,7 +246,10 @@ export const loadConfiguration = async (
 				requires: original.require
 			});
 		} catch (error: any) {
-			logger.error('Failed to configure transpiler', error, { transpiler: original.transpiler });
+			logger.checkpoint('Failed to configure transpiler', {
+				transpiler: original.transpiler,
+				error: describeThrowable(error)
+			});
 			throw new Error(`Failed to configure transpiler "${original.transpiler}": ${error.message}`, { cause: error });
 		}
 	} else {
@@ -261,7 +288,7 @@ export const loadConfiguration = async (
 		replaceFormatAlias('junitbamboo', '@lynxwall/cucumber-tsflow/junitbamboo');
 		logger.checkpoint('Format options processed');
 	} catch (error: any) {
-		logger.error('Failed to process format options', error);
+		logger.checkpoint('Failed to process format options', { error: describeThrowable(error) });
 		throw new Error(`Failed to process format options: ${error.message}`, { cause: error });
 	}
 
@@ -282,7 +309,10 @@ export const loadConfiguration = async (
 				logger.checkpoint('No features found for debugFile');
 			}
 		} catch (error: any) {
-			logger.error('Failed to process debugFile', error, { debugFile: original.debugFile });
+			logger.checkpoint('Failed to process debugFile', {
+				debugFile: original.debugFile,
+				error: describeThrowable(error)
+			});
 			throw new Error(`Failed to process debugFile "${original.debugFile}": ${error.message}`, { cause: error });
 		}
 	}
@@ -300,7 +330,7 @@ export const loadConfiguration = async (
 		validateConfiguration(original, cucumberLogger);
 		logger.checkpoint('Configuration validated');
 	} catch (error: any) {
-		logger.error('Configuration validation failed', error);
+		logger.checkpoint('Configuration validation failed', { error: describeThrowable(error) });
 		throw new Error(`Configuration validation failed: ${error.message}`, { cause: error });
 	}
 
@@ -314,7 +344,7 @@ export const loadConfiguration = async (
 			loaders: runnable.support?.loaders
 		});
 	} catch (error: any) {
-		logger.error('Failed to convert configuration', error);
+		logger.checkpoint('Failed to convert configuration', { error: describeThrowable(error) });
 		throw new Error(`Failed to convert configuration: ${error.message}`, { cause: error });
 	}
 
@@ -325,3 +355,20 @@ export const loadConfiguration = async (
 		runConfiguration: runnable
 	};
 };
+
+/**
+ * The notice printed when a configuration still sets `parallelLoad`. Deliberately loud — a blank line, a row
+ * of stars, a blank line, then the notice — so it is not lost among the startup lines.
+ */
+function parallelLoadDeprecationNotice(setBy: string): string {
+	return [
+		'',
+		'**********',
+		'',
+		`${ansis.bold('DEPRECATION NOTICE:')} the parallelLoad option is no longer used and has no effect. ` +
+			'Parallel preloading of support files was removed because it made every run slower; the on-disk ' +
+			'transpile cache now does the work it was meant to do, with nothing to configure. ' +
+			`Remove ${setBy} to clear this notice.`,
+		''
+	].join('\n');
+}

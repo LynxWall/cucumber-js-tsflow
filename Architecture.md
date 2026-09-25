@@ -9,7 +9,7 @@ All source code lives under `cucumber-tsflow/src/`.
 | Layer | Directory | Purpose |
 | --- | --- | --- |
 | CLI | `src/cli/` | Command-line entry point, argv parsing, orchestrates configuration and execution |
-| API | `src/api/` | Programmatic API: `loadConfiguration`, `loadSupport`, `runCucumber`, parallel preloader |
+| API | `src/api/` | Programmatic API: `loadConfiguration`, `loadSupport`, `runCucumber` |
 | Runtime | `src/runtime/` | Serial and parallel execution, test case runner, worker, coordinator, context management, message collector |
 | Bindings | `src/bindings/` | Decorator registration, singleton binding registry, step binding types |
 | Formatters | `src/formatter/` | Custom formatters: Behave JSON, JUnit Bamboo, TsFlow snippet syntax |
@@ -21,15 +21,17 @@ All source code lives under `cucumber-tsflow/src/`.
 ## Execution Flow
 
 ```
-CLI → loadConfiguration() → runCucumber() → load support code → makeRuntime() → Coordinator + Adapter → Worker → TestCaseRunner
+CLI → loadConfiguration() → runCucumber() → parse features → load support code → makeRuntime() → Coordinator + Adapter → Worker → TestCaseRunner
 ```
 
 1. The CLI parses arguments and loads configuration (profiles, transpiler selection, decorator mode)
-1. `runCucumber()` optionally runs a parallel preload phase to warm transpiler caches
-1. Support code is loaded: transpilers are registered, step definition files are imported, and decorator side-effects populate the `BindingRegistry`
+1. Feature files are parsed and the pickles filtered (`--name`, `--tags`, paths) before any support code loads; their Gherkin envelopes are buffered and replayed to the formatters once those exist, so the message order is unchanged
+1. Support code is loaded: transpilers are registered, step definition files are imported, and decorator side-effects populate the `BindingRegistry`. With `selectiveLoad` on, only the files the selected pickles need are loaded, decided by `SelectiveLoadSession` (see [Selective loading](#selective-loading))
 1. `makeRuntime()` creates a `Coordinator` with either an in-process (serial) or child-process (parallel) adapter
 1. The coordinator assembles test cases from parsed Gherkin pickles and delegates execution to the adapter
 1. Each test case runs through `TestCaseRunner`, which resolves bindings and manages scenario context
+
+With `--watch` the CLI repeats steps 2 to 6 in the same process on every change or Enter, handing `runCucumber()` a `SupportReloader` that keeps the loaded modules and re-evaluates only what must run again (see [Watch mode](#watch-mode)).
 
 ## Bindings System
 
@@ -39,7 +41,7 @@ The bindings system maps TypeScript decorators to CucumberJS step and hook defin
 
 - `binding-decorator.ts` — the `@binding()` class decorator; detects decorator mode and registers all collected bindings
 - `binding-registry.ts` — singleton registry (`BindingRegistry.instance`) stored on `global.__CUCUMBER_TSFLOW_BINDINGREGISTRY`
-- `step-binding.ts` — `StepBinding` interface and `SerializableBindingDescriptor` for cross-thread transfer
+- `step-binding.ts` — `StepBinding` interface
 - `step-decorators.ts` — `@given()`, `@when()`, `@then()` method decorators
 - `hook-decorators.ts` — `@before()`, `@after()`, `@beforeAll()`, `@afterAll()`, `@beforeStep()`, `@afterStep()` decorators
 - `binding-context.ts` — storage mechanisms for buffering bindings during decoration
@@ -47,10 +49,10 @@ The bindings system maps TypeScript decorators to CucumberJS step and hook defin
 
 ### Registration Flow
 
-1. Method decorators (`@given()`, `@when()`, etc.) create `StepBinding` objects and buffer them in a context-appropriate store
+1. Method decorators (`@given()`, `@when()`, etc.) create `StepBinding` objects and buffer them in a context-appropriate store. Each captures a `Callsite` holding only the raw V8 stack frame of the decorated line (`Error.stackTraceLimit` is lowered to the three frames needed); mapping that frame through a source map is deferred to the first read of `callsite.filename`/`lineNumber`, so no source map is parsed while support files are evaluating
 1. The `@binding()` class decorator runs last (class decorators execute after method decorators)
 1. It reads all buffered bindings, sets `classPrototype`, and registers them in `BindingRegistry`
-1. Each binding is then registered with CucumberJS (`Given()`, `Before()`, etc.) via a trampoline function
+1. Each binding is then registered with CucumberJS (`Given()`, `Before()`, etc.) via a trampoline function; these are taken from `supportCodeLibraryBuilder.methods` rather than the `@cucumber/cucumber` root barrel so that a support file's import graph stays small
 1. At runtime the trampoline resolves the correct class instance through `ManagedScenarioContext`
 
 ### Registry Internals
@@ -61,7 +63,9 @@ The `BindingRegistry` maintains three primary indexes:
 - `_classBindings`: `Map<prototype, ClassBinding>` — per-class bindings and context types
 - `_cucumberKeyIndex`: `Map<string, StepBinding>` — O(1) lookup by generated `cucumberKey`
 
-`updateSupportCodeLibrary()` patches CucumberJS's `SupportCodeLibrary` with tsflow-specific metadata (timeouts, tags, binding references) so that the runtime can resolve back to the correct decorator-based definitions.
+Duplicate registrations (a file re-evaluated by `reloadSupport()`, for example) are detected with a key built from `callsite.rawPosition` (file, line and column of the executed code), tags and pattern, so registering a binding never triggers source-map resolution.
+
+`updateSupportCodeLibrary()` patches CucumberJS's `SupportCodeLibrary` with tsflow-specific metadata (timeouts, tags, binding references) so that the runtime can resolve back to the correct decorator-based definitions. Reading `callsite.filename`/`lineNumber` here, once per binding after all support code has loaded, is where source maps are actually consulted. A frame whose file name is a `file:` URL is first looked up in `globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS`, where the esbuild ESM `load` hook keeps the source map of every module it transpiled on the thread (the transpiled code exists only in memory, so nothing that reads the file on disk can map it); the position is traced with `@jridgewell/trace-mapping`, one decoded `TraceMap` per module, and the filename is the URL's path. When the esbuild loaders run on the `module.register()` hooks thread (`TSFLOW_ESM_HOOKS=async`, or a Node without `registerHooks`), whose globals this thread never sees, `registerLoader()` hands them a `MessagePort` in the register `data`; `transpilers/esm/source-map-relay.mjs` posts each module's map on it before the module's source is returned, and `utils/loader-source-maps.ts` drains the port synchronously into the same global on the first lookup miss, so callsites resolve to TypeScript lines under both hook modes. Everything else, and any URL no esbuild loader recorded (the ts-node loaders, third-party loaders), goes through `source-map-support`. That lookup runs with the `XMLHttpRequest` global hidden: `source-map-support` treats a process with `window` and `XMLHttpRequest` globals (any jsdom set-up) as a browser and fetches each source file with a synchronous XHR that jsdom services by spawning a process, several hundred milliseconds per support file.
 
 ## Runtime System
 
@@ -77,8 +81,8 @@ The `BindingRegistry` maintains three primary indexes:
 
 Parallel execution uses Node.js child processes:
 
-- `ChildProcessAdapter` forks child processes via `child_process.fork()`, manages worker lifecycle, and distributes test cases over IPC (`INITIALIZE`/`RUN`/`FINALIZE` commands)
-- `ChildProcessWorker` runs inside each forked process: loads support code (re-running transpiler registration and decorators), creates its own `MessageCollector`, and executes tests via `Worker`
+- `ChildProcessAdapter` forks child processes via `child_process.fork()`, manages worker lifecycle, and distributes test cases over IPC (`INITIALIZE`/`RUN`/`FINALIZE` commands). `INITIALIZE` carries the coordinator's already-resolved `requirePaths`/`importPaths` (`resolvedSupportPaths`) alongside the original coordinates, so children do not expand the support globs again
+- `ChildProcessWorker` runs inside each forked process: loads support code from those paths (re-running transpiler registration and decorators), creates its own `MessageCollector`, and executes tests via `Worker`
 - `run-worker.ts` is the entry point script forked by the adapter
 
 ### Test Case Execution
@@ -89,7 +93,7 @@ Parallel execution uses Node.js child processes:
 
 `MessageCollector` extends CucumberJS's `EventDataCollector` and listens to `envelope` events. It is stored as `global.messageCollector` and provides:
 
-- `getStepScenarioContext()` — matches a step's pattern to find the running scenario's `ManagedScenarioContext`
+- `getStepScenarioContext()` — returns the `ManagedScenarioContext` of the test case currently running in this process (tracked from `testCaseStarted` to `endTestCase`)
 - `getHookScenarioContext()` — retrieves context for hook execution
 - `startTestCase()` — creates a new `ManagedScenarioContext` for each test case
 
@@ -136,7 +140,7 @@ The library supports both **TC39 Stage 3 decorators** and **legacy experimental 
 ### Configuration
 
 - `experimentalDecorators` field in `cucumber.json` (or `--experimental-decorators` CLI flag)
-- Stored as `global.experimentalDecorators` and `process.env.CUCUMBER_EXPERIMENTAL_DECORATORS`
+- Recorded once by `setExperimentalDecorators()` in `src/utils/decorator-mode.ts` (called by `loadConfiguration` and by each parallel child): `global.experimentalDecorators` for the decorators' hot path, and `process.env.CUCUMBER_EXPERIMENTAL_DECORATORS` for the transpilers, which read it through `experimentalDecorators()` on every call, because the environment is what reaches the loader hooks thread and the child processes
 
 ### Branching
 
@@ -148,22 +152,50 @@ Every decorator function checks `global.experimentalDecorators` to return the ap
 ### Transpiler Impact
 
 - `ts-node`/`ts-vue` have `-exp` variants that set `experimentalDecorators: true` in compiler options
-- The esbuild transpiler reads `global.experimentalDecorators` to configure `tsconfigRaw`
+- The esbuild transpilers and the Vue SFC compiler read the mode through `experimentalDecorators()` in `src/utils/decorator-mode.ts` (backed by `CUCUMBER_EXPERIMENTAL_DECORATORS`) to configure `tsconfigRaw`; `ts-vue-esm` alone compiles `.ts` files with the project's `tsconfig.json`, through ts-node's own ESM loader
 - TC39 mode uses `lib: ['es2022', 'esnext.decorators']`; legacy mode uses `lib: ['es2022']`
 
-## Parallel Preload
+## Diagnostics
 
-The parallel preload system warms transpiler on-disk caches before the main load phase or before child processes start.
+The user-facing description of everything in this section and of the caches below, with every environment variable, is [docs/performance-and-diagnostics.md](docs/performance-and-diagnostics.md); the README keeps one paragraph that links to it.
 
-### Design
+### Startup progress
 
-1. `parallelPreload()` in the main process distributes support files across `worker_threads` (round-robin)
-1. Each loader worker sets `global.__LOADER_WORKER = true` to skip CucumberJS registration
-1. Workers load files (triggering transpilation) and return `SerializableBindingDescriptor[]` for validation
-1. Thread count auto-detects via `availableParallelism()` (capped at 4) or accepts an explicit count
-1. After preloading, the main thread performs the authoritative load — hitting warm caches
+`runCucumber()` prints one append-only line per startup phase to the environment's stderr, where all of cucumber-tsflow's own output goes (stdout carries only formatter output), through `StartupProgress` in `src/utils/startup-progress.ts`: `resolve` (plugins and support globs), `parse` (Gherkin parsing of the feature files), `load` (transpile and load support files, then `updateSupportCodeLibrary`) and `launch` (BeforeAll hooks in serial mode, child processes loading support code in parallel mode; ends on the first `testCaseStarted` envelope). On a TTY each line is `[ spinner ] title — detail counter`: a bracketed `| / - \` spinner in a fixed slot at column 0, the themed title, the plain-language detail, and a `(done/total)` counter at the end. The spinner's color is independent of the theme and of progress: `spinnerSlot(frame)` picks the glyph from `frame mod 4` and colors each of the slot's three cells from a wheel of stops with linear RGB blends between them (`WHEEL_STOPS`, `STEPS_PER_STOP`), stepping every `FRAMES_PER_COLOR` frames, a period deliberately not a multiple of four so the color change drifts around the rotation; each cell lags the one to its left by `WIPE_LAG_FRAMES` so a new color sweeps across the slot rather than switching at once. When the phase ends the slot becomes `[ ✓ ]` in the theme color and the counter is replaced by a summary and the elapsed time. Nothing is fitted to the terminal width: the line is printed whole and wraps wherever the terminal wraps it, so a narrow window shows all of the text over several rows and a wide one shows it on one. To make that redrawable the cursor rests on the row after the block between writes (not on the block, where the terminal's caret would cover the spinner), and every frame is a single write of `CSI nA` + `CSI 1G` up to the block's first row, where `n` is the number of rows the block occupied when last drawn, then `CSI 0J` (erase to end of screen), the whole phase line, the message line beneath it when one has been opened, and a newline back to the resting row. Row counts are `ceil(visible length / columns)` per line at the current width, escape sequences excluded. The width is read for every redraw — in the worker through `tty.WriteStream#_refreshSize()`, since a worker gets no resize events — so a window resized mid-phase is still redrawn from the right row. Messages replace one another in place and clear themselves; when the phase ends the block is erased and the closing line written followed by a newline, so the next phase line starts directly beneath it.
 
-The preload runs in the main process before any child processes are forked. Parallel child processes benefit from the warm on-disk cache without needing their own preload phase.
+Everything after the opening line is drawn by `PhaseRenderer`, a synchronous class with no timers of its own: `start()` redraws at once, `pump()` advances the frame every 130 ms, shows a heartbeat quip after 30 s without a message (a `waiting` variant while nothing has completed yet) and clears a message 8 s after it appeared, `tick()` bumps the counter and, once a gap of 30 s or more between ticks has been followed by five ticks in a row each within 1 s of the last, shows a relief message (the unit that ends a stall is often followed by another slow one, so relief waits for work to be quick again), `end()` writes the closing line. In `plain` mode (non-TTY) nothing is redrawn and messages and the closing text are appended. Where it runs depends on the stream:
+
+- **Terminal with a file descriptor** (`process.stderr` in the CLI): `StartupProgress` starts `startup-progress-worker.js` in a `worker_threads` Worker (unref'd, one per run, started on the first phase) and the renderer lives there, writing through a `tty.WriteStream` opened on the same `fd` on the worker's own event loop. Two Windows-console details shape those writes. First, the TTY stream rather than raw `fs.writeSync`: raw bytes reach the console under its OEM code page, so `—` renders as `ΓÇö` and takes three cells, the line occupies more rows than the renderer counted, and every redraw lands on the wrong row; the TTY stream converts to UTF-16 and uses the wide-character console write, like `process.stderr` on the main thread. Second, `CSI 1G` rather than `\r` for column 0: libuv's TTY writer remembers the last line-ending character seen on a handle and swallows a `\r` that directly follows a `\n` (treating the pair as a reordered `\r\n`), and every closing line ends with a newline, so a `\r`-based redraw right after it would erase the row but leave the cursor where the main thread's opening text ended. This is the whole point of the worker: the main thread is blocked for most of a phase — the first support file's `import()` runs its entire graph through the in-thread ESM hooks and the Vue compiler before returning, and the CJS transpilers `require()` every file synchronously — so a main-thread timer cannot fire and a main-thread spinner freezes. The main thread writes the phase line, posts `start` / `tick` / `end` commands, and on `end` blocks in `Atomics.wait` on a shared `Int32Array` until the worker has written the closing text (2 s timeout, after which the main thread writes it itself), which keeps the two threads' writes in order. The worker resolves the theme by name and inherits the main thread's detected color depth through `FORCE_COLOR`, because a worker has no TTY of its own for ansis to probe.
+- **Anything else** (a non-TTY stream, a stream without an `fd`, or a missing worker script): the renderer runs in-thread with a `setInterval`, drawing the spinner only when the stream is a TTY. On a non-TTY stream the output is append-only: the phase line, any heartbeat quips, the closing text.
+
+Units of work are fed by callbacks rather than globals so the API entry points (`loadSupport`, `reloadSupport`) stay silent:
+
+| Phase      | Unit-of-work source                                                                                                                               |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `parse`    | `gherkinDocument` envelopes on the event broadcaster                                                                                      |
+| `load`     | `getSupportCodeLibrary({ onFileLoaded })`, called after each `require` / `import`                                                         |
+| `launch`   | `makeRuntime({ onWorkerReady })` → `ChildProcessAdapter`, fired on each child's `READY`                                                   |
+
+`TSFLOW_THEME` picks the labels (`lotr` opts into The Lord of the Rings; `off` disables the output; anything else is the default pickling theme). The reporter is created only in the main process, and every method is a no-op when the theme is off.
+
+### Verbose logging and timing
+
+Two environment variables expose what the runtime is doing. Both are read once per thread and cost a single boolean check per call site when unset.
+
+- `TSFLOW_VERBOSE=true` — untimed checkpoint logging via `src/utils/tsflow-logger.ts` (and its `.mjs` twin for the ESM loaders). Per-file checkpoints in the resolve/load hooks, transpilers and Vue SFC compiler are guarded behind `isVerbose()` so their detail objects are never built when off.
+- `TSFLOW_TIMING=true` — startup timing via `src/utils/tsflow-timing.ts` (and its `.mjs` twin). Records wall-clock time per phase and per file, then `runCucumber()` prints a report to stderr with a phase table per context, file totals per context, and a slowest-25-files table.
+
+### Timing collection
+
+Every execution context records into its own store on `globalThis.__TSFLOW_TIMING` (shared between the CJS build and the `.mjs` twin within one thread) and the main process aggregates them:
+
+| Context | Scope | Channel back to the main process |
+| --- | --- | --- |
+| Main process | `main` | — |
+| ESM loader hooks thread (`module.register()`: the ts-node loaders, third-party loaders, or `TSFLOW_ESM_HOOKS=async`) | `esm-hooks` | `MessageChannel` port passed as `register()` `data`; the loader's `initialize` export stores it and answers snapshot requests |
+| Parallel child process | `worker:<id>` | `TIMING` IPC message sent before `READY` |
+
+Loaders attached in-thread with `module.registerHooks()` (the esbuild loaders, see [ESM loader registration](#esm-loader-registration)) share the registering thread's store, so their `esm:hooks-init`, `esm:resolve` and `esm:load` phases appear directly under `main` or `worker:<id>` and no `esm-hooks` section is produced for them. Nested contexts compose as `worker:<id>/esm-hooks`. Per-file records have four kinds: `transpile` (esbuild `transformSync` / `compileVueSFC` only — ts-node's TypeScript transpile is not observable), `load` (ESM `load` hook wall time), and `require` / `import` (top-level support-file load including dependencies). The same file appearing under `main` and `worker:*` is the N+1 transpile multiplication made visible.
 
 ## Transpilers
 
@@ -189,8 +221,85 @@ Transpilers are loaded as CJS `requireModule` entries or ESM `loader` entries ba
 - `esbuild.ts` — wraps `esbuild.transformSync()`, maps file extensions to loaders, supports both decorator modes
 - `esbuild-transpiler.ts` — implements `ts-node-maintained`'s `Transpiler` interface using the esbuild wrapper
 - `vue-sfc-compiler.ts` — compiles `.vue` SFCs using `vue/compiler-sfc` (`parse`, `compileScript`, `compileTemplate`, `compileStyle`) then transpiles the output via esbuild
+- `transpile-cache.ts` — content-addressed on-disk cache wrapped around `transpileCode` (CJS and ESM) and `compileVueSFC`; see [Transpile cache](#transpile-cache)
 
-ESM loaders live under `src/transpilers/esm/` and act as Node.js custom loaders registered via `node:module.register()`.
+ESM loaders live under `src/transpilers/esm/` (authored `.mjs`, copied verbatim to `lib/`) and act as Node.js module customization hooks. `esnode-loader.mjs` and `esvue-loader.mjs` are built by `createEsbuildLoader()` in `loader-utils.mjs` and transpile `.ts`/`.tsx` with `esbuild.transformSync` directly (`esbuild.mjs`, `sourcemap: 'both'`: the map is inlined for Node and kept on `globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS` by module URL for callsite resolution) and `.vue` with the shared SFC compiler; they do not use ts-node. `tsnode-loader.mjs` (`ts-node-esm`) creates a `ts-node-maintained` service and delegates to its ESM hooks; `vue-loader.mjs` (`ts-vue-esm`) delegates TypeScript to `ts-node-maintained/esm`.
+
+### ESM loader registration
+
+`src/api/register-loaders.ts` (`registerLoader()`) is the single place a loader is attached — `getSupportCodeLibrary` calls it, in the main process and in each parallel child — and it chooses between two mechanisms:
+
+- **Synchronous, in-thread** (`module.registerHooks()`, Node 22.15 / 23.5 or later): used for tsflow's own esbuild loaders. The `.mjs` module is `import()`ed into the registering thread by path and its `resolve`/`load` are passed to `registerHooks()`. Nothing crosses a thread boundary: no `postMessage` per resolve, no structured clone of each transformed source. Registration is deduplicated per thread, since hooks stack.
+- **Asynchronous, hooks thread** (`module.register()`): used for the ts-node loaders (their hooks await ts-node's asynchronous hooks), for any third-party loader in the `loader` list, on Node versions without `registerHooks`, and when `TSFLOW_ESM_HOOKS=async` is set.
+
+The esbuild loaders' hooks are written to work under both mechanisms: every helper in `loader-utils.mjs` is synchronous, the hooks read sources with `readFileSync` instead of consulting `nextLoad`, and they never inspect what `nextResolve`/`nextLoad` return (a value in-thread, a promise on the hooks thread) — they return it as-is. Synchronous hooks are also invoked for every `require()` on the thread; `isRequire(context)` (`context.conditions` contains `'require'`) short-circuits those to Node's default loader, because the extension probing and `format: 'module'` results are only correct for `import`.
+
+### ESM loader caches
+
+`loader-utils.mjs` keeps two process-lifetime caches, both correct for a one-shot CLI run and cleared together by the exported `clearResolutionCaches()`, which is also registered as a reload listener with `module-graph.ts` so watch mode drops them before every rerun:
+
+- `pathResolutionCache` — bare specifier → tsconfig `paths` match (or `null`)
+- `extensionResolutionCache` — absolute extensionless path → resolved file URL (or `null`), shared by every importer of the same module and by aliased and relative spellings of it
+
+The tsconfig `paths` rewrite regexes used by `esbuild.mjs` and `tsnode-loader.mjs` are compiled once per process, and the `ts-node` service `tsnode-loader.mjs` creates passes `files: false` because with `transpileOnly: true` the tsconfig `include` walk feeds nothing.
+
+### Transpile cache
+
+`src/transpilers/transpile-cache.ts` is a content-addressed on-disk cache wrapped around the three transpile entry points: `transpileCode` in `esbuild.ts` (the CJS esbuild path, reached through ts-node's `Transpiler` plugin), `transpileCode` in `esm/esbuild.mjs` (the esbuild ESM `load` hook, which loads the CJS build through `createRequire` so all three share one module instance and one set of counters per thread) and `compileVueSFC` in `vue-sfc-compiler.ts` (the CJS Vue transpilers) and `loadVue` in `esm/loader-utils.mjs` (the ESM ones), which caches the compiled component together with its `transformImports` pass under its own kind, so a warm load reads one entry and runs nothing. `withTranspileCache(kind, filename, source, configuration, produce)` keys an entry on a SHA-256 of the entry format, the library version, `kind`, the caller's serialized configuration, the file name and the source. The configuration carries everything else that shapes the output: the full esbuild transform options (with `tsconfigRaw`, hence the decorator mode) and the esbuild version; for the ESM path also the tsconfig `absoluteBaseUrl` and `paths`, because `rewritePathMappings` bakes them into the output as `file://` URLs, so entries are not portable across checkouts and must not be; for Vue the style flag, output format, decorator mode and the consumer's `vue` version. Nothing is keyed on path or mtime alone, so a stale entry cannot be served: a changed input is a different key.
+
+Entries are JSON files named by the key, written to a temp file and renamed into place, so the N+1 contexts of a `parallel` run (coordinator and children) racing to populate an empty cache never see a partial entry, and the last writer of an identical result wins. Writes are best-effort and a failed or unparseable read is a miss and is deleted, so the cache can change whether a transpile runs but never what it returns. The directory is `TSFLOW_TRANSPILE_CACHE_DIR`, else `.cache/cucumber-tsflow/transpile` under the nearest `node_modules` at or above the working directory (else under the nearest `package.json`, else the OS temp directory). `TSFLOW_TRANSPILE_CACHE=false` disables reads and writes; `loadConfiguration` sets that variable from the `transpileCache` option (`--transpile-cache` / `--no-transpile-cache`, default true, an existing environment value acting as the default), which is how the setting reaches every thread and process, including the ESM hooks thread under `module.register()`.
+
+`runCucumber` appends the main process's `N of M transpiles from the cache` to the load-phase summary and then calls `pruneTranspileCache()`, which only when this process wrote entries lists the directory and deletes the least recently written files until it fits in 512 MB (a content-addressed store's garbage is exactly the entries no current source produces any more, and those are the oldest). In the `TSFLOW_TIMING` report, hits and misses are the `transpile-cache:hit` / `transpile-cache:miss` phases (the `calls` column is the count; a hit also records a `transpile` file entry for the lookup time so per-context file counts stay comparable between cold and warm runs), and `transpile-cache:prune` is the sweep.
+
+### Loading support code
+
+`src/api/support.ts` (`getSupportCodeLibrary()`) is the one place support code is evaluated into a CucumberJS library, whatever the context: `runCucumber` in the main process, `loadSupport()` / `reloadSupport()` from the API, each parallel child (`runtime/parallel/worker.ts`, which passes the coordinator's `supportCodeIds` so the definitions carry matching ids) and every watch-mode rerun. A load starts from nothing — the step-pattern cache, the `BindingRegistry` and the CucumberJS builder are reset — so the library and the registry are exactly what the files register while they evaluate; nothing from an earlier load can shadow a re-registered binding, and a load replaces the process's bindings, which is why the API cannot be called from inside a running suite.
+
+A process that has loaded before holds the support files in Node's module caches, where a cached module evaluates nothing, so every load after the first (a module-level counter says which) first makes its modules load again: `evictRequiredModules()` deletes the CommonJS ones from `require.cache`, `bumpModuleVersions()` gives the ES modules a version that `versionedUrl()` turns into a `?tsflow=<n>` query on their next import (see [Watch mode](#watch-mode)), and `notifyReload()` runs the reload listeners (the ESM loader's resolution caches). Which modules is the `reevaluate` parameter, as canonical paths: by default every support file being loaded, which builds the library a fresh process would; `reloadSupport(options, changedPaths)` adds the changed modules and `dependentProjectModules(changed)`, every project module that imports or requires one of them, so no re-evaluated file keeps a stale dependency; and watch mode passes the smaller set its `SupportReloader` decided, keeping the files that registered nothing loaded. The `SupportLoadRecorder` bracketed around each file (`beginFile` / `endFile`, several composed with `composeRecorders()`) is how selective loading and the reloader observe what each file registers.
+
+### Selective loading
+
+`src/api/selective-load.ts` implements the `selectiveLoad` option: on a filtered run, load only the support files the selected pickles need. It depends on `runCucumber` parsing the feature files before the support code loads (which it always does, buffering the Gherkin envelopes until the formatters exist) and on three observation points:
+
+- **What a file registers.** `SelectiveLoadSession` is a `SupportLoadRecorder` that `getSupportCodeLibrary` brackets around each `require`/`import` (several recorders are combined with `composeRecorders()`). Between `beginFile` and `endFile` it collects the step patterns from two sources — `BindingRegistry.addRegistrationListener()` (every tsflow binding as it is indexed, duplicates and tag-scoped alternatives included) and the new `stepDefinitionConfigs` on the CucumberJS builder (steps registered without a decorator) — and compares a fingerprint of the builder before and after (`src/api/builder-fingerprint.ts`: hook config counts, parameter type count, `World`, `defaultTimeout`, `parallelCanAssign`, `definitionFunctionWrapper`). A file that changed anything but the step definitions, or registered no steps at all, is marked `always`.
+- **What a file depends on.** `src/utils/module-graph.ts`. For `require` paths it walks `require.cache` from the entry (Node adds a cached module to every parent's `children`, so the graph is complete); for `import` paths the esbuild ESM loaders' `resolve` hook calls `recordImportEdge(parentURL, url)` with whatever it returns, in-thread under `module.registerHooks()`, and `importedProjectModules()` walks the recorded edges. Modules under `node_modules` and inside this package are excluded. Loaders on `module.register()` (ts-node ESM, third-party, `TSFLOW_ESM_HOOKS=async`) run on another thread where nothing is recorded, so `SelectiveLoadSession.unsupportedReason()` turns the option off for them.
+- **What the run needs.** `plan(pickles)` reads the index, marks every new, `always` or stale entry (any dependency's mtime or size differs from the recorded stamp) as must-load, compiles every indexed pattern with `ExpressionFactory` from `@cucumber/cucumber-expressions` — reached through `createRequire(require.resolve('@cucumber/cucumber'))` so it is the same copy CucumberJS uses — over a `ParameterTypeRegistry` rebuilt from the parameter types the index recorded, and matches each distinct selected step text against them. Every entry with a match is loaded; a text with no match returns a full plan (`"…" matches no step definition in the index`), so undefined steps are reported as in a full run. The matching is kept cheap on a full run (about 0.2 s for 3500 texts against 2100 patterns): each distinct pattern is compiled once, carries the literal text a match must start with (`literalPrefix()`) and is bucketed by that text's first word, so a step text is compared only with its bucket and the few patterns without a usable prefix; the test is `regexp.test()` on the expression's compiled `RegExp`, since `Expression.match()` also builds argument objects for every hit. Matching stops early once no entry is left to skip.
+
+The index is one JSON file per configuration under `<cache root>/selective-load/`, keyed on the entry format, library version, working directory, decorator mode and the support-code coordinates; `getCacheRootDirectory()` in `transpile-cache.ts` is the shared location. It holds a file table with stamps, per-entry dependency indexes, patterns (`[source, flags]` for a `RegExp`, `[expression, null]` for a Cucumber expression) and the `always` flag, plus the non-built-in parameter types. `finish(library)` rewrites the records of the files this run loaded (their graphs read now), keeps the validated records of the files it skipped, and writes atomically (temp file plus rename); `abort()` on a failed load writes nothing. The loaded path lists are what `runCucumber` passes to `makeRuntime` as `resolvedSupportPaths`, so parallel children load the same subset and CucumberJS's positional definition ids line up. `TSFLOW_TIMING` phases: `selective-load:plan`, `selective-load:index`.
+
+### Watch mode
+
+`src/cli/watch.ts` (`watchCucumber()`) is the CLI loop behind `--watch`; `src/api/support-reloader.ts` (`SupportReloader`) is what makes a second `runCucumber()` in the same process cheap. `Cli.run()` branches to the loop when the resolved configuration has `watch`; the loop prints a banner, starts reading keys from stdin (raw mode on a TTY; Enter reruns, `q` or Ctrl-C quits), runs once, and then reruns on a debounced file event or Enter until quit, resolving to the last run's success. Each in-process run resets the timing store and the transpile-cache counters, passes a shallow copy of the run configuration (because `runCucumber` replaces `options.support` with the loaded library) and hands the reloader and the changed paths to `runCucumber` through its fourth argument, `ITsFlowRunSession`. The status line after each run carries the wall-clock time and the heap in use (after `globalThis.gc()` when Node exposes it), because state a run leaves in a kept module is what the next run starts from. After each run the loop asks the reloader for `watchedFiles()` — the resolved feature files, the support files and every project module known to `module-graph.ts` — and keeps one non-recursive `fs.watch` per directory containing one, adding and closing watchers as the set changes. An event counts when it names a known file or a new file with a feature or code extension; an event with no file name is treated as "everything changed".
+
+`SupportReloader` implements `SupportLoadRecorder` and is composed with the `SelectiveLoadSession` recorder. `runCucumber` calls `prepare(changedPaths, sourcePaths, requirePaths, importPaths)` once the paths are resolved. On the first run it only starts observing. On every later run it: notes any module that applied decorators during the previous run (`BindingRegistry.getBindingSourceFiles()` mapped through `canonicalFromFrameFile()`, minus the support files); builds the set to evaluate again — the changed files, `dependentProjectModules(changed)` (the reverse closure over the recorded ESM edges and `require.cache` children, project modules only), every support file that registered something last time or has no record, and every decorator-applying module ever seen; and returns it in its summary as `files`. `runCucumber` passes that set to `getSupportCodeLibrary` as `reevaluate`, and the mechanics are the loader's (see [Loading support code](#loading-support-code)): eviction from `require.cache`, ESM versioning, the registry cleared, the reload listeners run. Between `beginFile` and `endFile` the reloader records whether the file registered anything: a builder fingerprint difference (`builder-fingerprint.ts`, steps included) or a registration seen through `addRegistrationListener()`. `finish()` stores the observations of the files that were evaluated (a kept file's observation is empty and is not recorded over its previous one); `abort()` after a failed load forgets every file the run meant to evaluate, so the next run evaluates them again instead of trusting a module that may have thrown half way through.
+
+The ESM half of "load again" is `versionedUrl()` in `module-graph.ts`. Node's module map cannot be invalidated, so a versioned module is imported under `file:///…/x.ts?tsflow=<generation>`: `getSupportCodeLibrary` applies it to the support-file URLs it imports, and the esbuild loaders' in-thread `resolve` hook applies it to every resolution it returns (its own and `nextResolve`'s), so an unversioned parent that imports a versioned child also gets the new instance — which is why the reverse closure has to be versioned as a whole, since a kept parent is never re-resolved. The `load` hook judges extensions on the URL without its query (`withoutQuery()`) and loads and maps the module under the full URL, so `Callsite` resolution through `__CUCUMBER_TSFLOW_SOURCE_MAPS` still finds the map and `fileURLToPath` drops the query from reported filenames. Under `module.register()` the hook runs on another thread and sees none of this, so `SupportReloader.unsupportedReason()` reports the loader and the CLI loop falls back to spawning `cucumber-tsflow` with the same arguments plus `--no-watch` per run, watching only the feature and support files. `registerLoader()` deduplicates `module.register()` calls per process for the same reason it deduplicates `registerHooks()`: hooks stack.
+
+### Caches and the reload reset
+
+The process holds a number of caches, and a load after the first in one process (a watch-mode rerun, `reloadSupport()`) resets some and keeps the rest. The rule that decides, and that a new cache is judged by: a cache is **reset on reload when its key is a path or specifier whose meaning depends on the project's files**, because an edit can change what the key resolves to without changing the key; it is **kept when the key already determines the value** (content-addressed, a versioned URL, the library object it belongs to, a pure function of the key); and it is **kept on purpose when it holds configuration read once at startup**, which is why a change to `cucumber.json` or to the tsconfig `paths` the loaders resolve with needs a restart rather than a rerun.
+
+Reset on every load after the first, by the load path in `getSupportCodeLibrary` (see [Loading support code](#loading-support-code)):
+
+- `BindingRegistry.instance` (`clear()`), `stepPatternRegistrations` in `binding-decorator.ts` and CucumberJS's `supportCodeLibraryBuilder` (`reset()`): the library is what this load's files register.
+- `pathResolutionCache` and `extensionResolutionCache` in `loader-utils.mjs`, through `addReloadListener(clearResolutionCaches)` and `notifyReload()`: a bare specifier or an extensionless path can resolve to a different file once one is added or removed. A new resolution cache registers a reload listener the same way.
+- The `require.cache` entries and the ES module versions of the `reevaluate` set (`evictRequiredModules()`, `bumpModuleVersions()`): the mechanism of reloading, not a cache of tsflow's own.
+- With each evicted CommonJS module, the entries `@cspotcode/source-map-support` holds for it (`forgetSourceMap()` in `module-graph.ts`). ts-node installs that library for the CommonJS transpilers, and it keeps every parsed source map and the compiled content it came from in a store on `globalThis` (`Symbol.for('source-map-support/sharedData')`), keyed by the file's URL and never invalidated by the library itself; `Callsite` resolves CommonJS frames through its `wrapCallSite`, so without this a re-evaluated support file's decorators reported the previous version's lines in every message, report and error. The esbuild ESM loaders need nothing of the kind: their maps are keyed by the versioned URL.
+- Per run in watch mode, by `watchCucumber()`: the timing store (`resetTimings()`) and the transpile-cache counters (`resetTranspileCacheStats()`), so that each run reports itself.
+
+Kept for the life of the process because the key determines the value:
+
+- The on-disk stores: the transpile cache (content-addressed), and the selective-load index (every skipped file's record is validated against the recorded stamps before it is trusted).
+- `globalThis.__CUCUMBER_TSFLOW_SOURCE_MAPS` and `traceMaps` in `our-callsite.ts`: keyed by module URL including the `?tsflow=<n>` version, so a re-evaluated module is a new entry and the previous one is unreachable.
+- `stepRegExpCache` in `runtime/utils.ts` (step pattern to `RegExp`) and `cacheRoots` in `transpile-cache.ts` (working directory to cache root): pure functions of their keys.
+- `definitionIndexes` in `test-case-runner.ts`: a `WeakMap` keyed on the `SupportCodeLibrary`, and every run builds a new library.
+- `importEdges` and `moduleVersions` in `module-graph.ts`: the module graph itself. Edges are re-recorded whenever a module is re-resolved, which happens whenever it is re-evaluated, so a stale edge can only enlarge the dependent closure, never miss a dependent.
+
+Kept on purpose although an edit could invalidate them:
+
+- `tsconfigPaths` in `loader-utils.mjs`, `paths` in `tsnode-loader.mjs` and the alias regexes compiled from them: the tsconfig is read when the loader initializes.
+- `registeredSync` and `registeredAsync` in `register-loaders.ts`: hooks stack, so a loader is attached once per process whatever the run count.
+- `globalConfiguration` in `gherkin/configuration.ts`: set by `loadConfiguration`, which watch mode runs once.
 
 ## Formatters
 
@@ -215,7 +324,7 @@ Format aliases in configuration: `behave:path` maps to `@lynxwall/cucumber-tsflo
 
 ## CLI
 
-The CLI entry point is `bin/cucumber-tsflow.js`, which delegates to the `Cli` class.
+The CLI entry point is `bin/cucumber-tsflow.js`. Before requiring the library it prints a one-line bootstrap notice to stderr in `ansis.dim`, the phase-detail gray (`ansis` is required by the bin on its own for this; the library loads it moments later regardless), and sets `globalThis.__CUCUMBER_TSFLOW_BOOTSTRAP_ANNOUNCED`, which `lib/cli/run.ts` reads to print `cucumber-tsflow loaded in N ms.` on entry (`performance.now()`, the same figure as the `bootstrap` timing phase) before configuration loads; both lines are skipped for the informational switches (`--version`, `--help`, `--i18n-languages`, `--i18n-keywords`) and under `TSFLOW_THEME=off`, and neither appears for programmatic callers, who never go through the bin. It then delegates to the `Cli` class.
 
 `Cli` parses arguments via `ArgvParser` (built on `commander`) and adds custom options beyond CucumberJS:
 
@@ -223,23 +332,29 @@ The CLI entry point is `bin/cucumber-tsflow.js`, which delegates to the `Cli` cl
 - `--enable-vue-style` — compile Vue SFC `<style>` blocks
 - `--experimental-decorators` — enable legacy TypeScript decorators
 - `--transpiler <name>` — select transpiler backend
+- `--transpile-cache` / `--no-transpile-cache` — read and write the on-disk transpile cache, default on (see [Transpile cache](#transpile-cache))
+- `--selective-load` / `--no-selective-load` — on a filtered run, load only the support files the selected scenarios need, default off (see [Selective loading](#selective-loading))
+- `--watch` / `--no-watch` — stay resident and rerun on changes (see [Watch mode](#watch-mode))
+- `--parallel-load` — deprecated: accepted, hidden from `--help`, and ignored with a notice that names where it was set; the preload it enabled was removed
 
-After parsing, the CLI calls `loadConfiguration()` then `runCucumber()`.
+After parsing, the CLI calls `loadConfiguration()` then `runCucumber()`, or `watchCucumber()` when `watch` is set.
 
 ## API Layer
 
 The public programmatic API (`@lynxwall/cucumber-tsflow/api`) exposes:
 
 - `loadConfiguration()` — locates config file, merges profiles, configures transpiler selection, handles `--debug-file` feature matching, and sets up format aliases
-- `loadSupport()` — loads support code with optional parallel preload; also provides `reloadSupport()` for delta-aware module eviction
-- `runCucumber()` — the main execution entry point that orchestrates the full test run
-- `getSupportCodeLibrary()` — resets and builds the CucumberJS support code library from loaded step definitions
+- `loadSupport()` — loads support code; `reloadSupport(options, changedPaths)` beside it loads it again in a process that has loaded before, adding the changed modules and their dependents (`dependentProjectModules()`) to what `getSupportCodeLibrary` evaluates again
+- `runCucumber()` — the main execution entry point that orchestrates the full test run: parses features, plans and loads support code (selectively when `selectiveLoad` is on), then runs; an optional fourth `session` argument carries a `SupportReloader` for a resident process
+- `SupportReloader` — keeps support modules loaded across `runCucumber()` calls in one process and re-evaluates only what must run again (what `--watch` uses; see [Watch mode](#watch-mode))
+- `getSupportCodeLibrary()` — builds the CucumberJS support code library by evaluating the support files, the one loader every context uses (see [Loading support code](#loading-support-code)); accepts an `onFileLoaded` progress callback, a `SupportLoadRecorder` bracketed around each file, the `supportCodeIds` a parallel child must match and the `reevaluate` set a resident process decided
 
 ## Package Exports
 
 | Export Path | Purpose |
 | --- | --- |
-| `.` | Main entry (decorators, types, CucumberJS re-exports) |
+| `.` | Main entry: everything in `./bindings` plus the formatters, snippet syntax, `version` and the deprecated `Cli` (required lazily on first construction) |
+| `./bindings` | Decorators, context classes and CucumberJS support-code helpers only — the light import for step-definition files |
 | `./api` | Programmatic API |
 | `./behave` | Behave JSON formatter |
 | `./junitbamboo` | JUnit Bamboo formatter |
@@ -253,12 +368,18 @@ The public programmatic API (`@lynxwall/cucumber-tsflow/api`) exposes:
 | `./lib/transpilers/esm/*` | ESM loaders |
 | `./lib/*` | Internal CJS modules |
 
+`.`, `./bindings` and `./api` each pair a CJS build with a hand-written `.mjs` wrapper (`src/wrapper.mjs`, `src/bindings.mjs`, `src/api/wrapper.mjs`) that re-exports the CJS module's names for ESM consumers; `api/index.d.ts` and `bindings/index.d.ts` at the package root are stubs for TypeScript configurations that do not read `exports`.
+
 ## Monorepo Structure
 
 The project uses Yarn 3.5.0 workspaces:
 
 - `cucumber-tsflow/` — the library package (published as `@lynxwall/cucumber-tsflow`)
 - `cucumber-tsflow-specs/` — 8 private test workspace packages covering the Node/Vue × CJS/ESM × Standard/Experimental matrix
+- `docs/` — user documentation beyond the README (`performance-and-diagnostics.md`)
+- `scripts/` — `benchmark.mjs` (`yarn bench`, the startup phases of a spec workspace over several runs) and `smoke-test-tarball.mjs` (`yarn smoke:tarball`, the packed tarball installed and run in a fresh CommonJS and a fresh ESM project)
+
+The library's build (`yarn build`) regenerates `src/version.ts`, compiles with `tsc --build tsconfig.node.json`, copies the hand-written `.mjs` files into `lib/`, and copies `README.md`, `CHANGELOG.md` and `LICENSE` from the repository root into `cucumber-tsflow/`, where the package's `files` list picks them up; the copies are committed so that the package directory is always publishable, and the root files are the ones to edit.
 
 ### Test Workspaces
 

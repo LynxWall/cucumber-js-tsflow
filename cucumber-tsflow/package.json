@@ -1,7 +1,7 @@
 {
 	"name": "@lynxwall/cucumber-tsflow",
 	"description": "Provides 'specflow' like bindings for CucumberJS 12.7.0 in TypeScript 5.9+.",
-	"version": "7.7.2",
+	"version": "8.0.0",
 	"author": "Lonnie Wall <lynxdev@lynxwall.com>",
 	"license": "MIT",
 	"keywords": [
@@ -35,6 +35,11 @@
 			"import": "./lib/api/wrapper.mjs",
 			"require": "./lib/api/index.js"
 		},
+		"./bindings": {
+			"types": "./lib/bindings.d.ts",
+			"import": "./lib/bindings.mjs",
+			"require": "./lib/bindings.js"
+		},
 		"./lib/*": {
 			"require": "./lib/*.js"
 		},
@@ -51,7 +56,6 @@
 		"./lib/transpilers/esm/tsnode-loader": "./lib/transpilers/esm/tsnode-loader.mjs",
 		"./lib/transpilers/esm/esnode-loader": "./lib/transpilers/esm/esnode-loader.mjs",
 		"./lib/transpilers/esm/esvue-loader": "./lib/transpilers/esm/esvue-loader.mjs",
-		"./lib/transpilers/esm/esbuild-transpiler": "./lib/transpilers/esm/esbuild-transpiler.mjs",
 		"./lib/transpilers/esm/vue-jsdom-setup": "./lib/transpilers/esm/vue-jsdom-setup.mjs",
 		"./package.json": "./package.json"
 	},
@@ -61,7 +65,11 @@
 	},
 	"dependencies": {
 		"@cucumber/cucumber": "~12.7.0",
+		"@cucumber/cucumber-expressions": "19.0.0",
+		"@cucumber/gherkin": "38.0.0",
+		"@cucumber/messages": "32.0.1",
 		"@jeanbenitez/logical-expression-parser": "~1.0.0",
+		"@jridgewell/trace-mapping": "~0.3.31",
 		"@types/node": "~22.13.10",
 		"ansis": "~3.17.0",
 		"commander": "^10.0.1",
@@ -69,36 +77,46 @@
 		"esbuild": "~0.25.10",
 		"glob": "~11.0.3",
 		"hash-sum": "~2.0.0",
-		"import-sync": "^2.2.3",
 		"jsdom": "~26.0.0",
 		"jsdom-global": "~3.0.2",
 		"lodash.merge": "~4.6.2",
 		"polyfill-symbol-metadata": "^0.0.2",
 		"require-extension-hooks": "~0.3.3",
-		"short-uuid": "~5.2.0",
 		"source-map-support": "~0.5.21",
 		"ts-node-maintained": "~10.9.6",
 		"tsconfig-paths": "~4.2.0",
-		"tslib": "2.8.1",
-		"typescript": "~5.9.2"
+		"typescript": "~5.9.2",
+		"xmlbuilder": "~15.1.1"
+	},
+	"peerDependencies": {
+		"vue": ">=3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vue": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
+		"@types/chai": "~4.3.20",
 		"@types/debug": "~4.1.12",
 		"@types/hash-sum": "~1.0.2",
 		"@types/lodash.merge": "~4.6.9",
 		"@types/source-map-support": "~0.5.10",
+		"chai": "~5.2.0",
 		"genversion": "~3.2.0",
 		"shx": "0.4.0"
 	},
 	"scripts": {
-		"build": "genversion --es6 src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs && yarn build:transpiler",
-		"build:transpiler": "node src/scripts/build-esm-transpiler-cjs.js",
+		"build": "shx rm -rf lib && genversion --es6 --semi src/version.ts && tsc --build tsconfig.node.json && yarn build:copy-mjs && yarn build:copy-docs",
+		"build:copy-docs": "shx cp ../README.md ../CHANGELOG.md ../LICENSE .",
 		"build:copy-mjs": "yarn copy:root-mjs && yarn copy:api-mjs && yarn copy:transpiler-mjs && yarn copy:utils-mjs",
 		"copy:root-mjs": "shx cp src/*.mjs lib/",
 		"copy:api-mjs": "shx cp src/api/*.mjs lib/api/",
 		"copy:transpiler-mjs": "shx mkdir -p lib/transpilers/esm && shx cp src/transpilers/esm/*.mjs lib/transpilers/esm/",
 		"copy:utils-mjs": "shx cp src/utils/*.mjs lib/utils/",
-		"build:watch": "tsc --build tsconfig.node.json --watch"
+		"build:watch": "tsc --build tsconfig.node.json --watch",
+		"typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p test/tsconfig.json",
+		"test:unit": "node --test \"test/**/*.test.ts\""
 	},
 	"bin": "bin/cucumber-tsflow.js",
 	"files": [
@@ -107,6 +125,8 @@
 		"README.md",
 		"api/",
 		"bin/",
-		"lib/"
+		"bindings/",
+		"lib/",
+		"skills/"
 	]
 }

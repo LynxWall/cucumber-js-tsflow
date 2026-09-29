@@ -15,9 +15,7 @@ How to use the new features: [Performance and diagnostics](https://github.com/Ly
 
 ### Breaking changes
 
-Coming from 6.x, read the [7.0.0](#700) entry first, because 7.0 was a breaking release of its own: standard (TC39) decorators became the default, so a suite written with TypeScript's legacy decorators needs `experimentalDecorators: true`; Node 22 became the minimum; and cucumber-js moved to 11, whose own breaking changes apply.
-
-Most 7.x suites upgrade without changes. These are the differences you may notice:
+Most suites upgrade without changes. These are the differences you may notice:
 
 - **A `BeforeAll` or `AfterAll` hook that throws fails the run**, as in CucumberJS: the error is reported with the hook's location and the run exits with code 1. Before, the error was swallowed and every scenario ran under a passing summary. If a pipeline turns red after upgrading, check these hooks first.
 - **cucumber-tsflow's own output goes to stderr**: the configuration and mode lines, the new startup progress, deprecation notices and watch-mode status lines. stdout carries only formatter output, so it can be piped or parsed.

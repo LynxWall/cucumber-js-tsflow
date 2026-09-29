@@ -18,9 +18,7 @@ A major release for speed. On a large suite most of a run used to be startup, an
 
 ### Upgrading from 7.x
 
-**Coming from 6.x?** Read the [7.0.0 notes](CHANGELOG.md#700) first, because 7.0 was a breaking release of its own: standard (TC39) decorators became the default, so a suite written with TypeScript's legacy decorators needs `experimentalDecorators: true`; Node 22 became the minimum; and cucumber-js moved to 11, whose own breaking changes apply.
-
-Most 7.x suites upgrade without changes. What you may notice:
+Most suites upgrade without changes. What you may notice:
 
 - **A `BeforeAll` or `AfterAll` hook that throws now fails the run**, as it does in CucumberJS. Before 8.0 the error was swallowed and every scenario ran; if a pipeline turns red after upgrading, check these hooks first.
 - **cucumber-tsflow's own output is on stderr**: the configuration and mode lines, the new startup progress and any notices. stdout carries only formatter output. `TSFLOW_THEME=off` turns the startup progress off.

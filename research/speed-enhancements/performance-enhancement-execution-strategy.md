@@ -37,12 +37,23 @@ this" and "what did that measure", not "what do I do next".
 
 Updated at every hand-off, so that this block is always current.
 
+- **Phase 13 scoped, folded into pull request #68 (2026-09-29).** Two decisions, taken with the owner at the
+  start of the session: Phase 13 lands inside #68, before it goes to Lonnie, rather than as a follow-up after
+  the tag, so he reviews one coherent diff instead of two; and the VS Code extension is out of scope entirely,
+  not a later-major item — the owner opened a separate JIRA ticket for it on its own branch. The revised scope
+  (build time, package size, dependency health as a standing check) and the two decisions are in
+  [phase-13-plan.md](plan/phase-13-plan.md). The Phase 13 paragraph below and the pull request description are
+  updated to match; pull request #68 stays in draft with an empty description until Phase 13's commits join it.
+  Also fixed this session: the local checkout had drifted one commit behind `origin/2026-09-speed-enhancements`
+  (a same-timestamp amend trimming four "coming from 6.x" lines from `CHANGELOG.md`/`README.md`, pushed
+  2026-09-25 after this checkout last pulled); reconciled with a merge commit rather than a reset, so nothing
+  local was discarded.
 - **Release review (2026-09-25):** after 12f closed, the owner asked for an outside-in review as the maintainer
   and a long-time user would read the branch. It made the release **8.0.0, a major version** (all ten manifests,
   the CHANGELOG, the README section and the guide say so), removed Node's compile cache, moved cucumber-tsflow's
   own output to stderr, deleted the stale extensionless `bin/cucumber-tsflow`, rewrote the CHANGELOG for users
   (the engineering list is now [detailed-changes.md](detailed-changes.md)), reorganized this folder, and measured
-  the full UIS Tools suite on 7.5.5 against the release for the first time: about 15 minutes against 4½ to 6
+  the full UIS Tools suite on 7.5.5 against the release for the first time: about 15 minutes against 4.5 to 6
   ([measurements/uis-tools-7.5.5-vs-8.0.0.md](measurements/uis-tools-7.5.5-vs-8.0.0.md)). The record is the
   [Release review](hand-offs/stage-12f-hand-off.md#release-review-2026-09-25) section of the 12f hand-off, whose
   pull request description is rewritten for 8.0.0. The minor-release rule below is replaced by it. The
@@ -72,13 +83,15 @@ Updated at every hand-off, so that this block is always current.
   hand-off commits. Everything is pushed. The
   commit workflow (small commits inside a stage, one squashed commit before the hand-off and before any push) is
   recorded at the end of the 12c hand-off.
-- **First act of the next session:** if the owner has not yet done their part, it is theirs: read the release
-  review's changes, post the rewritten pull request description on #68 and take it out of draft (the 12f
-  hand-off's closing notes list the rest in order). Otherwise, when 8.0.0 is tagged and published, tick section E of the checklist
-  with the registry check, then start Phase 13 by defining its scope properly (build time, package size, dependency health as a standing check, with the items 12e and 12f
-  collected). Check `ListAgents` for a peer session before editing.
-- **Read next:** [stage-12f-hand-off.md](hand-offs/stage-12f-hand-off.md) (its closing notes first, then
-  the open boxes in sections A, B, D and E), then the Phase 13 paragraph below.
+- **First act of the next session:** continue Phase 13 from [phase-13-plan.md](plan/phase-13-plan.md) — take the
+  build-time and package-size baseline, then work the dependency-health list (ESLint 10 migration first, since
+  ESLint 9 is deprecated on the registry). The owner's reading of the guide, README section and skill (12f's
+  open box) can happen alongside it. When Phase 13's commits are on the branch, write the pull request
+  description (the 12f hand-off's draft, updated for what Phase 13 changed) and take #68 out of draft. Check
+  `ListAgents` for a peer session before editing.
+- **Read next:** [phase-13-plan.md](plan/phase-13-plan.md), then [stage-12f-hand-off.md](hand-offs/stage-12f-hand-off.md)
+  (its closing notes first, then the open boxes in sections A and D) for how the release itself is tagged and
+  published once Lonnie merges.
 
 ## Phased plan
 
@@ -181,29 +194,30 @@ tests have to exist before the review's refactors land, not a phase after them. 
 start of the phase, the coverage inventory, the review findings list and the split into stages 12a–12f, each with its
 own gate and hand-off, are in [Phase 12 baseline](plan/phase-12-plan.md#phase-12-baseline).
 
-**Phase 13: build time and package size — PLANNED (added 2026-09-24).** Added by the owner during 12d, after
-Phase 12 was already the release gate: "I want to look at the build time and the build size for cucumber-tsflow.
-I wonder if there's ways we can improve it." Not an item from the table, and not about a consumer's test run,
-which Phases 1 to 11 covered; this is about the package itself. Scope, to be defined properly when the phase
-starts: (1) **build time**, what `yarn build` costs (`genversion`, `tsc --build`, the `.mjs` copies) and what a
-watch build costs per change, measured before anything is changed; (2) **package size**, the packed tarball's
-bytes and file count (12e's packed-tarball smoke test produces the tarball), the module count and bytes a
-consumer loads for `import { binding }` and for the CLI, and the runtime dependency tree's install footprint,
+**Phase 13: build time, package size and dependency health — IN PROGRESS (scoped 2026-09-29).** Added by the owner
+during 12d, after Phase 12 was already the release gate: "I want to look at the build time and the build size for
+cucumber-tsflow. I wonder if there's ways we can improve it." Not an item from the table, and not about a
+consumer's test run, which Phases 1 to 11 covered; this is about the package itself. Scoped properly at the start
+of the session in [phase-13-plan.md](plan/phase-13-plan.md), with two decisions: it **lands inside pull request
+#68, before it goes to Lonnie**, rather than after the tag as first assumed, so he reviews one diff rather than
+two; and **the VS Code extension is out of scope entirely**, not a later-major item as the release review first
+listed it — the owner opened a separate JIRA ticket for it on its own branch, a different project with its own
+release cycle. Scope: (1) **build time**, what `yarn build` costs (`genversion`, `tsc --build`, the `.mjs` copies)
+and what a watch build costs per change, measured before anything is changed; (2) **package size**, the packed
+tarball's bytes and file count (12e's packed-tarball smoke test produces the tarball), the module count and bytes
+a consumer loads for `import { binding }` and for the CLI, and the runtime dependency tree's install footprint,
 with candidates such as declaration-only files, unused exports, and dependencies that could be optional; (3)
 **dependency health as a standing check**, which 12d started: `yarn npm audit` clean, `yarn install` without
 warnings (ESLint 9 is deprecated on the registry; the ESLint 10 migration is the first item), no undeclared
-imports, no unused declared dependencies, the GitHub workflows on current action versions (`release.yml`, the
-publish path 12f did not use, still runs `actions/checkout@v2` and `actions/setup-node@v3`, whose runtime GitHub
-has retired; update it to the `v4` actions or delete it), and the package's committed `README.md`, `CHANGELOG.md`
-and `LICENSE` copies identical to the root files after `yarn build` (12f found the CHANGELOG copy one entry behind
-after a follow-up commit edited the root without rebuilding), each re-checked with a script that can run in CI. Runs after 12f
-because it changes what is measured and shipped, and the release should go out first from a tree the matrix and
-the UIS measurement have already judged. Added by the release review (2026-09-25): (4) **the VS Code extension**,
-broken for some time and not updated for 8.0's loading model (`loadSupport` and `reloadSupport` start from an
-empty registry); the owner tracks it as its own item; (5) **the four `@cucumber/*` dependency pins** checked
-against the versions `@cucumber/cucumber` pins, as part of the standing check; (6) **for a later major**, closing
-the `./lib/*` wildcard export (the library resolves its own transpilers through it, so explicit exports or a new
-resolution path come first) and removing `parallelLoad`, which 8.0 keeps accepted and ignored.
+imports, no unused declared dependencies, the four `@cucumber/*` dependency pins checked against the versions
+`@cucumber/cucumber` itself pins, the GitHub workflows on current action versions (`release.yml`, the publish path
+12f did not use, still runs `actions/checkout@v2` and `actions/setup-node@v3`, whose runtime GitHub has retired;
+update it to the `v4` actions or delete it), and the package's committed `README.md`, `CHANGELOG.md` and `LICENSE`
+copies identical to the root files after `yarn build` (12f found the CHANGELOG copy one entry behind after a
+follow-up commit edited the root without rebuilding), each re-checked with a script that can run in CI. **For a
+later major, unaffected by this phase:** closing the `./lib/*` wildcard export (the library resolves its own
+transpilers through it, so explicit exports or a new resolution path come first) and removing `parallelLoad`,
+which 8.0 keeps accepted and ignored.
 
 ## Document map
 
@@ -232,6 +246,7 @@ this map.
 | [stage-12e-hand-off.md](hand-offs/stage-12e-hand-off.md) | Documentation and packaging: the guide, the README, the package copies and the clean build, the two scripts, the skill check and the UIS link, the packaging findings (`es-node-esm` without `vue`, CHANGELOG and LICENSE, stale `lib/`), boxes for the 12f checklist | A packaging or documentation question |
 | [stage-12f-hand-off.md](hand-offs/stage-12f-hand-off.md) | Release: the release path (`publish.yml` on a `v*` tag; why not `release.yml`), the checklist with its boxes assigned to the session, the owner and the maintainer, the version-decision inputs, the state of pull request #68 | Continuing 12f; how 8.0.0 is tagged and published; what the owner and Lonnie each do; the release review that made it 8.0.0 |
 | [uis-tools-7.5.5-vs-8.0.0.md](measurements/uis-tools-7.5.5-vs-8.0.0.md) | The full UIS Tools suite on 7.5.5 against the release: every run, the clean and disturbed ones, where the time went | The number to quote for the release; how to repeat it |
+| [phase-13-plan.md](plan/phase-13-plan.md) | Build time, package size, dependency health: the two scoping decisions (lands inside #68; VS Code extension out of scope), the scope, the baseline to take first, exit criteria | Starting or continuing Phase 13; why it changed shape from the plan first written in 12d |
 
 Related documents outside those folders: [README.md](README.md) (the project overview),
 [decisions.md](decisions.md) (the durable design decisions, condensed),

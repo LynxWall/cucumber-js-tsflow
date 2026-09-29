@@ -10,7 +10,7 @@ The goal was the time cucumber-tsflow spends before the first scenario of a larg
 from UIS Tools, the largest cucumber-tsflow suite at JHU UIS (about 1,600 scenarios, Vue 3, `es-vue-esm`), the
 reference suite for every measurement. On that suite:
 
-- The full suite (1,624 scenarios) runs in 4½ to 6 minutes, against about 15 minutes on 7.5.5, the version the
+- The full suite (1,624 scenarios) runs in 4.5 to 6 minutes, against about 15 minutes on 7.5.5, the version the
   team runs; the wait before the first scenario went from about 6 minutes to 15 to 25 seconds
   ([measurements/uis-tools-7.5.5-vs-8.0.0.md](measurements/uis-tools-7.5.5-vs-8.0.0.md)).
 
@@ -33,7 +33,7 @@ Warm, against the 7.7.2 the branch was cut from:
 | [decisions.md](decisions.md) | The durable design decisions, condensed: the problem, the decision, the evidence and the consequences of each |
 | [detailed-changes.md](detailed-changes.md) | The engineering-level list of what changed on the branch |
 | [analysis/](analysis/) | The three investigations that started the work, the two reviews that merged them into one worklist of 25 items, and the Phase 4 write-up of the jsdom finding |
-| [plan/](plan/) | `ratings.md` (every worklist item rated for impact and complexity, and re-rated after Phase 5) and `phase-12-plan.md` (the review and release phase) |
+| [plan/](plan/) | `ratings.md` (every worklist item rated for impact and complexity, and re-rated after Phase 5), `phase-12-plan.md` (the review and release phase) and `phase-13-plan.md` (build time, package size, dependency health) |
 | [hand-offs/](hand-offs/) | One document per phase (1 to 11) and per stage of Phase 12 (12a to 12f), written at the end of each session: the state of the tree, what landed, what was measured, and notes for the next session |
 | [testing/](testing/) | How the local build was linked into UIS Tools, run, timed and profiled |
 | [measurements/](measurements/) | The full UIS Tools suite on 7.5.5 against the release, taken in the release review |

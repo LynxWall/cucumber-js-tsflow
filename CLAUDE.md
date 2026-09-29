@@ -34,6 +34,7 @@ All commands run from the repo root unless noted.
 | Full test matrix (what CI runs) | `yarn test:all` |
 | Startup benchmark of a spec workspace (`--workspace`, `--runs`, `--cold`, `--report`) | `yarn bench` |
 | Packed-tarball smoke test (pack, install into fresh CJS and ESM projects, run a feature, type-check) | `yarn smoke:tarball` |
+| Check the committed package copies of README/CHANGELOG/LICENSE against the root files (CI runs it before the build) | `yarn check:package-docs` |
 
 There is **no root `yarn test` script**. The tests are the unit tests under `cucumber-tsflow/test/` (Node's built-in runner with chai, importing the built `lib/`) and the spec workspaces, run through the built CLI, so **`yarn build` must succeed before any test command**.
 

@@ -77,7 +77,7 @@ export const loadConfiguration = async (
 		throw new Error(`Failed to locate configuration file: ${error.message}`, { cause: error });
 	}
 
-	let msg = '';
+	let msg: string;
 	if (configFile) {
 		msg = `Loading configuration from "${configFile}".`;
 	} else if (configFile === false) {

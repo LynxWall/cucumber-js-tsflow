@@ -127,6 +127,8 @@
 		"bin/",
 		"bindings/",
 		"lib/",
-		"skills/"
+		"skills/",
+		"!lib/*.tsbuildinfo",
+		"!src/transpilers/esm/README.md"
 	]
 }

@@ -37,6 +37,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - name: Install packages
         run: yarn
+      # Before the build, which would regenerate the copies this compares
+      - name: Check committed package doc copies
+        run: yarn check:package-docs
       - name: Build
         run: yarn build
       - name: Type-check

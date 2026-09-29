@@ -217,7 +217,9 @@ copies identical to the root files after `yarn build` (12f found the CHANGELOG c
 follow-up commit edited the root without rebuilding), each re-checked with a script that can run in CI. **For a
 later major, unaffected by this phase:** closing the `./lib/*` wildcard export (the library resolves its own
 transpilers through it, so explicit exports or a new resolution path come first) and removing `parallelLoad`,
-which 8.0 keeps accepted and ignored.
+which 8.0 keeps accepted and ignored. **Raised and held off (2026-09-29):** migrating the monorepo's own tooling
+from Yarn to pnpm — the owner floated it while this phase was being scoped, then chose to hold off ("it could be
+its own ticket one day"); the lift is recorded in [phase-13-plan.md](plan/phase-13-plan.md#scope), not started.
 
 ## Document map
 

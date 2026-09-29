@@ -71,6 +71,18 @@ entirely rather than deferred; the two later-major items are untouched by this p
 - The VS Code extension — separate JIRA ticket, separate branch, a different project. See the decision above.
 - Closing the `./lib/*` wildcard export and removing `parallelLoad`: both stay "for a later major" per the
   release review, untouched by this pass.
+- **Migrating the monorepo's own tooling from Yarn to pnpm.** Raised by the owner while scoping this phase,
+  then held off (2026-09-29): "we can hold off on the yarn stuff... it could be its own ticket one day." Not
+  started, not a Phase 13 item. The lift, if it is ever picked up: `.yarnrc.yml`/`.yarn/`/`yarn.lock` replaced by
+  `pnpm-workspace.yaml`/`.npmrc`/`pnpm-lock.yaml` and the `packageManager` field; the root `package.json`'s roughly
+  thirty `yarn workspace <name> <script>` invocations rewritten to pnpm's `--filter` syntax, not just renamed;
+  `scripts/smoke-test-tarball.mjs`, which shells out to `yarn workspace @lynxwall/cucumber-tsflow pack` and checks
+  the tarball for a `.yarn` directory; `ci.yml`, `publish.yml` and `release.yml`, which all run
+  `yarn`/`yarn build`/`yarn test:all`; and roughly forty files of documentation, led by CLAUDE.md's commands
+  table. The one argument for it: pnpm's stricter `node_modules` layout would re-verify the phantom-dependency
+  fixes 12d already made. This is not a Phase 13 problem to solve — `yarn npm audit` is already clean — and
+  a package-manager migration is a different risk profile from anything else in this phase, so it belongs in its
+  own follow-up, not folded into what is about to go to Lonnie.
 
 ## Before changing anything
 

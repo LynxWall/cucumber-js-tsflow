@@ -82,6 +82,19 @@ sed -i 's#"link:[^"]*cucumber-tsflow"#"link:<relative-path>"#' package.json
 corepack pnpm install
 ```
 
+**After every `pnpm install` in the consumer, check this repo's skill folder.** A consumer whose
+`prepare` script runs skills-npm (uis-building-blocks does, with `--force`) links the shipped skill at
+`cucumber-tsflow/skills/cucumber-tsflow` into its agent folders as a directory junction and prunes stale
+entries with a recursive delete, which on Windows follows the junction and deletes the source files here.
+From this repo root:
+
+```sh
+git status --short -- cucumber-tsflow/skills                      # must print nothing
+git checkout -- cucumber-tsflow/skills/cucumber-tsflow/references/  # if it showed deletions
+```
+
+Treat a deletion there as damage from the install, never as a change to keep.
+
 `pnpm-workspace.yaml` policies seen on real consumers — `trustPolicy: no-downgrade`,
 `blockExoticSubdeps: true`, `minimumReleaseAge` — do not block a `link:` install. If a future one does,
 the escape hatch is a `trustPolicyExclude` entry for `@lynxwall/cucumber-tsflow@<version>`.
@@ -134,7 +147,7 @@ From the consumer directory:
 1. `git diff package.json pnpm-lock.yaml` — inspect. If `package.json` carries unrelated local edits, revert
    only the `cucumber-tsflow` line (put the original range back by hand) instead of checking the file out.
 2. Otherwise `git checkout -- package.json pnpm-lock.yaml`.
-3. `corepack pnpm install`.
+3. `corepack pnpm install`, then the skill-folder check from step 4 in this repo.
 4. Verify `node_modules/@lynxwall/cucumber-tsflow` is a real directory again and prints the registry
    version.
 

@@ -89,9 +89,14 @@ export class SupportReloader implements SupportLoadRecorder {
 	 */
 	static unsupportedReason(coordinates: ISupportCodeCoordinates): string | undefined {
 		const asyncLoader = coordinates.loaders.find(loader => loaderHooksMode(loader) === 'async');
-		return asyncLoader
-			? `the ${describeTranspiler([], [asyncLoader]) ?? asyncLoader} loader runs on Node's loader hooks thread, where modules cannot be reloaded in place`
-			: undefined;
+		if (asyncLoader) {
+			return `the ${describeTranspiler([], [asyncLoader]) ?? asyncLoader} loader runs on Node's loader hooks thread, where modules cannot be reloaded in place`;
+		}
+		// Without a loader of ours no resolve hook versions the imports, so a kept module would keep its old dependencies
+		if (coordinates.importPaths.length > 0 && coordinates.loaders.length === 0) {
+			return 'the import paths load without a cucumber-tsflow loader, so modules cannot be reloaded in place';
+		}
+		return undefined;
 	}
 
 	/**

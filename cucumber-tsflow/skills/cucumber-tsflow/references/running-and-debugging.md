@@ -19,7 +19,8 @@ npx cucumber-tsflow -p default --debug-file features/step_definitions/cart-steps
 editor's "current file" variable.
 
 Exit codes: `0` all passed; `1` invalid configuration or an unhandled error; `2` pending, undefined, unknown or
-ambiguous steps but nothing failed; `3` at least one step failed. A package-manager script may report its own
+ambiguous steps but nothing failed; `3` at least one step failed. A `@beforeAll`/`@afterAll` hook that throws
+ends the run with `1` in serial mode and `2` in parallel mode. A package-manager script may report its own
 code; call `npx cucumber-tsflow` directly to see the real one.
 
 ## Watch mode
@@ -29,7 +30,8 @@ npx cucumber-tsflow -p default --name "checks out" --watch
 ```
 
 - Runs once, then reruns when a feature file, a support file or a module the support code imported changes, or
-  when Enter is pressed. `q` or Ctrl-C quits. Command-line filters apply to every rerun.
+  when Enter is pressed. `q` quits once the current run is over; Ctrl-C quits at once, abandoning a run in
+  progress. Command-line filters apply to every rerun.
 - A rerun keeps unchanged modules loaded (frameworks, jsdom, Vue, shared helpers) and evaluates again only the
   support files that registered something, the changed files and everything that imports them. That is what
   makes it fast, and it has two consequences:
@@ -38,8 +40,9 @@ npx cucumber-tsflow -p default --name "checks out" --watch
   - Anything a run leaves behind (mounted components, registered spies, store contents) accumulates. The status
     line after each run shows the heap; if it climbs, add clean-up to an `@after` hook.
 - Use watch mode for a filtered inner loop. Run the full suite in a fresh process.
-- With `ts-node-esm`, `ts-vue-esm`, a third-party loader, `TSFLOW_ESM_HOOKS=async`, or `es-*-esm` on Node older
-  than 22.15, every run is a fresh child process; the line under the `Watch mode:` banner says so.
+- With `ts-node-esm`, `ts-vue-esm`, a third-party loader, `TSFLOW_ESM_HOOKS=async`, `es-*-esm` on a Node without
+  `module.registerHooks()` (before 22.15 / 23.5), or `import` paths with no cucumber-tsflow loader, every run is a
+  fresh child process; the line under the `Watch mode:` banner says so.
 
 ## Selective loading
 
@@ -50,9 +53,10 @@ run with it on loads everything and writes an index.
 
 It assumes a file that defines only steps has no other effect when imported. Keep side effects (global patches,
 plugin registration) in files without step definitions, or in hooks. It is off for `ts-node-esm`, `ts-vue-esm`,
-third-party loaders, `TSFLOW_ESM_HOOKS=async`, and `es-*-esm` on Node older than 22.15 (the loader then runs on
-Node's hooks thread, where imports cannot be tracked). The load-phase progress line reports how many files were
-skipped.
+third-party loaders, `TSFLOW_ESM_HOOKS=async`, and `es-*-esm` on a Node without `module.registerHooks()` (before
+22.15 / 23.5), where the loader runs on Node's hooks thread and imports cannot be tracked, and for `import` paths
+with no cucumber-tsflow loader, where nothing records them. The load-phase progress line reports how many files
+were skipped.
 
 ## Caches
 

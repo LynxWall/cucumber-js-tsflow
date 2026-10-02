@@ -11,6 +11,7 @@
 import {
 	Loader,
 	transformSync,
+	formatMessagesSync,
 	CommonOptions,
 	TransformOptions,
 	BuildOptions,
@@ -18,8 +19,11 @@ import {
 } from 'esbuild';
 import path from 'path';
 import { experimentalDecorators } from '../utils/decorator-mode';
+import { createLogger, isVerbose } from '../utils/tsflow-logger';
 import { startTimer, recordFile } from '../utils/tsflow-timing';
 import { withTranspileCache } from './transpile-cache';
+
+const logger = createLogger('esbuild');
 
 export type TranspileOptions = {
 	esbuild?: CommonOptions & TransformOptions & BuildOptions;
@@ -105,6 +109,15 @@ export function runEsbuild(code: string, filename: string, transformOptions: Tra
 	const start = startTimer();
 	const ret = transformSync(code, transformOptions);
 	recordFile('transpile', filename, start);
+	// esbuild runs with logLevel 'silent' so that its diagnostics never land on the open progress line: an error
+	// is reported once by the CLI, and warnings (a duplicate object key, an ignored tsconfig field) are kept for
+	// TSFLOW_VERBOSE
+	if (ret.warnings.length > 0 && isVerbose()) {
+		logger.checkpoint('esbuild warnings', {
+			filename,
+			warnings: formatMessagesSync(ret.warnings, { kind: 'warning' })
+		});
+	}
 	return { output: ret.code, sourceMap: ret.map };
 }
 

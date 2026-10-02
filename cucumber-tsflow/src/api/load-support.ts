@@ -7,7 +7,7 @@ import { initializeForLoadSupport } from '@cucumber/cucumber/lib/api/plugins';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { setExperimentalDecorators } from '../utils/decorator-mode';
 import { dependentProjectModules } from '../utils/module-graph';
-import { canonicalPath } from '../utils/paths';
+import { canonicalFromFrameFile, canonicalPath } from '../utils/paths';
 import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 /**
@@ -39,11 +39,11 @@ export async function loadSupport(
 
 /**
  * Load the support code again in a process that has loaded it before, after `changedPaths` changed on disk.
- * Every support file evaluates again, as does each changed module and every project module that imports or
- * requires one, directly or through others, so that no re-evaluated file keeps a stale dependency; everything
- * else stays loaded, and unchanged files come back from the transpile caches rather than being compiled
- * again. With no changed paths this is `loadSupport`. Intended for a persistent worker process that runs
- * more than once, such as the companion VS Code extension.
+ * Every support file evaluates again, as does every module that declared bindings on the previous load, each
+ * changed module and every project module that imports or requires one, directly or through others, so that no
+ * re-evaluated file keeps a stale dependency; everything else stays loaded, and unchanged files come back from
+ * the transpile caches rather than being compiled again. With no changed paths this is `loadSupport`. Intended
+ * for a persistent worker process that runs more than once, such as the companion VS Code extension.
  *
  * @public
  * @param options - The same options used for the original `loadSupport` call
@@ -83,7 +83,14 @@ async function loadSupportCode(
 
 	// In a process that has loaded before, every support file evaluates again (a cached module registers
 	// nothing), and so do the changed modules and every project module that depends on one of them
-	const reevaluate = new Set<string>([...requirePaths, ...importPaths].map(canonicalPath));
+	const supportKeys = new Set<string>([...requirePaths, ...importPaths].map(canonicalPath));
+	const reevaluate = new Set<string>(supportKeys);
+	// A module outside the globs that applied decorators on the previous load (a helper a support file imports)
+	// holds bindings too; the load clears the registry, so it must evaluate again to register them
+	for (const raw of BindingRegistry.instance.getBindingSourceFiles()) {
+		const key = canonicalFromFrameFile(raw);
+		if (key && !supportKeys.has(key)) reevaluate.add(key);
+	}
 	if (changedPaths.length > 0) {
 		const changed = new Set(changedPaths.map(canonicalPath));
 		for (const file of changed) reevaluate.add(file);

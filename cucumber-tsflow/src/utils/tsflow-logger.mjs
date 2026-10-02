@@ -25,9 +25,10 @@ export function createLogger(namespace) {
 		checkpoint: (stage, detail) => {
 			if (!VERBOSE) return;
 
-			console.log(`${prefix} ${stage}`);
+			// On stderr with the rest of cucumber-tsflow's own output: stdout carries only formatter output
+			console.error(`${prefix} ${stage}`);
 			if (detail !== undefined) {
-				console.log(`${prefix}   └─`, detail);
+				console.error(`${prefix}   └─`, detail);
 			}
 		},
 

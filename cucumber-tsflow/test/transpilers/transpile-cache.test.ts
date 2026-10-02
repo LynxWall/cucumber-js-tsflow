@@ -14,7 +14,8 @@ const {
 	getTranspileCacheDirectory,
 	resetTranspileCacheDirectory,
 	pruneTranspileCache,
-	isTranspileCacheEnabled
+	isTranspileCacheEnabled,
+	PENDING_PRUNE_MARKER
 } = cache;
 
 const root = temporaryDirectory('transpile-cache');
@@ -130,13 +131,49 @@ describe('withTranspileCache', () => {
 });
 
 describe('pruneTranspileCache', () => {
-	it('does nothing unless this thread wrote an entry', () => {
+	it('does nothing on a warm run: no entry written in this thread and no marker left by another', () => {
 		const directory = path.join(root, 'prune-warm');
 		useStore(directory);
+		lookup();
+		pruneTranspileCache(Number.MAX_SAFE_INTEGER);
 		lookup();
 		resetTranspileCacheStats();
 		pruneTranspileCache(0);
 		expect(entries(directory)).to.have.length(1);
+	});
+
+	it('leaves the pending-prune marker after writing an entry, and the sweep removes it', () => {
+		const directory = path.join(root, 'prune-marker-left');
+		const marker = path.join(directory, PENDING_PRUNE_MARKER);
+		useStore(directory);
+		lookup();
+		expect(existsSync(marker)).to.equal(true);
+		pruneTranspileCache(Number.MAX_SAFE_INTEGER);
+		expect(existsSync(marker)).to.equal(false);
+		// A hit writes nothing and leaves no marker
+		lookup();
+		expect(existsSync(marker)).to.equal(false);
+	});
+
+	it('sweeps when another thread or process wrote the entries and left the marker, with no writes of its own', () => {
+		// The loader hooks thread (ts-vue-esm, TSFLOW_ESM_HOOKS=async) and parallel children write entries this
+		// thread never counts; the marker they leave is what tells it to sweep
+		const directory = path.join(root, 'prune-marker');
+		useStore(directory);
+		mkdirSync(directory, { recursive: true });
+		const files = ['a', 'b', 'c'].map(name => path.join(directory, `${name}.json`));
+		const now = Date.now() / 1000;
+		files.forEach((file, i) => {
+			writeFileSync(file, 'x'.repeat(10));
+			utimesSync(file, now - 300 + i * 100, now - 300 + i * 100);
+		});
+		writeFileSync(path.join(directory, PENDING_PRUNE_MARKER), '');
+		expect(getTranspileCacheStats().writes).to.equal(0);
+		pruneTranspileCache(15);
+		expect(existsSync(files[0])).to.equal(false);
+		expect(existsSync(files[1])).to.equal(false);
+		expect(existsSync(files[2])).to.equal(true);
+		expect(existsSync(path.join(directory, PENDING_PRUNE_MARKER))).to.equal(false);
 	});
 
 	it('deletes the least recently written files first, stray temp files included, until the directory fits', () => {
@@ -145,7 +182,7 @@ describe('pruneTranspileCache', () => {
 		lookup({ source: 'one' });
 		lookup({ source: 'two' });
 		lookup({ source: 'three' });
-		const files = readdirSync(directory).map(name => path.join(directory, name));
+		const files = entries(directory).map(name => path.join(directory, name));
 		const stray = path.join(directory, 'abandoned.json.123-0.tmp');
 		writeFileSync(stray, 'x'.repeat(10));
 		const now = Date.now() / 1000;

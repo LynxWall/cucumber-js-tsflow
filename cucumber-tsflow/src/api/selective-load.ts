@@ -151,9 +151,12 @@ export function patternKey([source, flags]: StoredPattern): string {
 export function literalPrefix([source, flags]: StoredPattern): string {
 	if (flags === null) {
 		const end = source.search(/[{(/\\]/);
-		if (end === -1) return source;
-		// Alternation applies to the whole word it sits in, so back up to the space before it
-		return source.slice(0, source[end] === '/' ? source.lastIndexOf(' ', end) + 1 : end);
+		let cut = end === -1 ? source.length : end;
+		// Alternation applies to the whole word it sits in, wherever in the word the `/` is (`cucumber(s)/gherkin`
+		// also matches `gherkin`), so stop at the space before the first word that has one
+		const slash = source.indexOf('/');
+		if (slash !== -1) cut = Math.min(cut, source.lastIndexOf(' ', slash) + 1);
+		return source.slice(0, cut);
 	}
 	if (!source.startsWith('^') || flags.includes('i') || source.includes('|')) return '';
 	const body = source.slice(1);
@@ -213,13 +216,18 @@ export class SelectiveLoadSession implements SupportLoadRecorder {
 	/**
 	 * Why selective loading cannot run for these coordinates, or undefined when it can. A loader attached
 	 * with `module.register()` runs on Node's loader hooks thread, where the import graph is not visible to
-	 * this process, so a skipped file's record could never be validated.
+	 * this process, so a skipped file's record could never be validated; `import` paths with no loader of ours
+	 * go through Node's own loader, which records no import edges either.
 	 */
 	static unsupportedReason(coordinates: ISupportCodeCoordinates): string | undefined {
 		const asyncLoader = coordinates.loaders.find(loader => loaderHooksMode(loader) === 'async');
-		return asyncLoader
-			? `the ${describeTranspiler([], [asyncLoader]) ?? asyncLoader} loader runs on Node's loader hooks thread, where imports cannot be tracked`
-			: undefined;
+		if (asyncLoader) {
+			return `the ${describeTranspiler([], [asyncLoader]) ?? asyncLoader} loader runs on Node's loader hooks thread, where imports cannot be tracked`;
+		}
+		if (coordinates.importPaths.length > 0 && coordinates.loaders.length === 0) {
+			return 'the import paths load without a cucumber-tsflow loader, so imports cannot be tracked';
+		}
+		return undefined;
 	}
 
 	/** A plan that loads everything, for `reason`; this run still records and rewrites the index. */

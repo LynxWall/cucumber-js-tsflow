@@ -1,7 +1,34 @@
 import { describe, it } from 'node:test';
 import { expect } from 'chai';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import loggerCjs from '../../lib/utils/tsflow-logger.js';
 import * as loggerEsm from '../../lib/utils/tsflow-logger.mjs';
+
+const lib = path.join(import.meta.dirname, '..', '..', 'lib', 'utils');
+
+describe('tsflow-logger: where checkpoints go', () => {
+	// stdout carries only formatter output, so TSFLOW_VERBOSE diagnostics join the rest of tsflow's output on stderr.
+	// The verbose flag is read when the module loads, so each case is a fresh process
+	const cjs = `require(${JSON.stringify(path.join(lib, 'tsflow-logger.js'))}).createLogger('t').checkpoint('hello', { a: 1 })`;
+	const esm = `import(${JSON.stringify(pathToFileURL(path.join(lib, 'tsflow-logger.mjs')).href)}).then(m => m.createLogger('t').checkpoint('hello', { a: 1 }))`;
+	for (const [name, script] of [
+		['CommonJS', cjs],
+		['ESM', esm]
+	]) {
+		it(`writes TSFLOW_VERBOSE checkpoints to stderr, nothing to stdout (${name})`, () => {
+			const result = spawnSync(process.execPath, ['-e', script], {
+				encoding: 'utf8',
+				env: { ...process.env, TSFLOW_VERBOSE: 'true' }
+			});
+			expect(result.status, result.stderr).to.equal(0);
+			expect(result.stdout).to.equal('');
+			expect(result.stderr).to.include('[tsflow:t] hello');
+			expect(result.stderr).to.include('a: 1');
+		});
+	}
+});
 
 // The CommonJS module and its hand-written ESM twin (used by the loaders) must format a throwable the same way
 const twins: Array<[string, typeof loggerCjs]> = [

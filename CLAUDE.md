@@ -15,7 +15,7 @@ Yarn 3.5.0 workspaces monorepo:
 - [cucumber-tsflow/](cucumber-tsflow/) — the published library; all source under [cucumber-tsflow/src/](cucumber-tsflow/src/), compiled to `lib/`
 - [cucumber-tsflow-specs/](cucumber-tsflow-specs/) — 8 private spec workspaces covering the Node/Vue × CJS/ESM × TC39/experimental-decorator matrix, all sharing the feature files in [cucumber-tsflow-specs/features/](cucumber-tsflow-specs/features/)
 - [docs/](docs/) — user documentation beyond the README. [docs/performance-and-diagnostics.md](docs/performance-and-diagnostics.md) holds every performance feature, cache and environment variable; the root README keeps one paragraph that links to it, so new performance documentation goes there, not into the README
-- [scripts/](scripts/) — `yarn bench` ([scripts/benchmark.mjs](scripts/benchmark.mjs), the startup phases of a spec workspace over several runs) and `yarn smoke:tarball` ([scripts/smoke-test-tarball.mjs](scripts/smoke-test-tarball.mjs), the packed tarball installed and run in fresh CJS and ESM projects)
+- [scripts/](scripts/) — `yarn bench` ([scripts/benchmark.mjs](scripts/benchmark.mjs), the startup phases of a spec workspace over several runs) `yarn smoke:tarball` ([scripts/smoke-test-tarball.mjs](scripts/smoke-test-tarball.mjs), the packed tarball installed and run in fresh CJS and ESM projects) and `yarn check:package-docs` ([scripts/check-package-docs.mjs](scripts/check-package-docs.mjs), the committed package copies of README, CHANGELOG and LICENSE compared with the root files)
 
 ## Commands
 

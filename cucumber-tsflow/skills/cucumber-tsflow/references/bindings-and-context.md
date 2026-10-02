@@ -100,9 +100,10 @@ export default class Lifecycle {
   expression such as `'@ui and not @mobile'`. They run on the scenario's binding instance, so injected contexts
   are available.
 - `@beforeAll` and `@afterAll` take `(timeout?)` and run once per process (once per worker in a parallel run),
-  outside any scenario: no instance, no injected contexts, no World. A non-static method is called with the
-  class prototype as `this`, which has none of the instance's fields; make these methods `static` so that is
-  obvious.
+  outside any scenario: no instance, no injected contexts, no World. They run under the default timeout (5 s, or
+  what `setDefaultTimeout` set), so slow set-up passes its own, `@beforeAll(60000)`; one that throws fails the
+  run (exit code `1` in serial mode, `2` in parallel). A non-static method is called with the class prototype as
+  `this`, which has none of the instance's fields; make these methods `static` so that is obvious.
 - Order within a scenario: `@before` hooks; for each step `@beforeStep`, the step, `@afterStep`; `@after` hooks;
   then `dispose()` on every context and binding class instance that defines it. A context's `initialize()` runs
   immediately before the first `@before`/`@after` hook or step that belongs to a class listing the context;

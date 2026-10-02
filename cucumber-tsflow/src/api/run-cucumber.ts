@@ -110,16 +110,33 @@ Running from: ${__dirname}
 					options.support
 				);
 
+	/**
+	 * Run one startup step; if it throws while a phase line is open, close the line as failed and stop the spinner
+	 * before the error propagates (an invalid `--name` pattern throws from the pickle filter, for example), so that
+	 * no spinner worker is left redrawing over whatever is printed next.
+	 */
+	const guarded = async <T>(step: () => Promise<T>): Promise<T> => {
+		try {
+			return await step();
+		} catch (err) {
+			progress.fail();
+			progress.finish();
+			throw err;
+		}
+	};
+
 	progress.begin('resolve', 'resolving support-code globs and plugins');
-	const pluginManager = await initializeForRunCucumber(
-		{
-			...options,
-			support: supportCoordinates
-		},
-		mergedEnvironment
+	const pluginManager = await guarded(() =>
+		initializeForRunCucumber(
+			{
+				...options,
+				support: supportCoordinates
+			},
+			mergedEnvironment
+		)
 	);
 
-	const resolvedPaths = await resolvePaths(logger, cwd, options.sources, supportCoordinates);
+	const resolvedPaths = await guarded(() => resolvePaths(logger, cwd, options.sources, supportCoordinates));
 	pluginManager.emit('paths:resolve', resolvedPaths);
 	const { sourcePaths, requirePaths, importPaths } = resolvedPaths;
 	const supportFileCount = requirePaths.length + importPaths.length;
@@ -137,19 +154,21 @@ Running from: ${__dirname}
 	progress.begin('parse', `parsing ${plural(sourcePaths.length, 'feature file')} into scenarios`, sourcePaths.length);
 	let phaseStart = startTimer();
 	if (sourcePaths.length > 0) {
-		const gherkinResult = await getPicklesAndErrors({
-			newId,
-			cwd,
-			sourcePaths,
-			coordinates: options.sources,
-			onEnvelope: envelope => {
-				gherkinEnvelopes.push(envelope);
-				// One progress mark per parsed feature file
-				if (envelope.gherkinDocument) progress.tick();
-			}
-		});
-		filteredPickles = await pluginManager.transform('pickles:filter', gherkinResult.filterablePickles);
-		filteredPickles = await pluginManager.transform('pickles:order', filteredPickles);
+		const gherkinResult = await guarded(() =>
+			getPicklesAndErrors({
+				newId,
+				cwd,
+				sourcePaths,
+				coordinates: options.sources,
+				onEnvelope: envelope => {
+					gherkinEnvelopes.push(envelope);
+					// One progress mark per parsed feature file
+					if (envelope.gherkinDocument) progress.tick();
+				}
+			})
+		);
+		filteredPickles = await guarded(() => pluginManager.transform('pickles:filter', gherkinResult.filterablePickles));
+		filteredPickles = await guarded(() => pluginManager.transform('pickles:order', filteredPickles));
 		parseErrors = gherkinResult.parseErrors;
 	}
 	recordPhase('gherkin', phaseStart);

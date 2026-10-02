@@ -42,8 +42,8 @@ Choosing:
 1. Prefer `es-*`. esbuild is much faster and its output is cached on disk. Use `ts-*` only when the project
    depends on ts-node behavior. `ts-node-esm` and `ts-vue-esm` also run on Node's loader hooks thread, where
    selective loading is disabled and each `--watch` rerun is a fresh process; so do `es-node-esm` and
-   `es-vue-esm` on Node older than 22.15 or with `TSFLOW_ESM_HOOKS=async`. The CommonJS transpilers and the
-   in-thread `es-*-esm` loaders support both.
+   `es-vue-esm` on a Node without `module.registerHooks()` (before 22.15 / 23.5) or with `TSFLOW_ESM_HOOKS=async`.
+   The CommonJS transpilers and the in-thread `es-*-esm` loaders support both.
 
 esbuild strips types without type-checking, and `ts-node`, `ts-vue` and `ts-node-esm` run ts-node
 transpile-only; `ts-vue-esm` follows the project's own `ts-node` settings in `tsconfig.json`. Do not rely on a

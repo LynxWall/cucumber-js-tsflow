@@ -256,5 +256,9 @@ describe('SupportReloader over ES module support files', () => {
 		expect(SupportReloader.unsupportedReason({ ...coordinates, loaders: ['ts-node-maintained/esm'] })).to.include(
 			'the ts-node-maintained/esm loader'
 		);
+		// Without a loader of ours nothing versions the imports, so a kept module would keep its old dependencies
+		expect(SupportReloader.unsupportedReason({ ...coordinates, importPaths: ['./steps/**/*.mjs'] })).to.include(
+			'without a cucumber-tsflow loader'
+		);
 	});
 });

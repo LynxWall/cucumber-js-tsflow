@@ -55,6 +55,7 @@ class WatchSession {
 	public runs = 0;
 	public exitCode: number | null | undefined;
 	private readonly waiters: Array<{ runs: number; resolve: () => void }> = [];
+	private readonly outputWaiters: Array<{ text: string; resolve: () => void }> = [];
 	private exited: Promise<number | null> | undefined;
 	/** Files this session edited, with their content and timestamps from before the first edit. */
 	private readonly originals = new Map<string, { content: Buffer; atime: Date; mtime: Date }>();
@@ -85,6 +86,10 @@ class WatchSession {
 				if (this.runs >= waiter.runs) waiter.resolve();
 				else this.waiters.push(waiter);
 			}
+			for (const waiter of this.outputWaiters.splice(0)) {
+				if (this.output.includes(waiter.text)) waiter.resolve();
+				else this.outputWaiters.push(waiter);
+			}
 		};
 		child.stdout?.on('data', collect);
 		child.stderr?.on('data', collect);
@@ -95,6 +100,12 @@ class WatchSession {
 	waitForRuns(count: number): Promise<void> {
 		if (this.runs >= count) return Promise.resolve();
 		return new Promise(resolve => this.waiters.push({ runs: count, resolve }));
+	}
+
+	/** Resolves once the process has printed `text`. */
+	waitForOutput(text: string): Promise<void> {
+		if (this.output.includes(text)) return Promise.resolve();
+		return new Promise(resolve => this.outputWaiters.push({ text, resolve }));
 	}
 
 	send(keys: string): void {
@@ -145,6 +156,12 @@ class WatchSession {
 		this.exitCode = await this.exited;
 	}
 
+	/** Ctrl-C as a raw-mode terminal delivers it: the byte 0x03 on stdin. */
+	async interrupt(): Promise<void> {
+		this.send('\x03');
+		this.exitCode = await this.exited;
+	}
+
 	kill(): void {
 		if (this.child && this.child.exitCode === null) this.child.kill();
 	}
@@ -164,6 +181,18 @@ export default class WatchModeSteps {
 	async startSessionWithArguments(profile: string, args: string): Promise<void> {
 		this.session.start(profile, args.split(' '));
 		await this.session.waitForRuns(1);
+	}
+
+	@given('a watch session on the {string} profile has started its first run', undefined, RUN_TIMEOUT_MS)
+	async startSessionWithoutWaiting(profile: string): Promise<void> {
+		this.session.start(profile);
+		// The banner is printed just before the first run starts
+		await this.session.waitForOutput('Watch mode: ');
+	}
+
+	@when('I press Ctrl-C', undefined, 30000)
+	async pressCtrlC(): Promise<void> {
+		await this.session.interrupt();
 	}
 
 	@when('I press Enter and wait for the run to finish', undefined, RUN_TIMEOUT_MS)

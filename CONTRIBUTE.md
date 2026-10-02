@@ -63,7 +63,7 @@ Profiles live in each workspace's `cucumber.json`.
 
 1. `yarn build`, then `yarn typecheck` and `yarn lint`: both must report nothing. CI runs them after the build.
 1. `yarn test:unit`, then the spec variants your change can affect. A change to loading, transpilation or decorator registration can pass CommonJS with esbuild and fail ESM with ts-node, so for those run `yarn test:all`.
-1. Update the documents that describe what you changed, in the same pull request: the `[Unreleased]` section of `CHANGELOG.md`; the README or the performance guide for anything a user sees; `Architecture.md` for anything structural; and the agent skill (next section) for anything a consumer can see.
+1. Update the documents that describe what you changed, in the same pull request: the entry at the top of `CHANGELOG.md` for the release being prepared; the README or the performance guide for anything a user sees; `Architecture.md` for anything structural; and the agent skill (next section) for anything a consumer can see.
 1. Follow the code style Prettier and ESLint enforce (tabs, single quotes, no trailing commas, CRLF line endings) and write American English in code, comments and documents.
 1. `yarn smoke:tarball` when you touch `package.json`, the `exports` map, the `files` list, the `bin` or the `bindings/` and `api/` stubs. It packs the library and runs a feature from the tarball in a fresh CommonJS project and a fresh ESM project.
 
@@ -73,7 +73,7 @@ The package ships an agent skill in `cucumber-tsflow/skills/cucumber-tsflow/`, w
 
 ## Releasing
 
-The GitHub workflows in `.github/workflows/` publish the package: both `release.yml` and `publish.yml` install, run `yarn build` and `yarn test:all`, then publish `cucumber-tsflow/`. The version lives in `cucumber-tsflow/package.json`, and `yarn build` regenerates `src/version.ts` from it. The build also copies `README.md`, `CHANGELOG.md` and `LICENSE` from the repository root into the package directory, so edit the root copies only.
+`.github/workflows/publish.yml` publishes the package when a `v*` tag is pushed: it installs, runs `yarn build` and `yarn test:all`, then runs `npm publish --provenance` on `cucumber-tsflow/`. The version lives in `cucumber-tsflow/package.json`, and `yarn build` regenerates `src/version.ts` from it. The build also copies `README.md`, `CHANGELOG.md` and `LICENSE` from the repository root into the package directory, so edit the root copies only; `yarn check:package-docs`, which CI runs before the build, fails when the committed copies differ from the root files.
 
 [Git]: https://git-scm.com/
 [fork and clone]: https://help.github.com/articles/fork-a-repo/

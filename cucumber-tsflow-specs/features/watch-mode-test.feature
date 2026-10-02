@@ -45,3 +45,13 @@ Feature: Watch mode
     And the step definitions reported to "../reports/watch-locations-cjs.ndjson" for "src/step_definitions/basic-test.ts" are 3 lines further down than recorded
     When I quit the watch session
     Then the session exited with code 0
+
+  Scenario: Ctrl-C stops a run in progress at once
+    "q" waits for the current run to finish; Ctrl-C does not, so a long run
+    started by mistake can be abandoned without closing the terminal.
+
+    Given a watch session on the "watch" profile has started its first run
+    When I press Ctrl-C
+    Then the session exited with code 130
+    And the session ran 0 times
+    And nothing was printed after the session stopped

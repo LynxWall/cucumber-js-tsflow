@@ -182,6 +182,12 @@ describe('SelectiveLoadSession', () => {
 		);
 		expect(SelectiveLoadSession.unsupportedReason(coordinates)).to.equal(undefined);
 	});
+
+	it('is unavailable for import paths with no cucumber-tsflow loader, since nothing records their imports', () => {
+		expect(SelectiveLoadSession.unsupportedReason({ ...coordinates, importPaths: ['./steps/**/*.mjs'] })).to.include(
+			'without a cucumber-tsflow loader'
+		);
+	});
 });
 
 describe('literalPrefix', () => {
@@ -189,6 +195,7 @@ describe('literalPrefix', () => {
 		['I have {int} cucumbers', 'I have '],
 		['I eat cucumber(s)', 'I eat cucumber'],
 		['I like apples/pears', 'I like '],
+		['the cucumber(s)/gherkin is ripe', 'the '],
 		['a \\{ brace', 'a '],
 		['plain text', 'plain text'],
 		[/^I have (\d+)/, 'I have '],
@@ -216,6 +223,8 @@ describe('literalPrefix', () => {
 			['I eat cucumber(s)', 'I eat cucumbers'],
 			['I eat cucumber(s)', 'I eat cucumber'],
 			['I like apples/pears', 'I like pears'],
+			['the cucumber(s)/gherkin is ripe', 'the gherkin is ripe'],
+			['the cucumber(s)/gherkin is ripe', 'the cucumbers is ripe'],
 			[/^abc?/, 'ab'],
 			[/^ab+c/, 'abbc'],
 			[/^ab*c/, 'ac'],

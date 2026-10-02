@@ -20,6 +20,11 @@ export interface ITsFlowRunOptionsRuntime extends IRunOptionsRuntime {
 	experimentalDecorators: boolean;
 	/** Load only the support files the selected scenarios need, from an index written by earlier runs. Default false. */
 	selectiveLoad?: boolean;
+	/**
+	 * @deprecated No effect since 8.0.0: parallel preloading was removed. Accepted so that configurations and callers
+	 * written for 7.7 still type-check; it goes away with the next major version.
+	 */
+	parallelLoad?: boolean | number;
 }
 export interface ITsFlowRunConfiguration extends IRunConfiguration {
 	runtime: ITsFlowRunOptionsRuntime;

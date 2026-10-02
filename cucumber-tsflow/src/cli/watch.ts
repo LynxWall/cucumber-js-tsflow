@@ -1,6 +1,7 @@
 /**
  * `--watch`: run, then stay resident and run again whenever a feature file, a support file or a module the
- * support code loaded changes, or when the user presses Enter. `q` (or Ctrl-C) quits.
+ * support code loaded changes, or when the user presses Enter. `q` quits once the current run is over; Ctrl-C
+ * quits at once, abandoning a run in progress (the terminal is in raw mode, so it arrives as a key, not a signal).
  *
  * The point of staying resident is the support code: on a rerun `runCucumber` is given a `SupportReloader`
  * (see `api/support-reloader.ts`) that keeps every module loaded except those that have to evaluate again,
@@ -16,7 +17,7 @@
  */
 import { FSWatcher, watch as watchDirectory } from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { ChildProcess, spawn } from 'node:child_process';
 import type { Readable } from 'node:stream';
 import ansis from 'ansis';
 import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
@@ -63,6 +64,8 @@ export interface IWatchOptions {
 	argv: readonly string[];
 	/** Where key presses are read from; `process.stdin` by default */
 	stdin?: KeyInput;
+	/** Ends the process when Ctrl-C interrupts a run in progress; `process.exit` by default */
+	exit?: (code: number) => void;
 }
 
 /** The part of `process.stdin` (a TTY, a pipe or a file) the session uses. */
@@ -111,6 +114,10 @@ class WatchSession {
 	private quitting = false;
 	private lastSuccess = false;
 	private resolveQuit: (() => void) | undefined;
+	private readonly exit: (code: number) => void;
+	/** The child of a fallback run in progress, so that Ctrl-C can kill it */
+	private child: ChildProcess | undefined;
+	private interrupted = false;
 
 	constructor(
 		private readonly runConfiguration: ITsFlowRunConfiguration,
@@ -121,6 +128,7 @@ class WatchSession {
 		this.cwd = merged.cwd;
 		this.stderr = merged.stderr as unknown as WatchOutput;
 		this.stdin = options.stdin ?? process.stdin;
+		this.exit = options.exit ?? (code => process.exit(code));
 		this.coordinates = {
 			requireModules: [],
 			requirePaths: [],
@@ -136,7 +144,7 @@ class WatchSession {
 		this.stderr.write(
 			ansis.cyanBright('Watch mode: ') +
 				'the run repeats whenever a feature or support file changes. ' +
-				ansis.dim('Enter reruns, q quits.') +
+				ansis.dim('Enter reruns, q quits after the run, Ctrl-C stops a run in progress.') +
 				'\n'
 		);
 		if (this.unsupportedReason) {
@@ -196,7 +204,8 @@ class WatchSession {
 		this.running = false;
 
 		if (this.quitting) {
-			this.finishQuit();
+			// An interrupt has already restored the terminal and announced the stop
+			if (!this.interrupted) this.finishQuit();
 			return;
 		}
 		await this.refreshWatchers();
@@ -239,11 +248,16 @@ class WatchSession {
 				env: this.environment.env ?? process.env,
 				stdio: 'inherit'
 			});
+			this.child = child;
 			child.on('error', error => {
+				this.child = undefined;
 				this.stderr.write(`${error.message}\n`);
 				resolve(false);
 			});
-			child.on('exit', code => resolve(code === 0));
+			child.on('exit', code => {
+				this.child = undefined;
+				resolve(code === 0);
+			});
 		});
 	}
 
@@ -312,7 +326,11 @@ class WatchSession {
 
 	private readonly onKeys = (chunk: string | Buffer): void => {
 		for (const key of chunk.toString()) {
-			if (key === 'q' || key === '') {
+			if (key === '') {
+				this.interrupt();
+				return;
+			}
+			if (key === 'q') {
 				this.quit();
 				return;
 			}
@@ -320,6 +338,7 @@ class WatchSession {
 		}
 	};
 
+	/** `q`: quit once the current run, if any, is over. */
 	private quit(): void {
 		if (this.quitting) return;
 		this.quitting = true;
@@ -327,7 +346,26 @@ class WatchSession {
 		if (!this.running) this.finishQuit();
 	}
 
-	private finishQuit(): void {
+	/**
+	 * Ctrl-C: quit now. Between runs that is `quit()`. During a run an in-process `runCucumber` cannot be
+	 * abandoned from here, so the terminal is restored and the process exits with 130, as a SIGINT would end
+	 * it; a child-process run is killed first.
+	 */
+	private interrupt(): void {
+		if (!this.running) {
+			this.quit();
+			return;
+		}
+		if (this.interrupted) return;
+		this.interrupted = true;
+		this.quitting = true;
+		if (this.debounce) clearTimeout(this.debounce);
+		this.child?.kill();
+		this.finishQuit('Interrupted; the run in progress is abandoned. Watch mode stopped.');
+		this.exit(130);
+	}
+
+	private finishQuit(message = 'Watch mode stopped.'): void {
 		for (const watcher of this.watchers.values()) watcher.close();
 		this.watchers.clear();
 		const stdin = this.stdin;
@@ -336,7 +374,7 @@ class WatchSession {
 		stdin.pause();
 		// A TTY or pipe stdin is a socket that would otherwise keep the event loop alive
 		stdin.unref?.();
-		this.stderr.write(ansis.dim('Watch mode stopped.') + '\n');
+		this.stderr.write(ansis.dim(message) + '\n');
 		this.resolveQuit?.();
 	}
 }

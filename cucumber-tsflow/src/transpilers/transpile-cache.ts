@@ -24,7 +24,9 @@
  * `package.json`), falling back to the OS temp directory. `TSFLOW_TRANSPILE_CACHE=false` (the
  * `--no-transpile-cache` option) disables reads and writes. `pruneTranspileCache()` bounds the directory
  * by size, evicting the least recently written entries first; a content-addressed store's garbage is
- * exactly the entries no current source produces any more, and those are the oldest.
+ * exactly the entries no current source produces any more, and those are the oldest. Every writer (this
+ * thread, the loader hooks thread, a parallel child) leaves a `pending-prune` marker file after its first
+ * write, so the main process sweeps whenever something was written and never lists the directory otherwise.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -43,6 +45,13 @@ const DEFAULT_MAX_BYTES = 512 * 1024 * 1024;
 
 const ENTRY_EXTENSION = '.json';
 
+/**
+ * An empty file a writer leaves in the cache directory after its first write. `pruneTranspileCache()` runs in
+ * the main thread, whose own counters know nothing of the entries the loader hooks thread or a parallel child
+ * wrote; the marker tells it something was written, and the sweep removes it.
+ */
+export const PENDING_PRUNE_MARKER = 'pending-prune';
+
 interface EntryFile<T> {
 	v: number;
 	value: T;
@@ -60,6 +69,7 @@ export interface TranspileCacheStats {
 const stats = { hits: 0, misses: 0, writes: 0 };
 let directory: string | undefined;
 let directoryEnsured = false;
+let markerLeft = false;
 
 /**
  * True unless `TSFLOW_TRANSPILE_CACHE=false`, which `loadConfiguration` sets from the `transpileCache`
@@ -134,6 +144,7 @@ export function getTranspileCacheDirectory(): string {
 export function resetTranspileCacheDirectory(): void {
 	directory = undefined;
 	directoryEnsured = false;
+	markerLeft = false;
 	cacheRoots.clear();
 }
 
@@ -217,6 +228,10 @@ function writeEntry(key: string, value: object): void {
 		writeFileSync(temp, JSON.stringify(entry));
 		renameSync(temp, file);
 		stats.writes++;
+		if (!markerLeft) {
+			writeFileSync(path.join(getTranspileCacheDirectory(), PENDING_PRUNE_MARKER), '');
+			markerLeft = true;
+		}
 	} catch {
 		// Best effort: a read-only location, a full disk, or (on Windows) a concurrent reader holding the
 		// target open. The transpile result is still returned to the caller; the next run misses again.
@@ -230,37 +245,49 @@ function writeEntry(key: string, value: object): void {
 
 /**
  * Bound the cache directory to `maxBytes`, deleting the least recently written entries (and any stray
- * temp files) until it fits. Does nothing unless this thread wrote an entry, so a warm run never scans the
- * directory; the main process calls it once after support code has loaded.
+ * temp files) until it fits. Does nothing unless an entry was written since the last sweep, by this thread
+ * (its counter) or by the loader hooks thread or a parallel child (the marker file they leave), so a warm
+ * run never scans the directory; the main process calls it once after support code has loaded.
  */
 export function pruneTranspileCache(maxBytes: number = DEFAULT_MAX_BYTES): void {
-	if (stats.writes === 0 || !directory) return;
+	if (!isTranspileCacheEnabled()) return;
+	const dir = getTranspileCacheDirectory();
+	const marker = path.join(dir, PENDING_PRUNE_MARKER);
+	if (stats.writes === 0 && !existsSync(marker)) return;
 	const start = startTimer();
 	try {
 		const entries: Array<{ file: string; stamp: FileStamp }> = [];
 		let total = 0;
-		for (const name of readdirSync(directory)) {
-			const file = path.join(directory, name);
+		for (const name of readdirSync(dir)) {
+			if (name === PENDING_PRUNE_MARKER) continue;
+			const file = path.join(dir, name);
 			// Not a regular file, or removed by another process between readdir and stat: nothing to count
 			const stamp = stampOf(file);
 			if (!stamp) continue;
 			entries.push({ file, stamp });
 			total += stamp.size;
 		}
-		if (total <= maxBytes) return;
-		entries.sort((a, b) => a.stamp.mtimeMs - b.stamp.mtimeMs);
-		for (const entry of entries) {
-			if (total <= maxBytes) break;
-			try {
-				unlinkSync(entry.file);
-				total -= entry.stamp.size;
-			} catch {
-				// In use or already gone; skip it
+		if (total > maxBytes) {
+			entries.sort((a, b) => a.stamp.mtimeMs - b.stamp.mtimeMs);
+			for (const entry of entries) {
+				if (total <= maxBytes) break;
+				try {
+					unlinkSync(entry.file);
+					total -= entry.stamp.size;
+				} catch {
+					// In use or already gone; skip it
+				}
 			}
 		}
 	} catch {
 		// The directory disappeared or cannot be listed; nothing to prune
 	} finally {
+		try {
+			unlinkSync(marker);
+		} catch {
+			// Never written, or another process removed it already
+		}
+		markerLeft = false;
 		recordPhase('transpile-cache:prune', start);
 	}
 }

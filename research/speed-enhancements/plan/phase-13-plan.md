@@ -84,6 +84,46 @@ entirely rather than deferred; the two later-major items are untouched by this p
   a package-manager migration is a different risk profile from anything else in this phase, so it belongs in its
   own follow-up, not folded into what is about to go to Lonnie.
 
+## Follow-ups from the final review pass (2026-10-02)
+
+Findings of the maintainer-persona review of pull request #68, taken before it left draft, that were not fixed on
+the branch. Each names what would resolve it, so it can become a ticket as it stands.
+
+- **`enableVueStyle` reaches neither the loader hooks thread nor parallel children.** `loadConfiguration` writes
+  only `global.enableVueStyle`; `loader-utils.mjs` reads the global or `CUCUMBER_ENABLE_VUE_STYLE`, which nothing in
+  `src/` sets, and `esvue.ts`/`tsvue.ts` read only the global, which a child never sets. So `.vue` styles compile
+  off under `ts-vue-esm`, under `es-vue-esm` with async hooks and in every parallel child, whatever the option
+  says, and the transpile cache (keyed on the flag) holds different entries for coordinator and children.
+  Pre-existing on master. Resolve as the decorator mode was resolved in 8.0 (`decorator-mode.ts`): one accessor
+  backed by an environment variable that `loadConfiguration` sets and every reader uses, plus Vue spec coverage in
+  a parallel profile with `enableVueStyle: true`.
+- **Vue cache entries are not pure functions of the `.vue` source.** With `enableVueStyle: true` and
+  `<style lang="scss">`, sass resolves partials from disk and their content lands in the entry without being in
+  the key; `transformImports` bakes the result of file-existence probing into the `vue-sfc-esm` entry. Narrow in
+  practice. Resolve by bypassing the cache for preprocessed styles (or keying on the resolved partials) and by
+  naming the exception in the guide's "a stale entry is never served".
+- **`ENTRY_FORMAT` is the only recipe version in the cache key.** `tsflowVersion` does not move between local
+  builds, so a linked consumer keeps serving the previous build's output after a change to `rewritePathMappings`,
+  `transformImports` or the Vue assembly. Resolve by bumping `ENTRY_FORMAT` whenever the recipe changes (and
+  saying so in its comment) or by adding a recipe constant.
+- **`reloadSupport()` under a loader on the hooks thread.** With `ts-node-esm`, `ts-vue-esm` or
+  `TSFLOW_ESM_HOOKS=async` no import edges exist, so `dependentProjectModules()` returns nothing and a changed
+  dependency keeps its old instance; watch mode guards this with `SupportReloader.unsupportedReason()`, the API
+  does not. Resolve with the same check in `loadSupportCode` (throw, or document the limit in the API's JSDoc).
+- **The watch-mode child-process fallback drops `process.execArgv`**, so
+  `node --max-old-space-size=8192 bin/cucumber-tsflow.js --watch` loses the flag on every run, and the
+  `parallelLoad` notice repeats per run. Resolve by spawning with `[...process.execArgv, script, ...]`.
+- **`selectiveLoad: true` on the main matrix profiles** (`esnode` in `node`, `esnodeesm` in `node-esm`) makes the
+  matrix depend on an index under `node_modules/.cache` that a fresh CI checkout never has: always a full plan in
+  CI, a selective plan on a warm local tree. Decide whether the matrix should stay deterministic (leave selective
+  loading to `selective-load-test.feature`) or keep the dogfooding.
+- **Step locations under `ts-node-esm` and `ts-vue-esm`** stay `file:` URLs with the lines of the compiled output,
+  because ts-node's maps live on the hooks thread. Pre-existing; the CHANGELOG says so. Resolve by relaying
+  ts-node's maps as `source-map-relay.mjs` does for the esbuild loaders.
+- **The consumer's name in the repository.** The README, CHANGELOG and guide do not name the suite the numbers
+  come from, but the guide links to `research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md` and the
+  research folder names it throughout. Decide one way or the other.
+
 ## Before changing anything
 
 Per the phase's original framing in 12d ("measured before anything is changed"), take a baseline on the tree as

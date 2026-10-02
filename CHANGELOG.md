@@ -17,18 +17,18 @@ How to use the new features: [Performance and diagnostics](https://github.com/Ly
 
 Most suites upgrade without changes. These are the differences you may notice:
 
-- **A `BeforeAll` or `AfterAll` hook that throws fails the run**, as in CucumberJS: the error is reported with the hook's location and the run exits with code 1. Before, the error was swallowed and every scenario ran under a passing summary. If a pipeline turns red after upgrading, check these hooks first.
+- **A `BeforeAll` or `AfterAll` hook that throws fails the run**, as in CucumberJS: the error is reported with the hook's location and the run exits with code 1 in serial mode (2 in parallel mode, where the worker that ran the hook reports it). Before, the error was swallowed and every scenario ran under a passing summary. These hooks also run under the default timeout now (5 seconds, or what `setDefaultTimeout` sets), where before they ran unbounded; a hook that needs longer passes its own, `@beforeAll(60000)`. If a pipeline turns red after upgrading, check these hooks first.
 - **cucumber-tsflow's own output goes to stderr**: the configuration and mode lines, the new startup progress, deprecation notices and watch-mode status lines. stdout carries only formatter output, so it can be piped or parsed.
-- **Step-definition locations are relative to the working directory on every platform.** On Linux and macOS they were absolute paths in reports and messages.
+- **Step-definition locations are relative to the working directory on every platform** with the CommonJS transpilers and the esbuild ESM loaders. On Linux and macOS they were absolute paths in reports and messages. Under `ts-node-esm` and `ts-vue-esm` locations are unchanged: `file:` URLs with the lines of the compiled output.
 - **Steps always receive the running scenario's context.** The previous lookup could hand a step another scenario's context, or none, when a step pattern also matched text in another scenario.
-- **`loadSupport()` and `reloadSupport()` start from an empty registry and evaluate every support file again on each call**, so each returns a complete library; calling them from inside a running suite is not supported. The VS Code extension (`cucumber-tsflow-vscode`) has not been updated for this; if you rely on it, stay on 7.x until it is.
-- **Removed:** the `lib/transpilers/esm/esbuild-transpiler` export (use the `es-node-esm` or `es-vue-esm` transpiler), the internal `BindingRegistry.removeBindingsForFile()` and `hasBindingForKey()`, the runtime values of the `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext` interfaces in the ES module entry points (they were always `undefined`; the types are unchanged), and the extensionless `bin/cucumber-tsflow` file (the command is `bin/cucumber-tsflow.js`). The deprecated `Cli` export is now created on first use, so `instanceof Cli` no longer matches.
+- **`loadSupport()` and `reloadSupport()` start from an empty registry and evaluate every support file again on each call**, so each returns a complete library, the bindings of modules the support files import included; calling them from inside a running suite is not supported. The VS Code extension (`cucumber-tsflow-vscode`) has not been updated for this; if you rely on it, stay on 7.x until it is.
+- **Removed:** the `lib/transpilers/esm/esbuild-transpiler` export (use the `es-node-esm` or `es-vue-esm` transpiler), the internal `BindingRegistry.removeBindingsForFile()`, `hasBindingForKey()`, `toDescriptors()` and `getDescriptorSourceFiles()` together with `serializeBinding()` and the `SerializableBindingDescriptor` type from `lib/bindings/step-binding`, the runtime values of the `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext` interfaces in the ES module entry points (they were always `undefined`; the types are unchanged), and the extensionless `bin/cucumber-tsflow` file (the command is `bin/cucumber-tsflow.js`). The deprecated `Cli` export is now created on first use, so `instanceof Cli` no longer matches.
 - **`ts-node-esm` ignores the tsconfig `ts-node.files` setting**, which only added startup time under transpile-only compilation.
 
 ### Added
 
 - **On-disk transpile cache** for the esbuild transpilers and the Vue SFC compiler, on by default, in `node_modules/.cache/cucumber-tsflow` (`transpileCache`, `--no-transpile-cache`).
-- **Watch mode** (`--watch`): stays running and reruns on file changes or Enter, keeping the loaded modules between runs.
+- **Watch mode** (`--watch`): stays running and reruns on file changes or Enter, keeping the loaded modules between runs. `q` quits after the current run; Ctrl-C stops a run in progress at once.
 - **Selective loading** (`selectiveLoad`, off by default): a filtered run loads only the support files its scenarios use.
 - **Startup progress**: a bootstrap notice and one line per startup phase with a spinner. `TSFLOW_THEME=lotr` picks another theme; `TSFLOW_THEME=off` turns it off.
 - **Startup timing report** with `TSFLOW_TIMING=true`.
@@ -40,6 +40,7 @@ Most suites upgrade without changes. These are the differences you may notice:
 
 - **Faster startup.** Resolving step locations no longer issues a synchronous XMLHttpRequest per support file under jsdom (the largest single cost in Vue suites) and happens only when a location is needed. The esbuild ESM loaders run in-thread with `module.registerHooks()` on Node 22.15 or later and call esbuild directly. Feature files are parsed before the support code loads, parallel workers receive the resolved file lists instead of expanding the globs again, and step, hook and binding lookups no longer scan lists.
 - **Every package the library imports is declared**, so pnpm's strict layout resolves them: `@cucumber/messages`, `@cucumber/gherkin`, `@cucumber/cucumber-expressions` and `xmlbuilder` as dependencies, `vue` as an optional peer. `short-uuid`, `import-sync` and `tslib` are no longer dependencies.
+- **esbuild's warnings print only under `TSFLOW_VERBOSE=true`.** The esbuild transpilers run silent so that a diagnostic never lands on the startup progress line; errors are reported once by the CLI, and warnings (a duplicate object key, an ignored tsconfig field) are kept for the verbose log.
 
 ### Fixed
 

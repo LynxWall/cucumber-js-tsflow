@@ -9,7 +9,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ## [8.0.0]
 
-A major release for speed. On a large suite most of a run used to be startup: transpiling and loading the support code before the first scenario. 8.0 makes that a small part of the run, adds opt-in features that shorten the inner loop further, and fixes several long-standing bugs along the way. Writing step definitions does not change. On UIS Tools, the largest suite at JHU UIS (1,624 scenarios, Vue 3, `es-vue-esm`), the full run takes 4½ to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes.
+A major release for speed. On a large suite most of a run used to be startup: transpiling and loading the support code before the first scenario. 8.0 makes that a small part of the run, adds opt-in features that shorten the inner loop further, and fixes several long-standing bugs along the way. Writing step definitions does not change. On the project we use to benchmark updates, the largest suite we test against (1,624 scenarios, Vue 3, `es-vue-esm`), the full run takes 4.5 to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes.
 
 How to use the new features: [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md). Every change at the level of modules and functions: [Detailed changes in 8.0.0](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/research/speed-enhancements/detailed-changes.md).
 

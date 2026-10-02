@@ -25,11 +25,11 @@ Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output
 [ / ] Packing the jars — transpiling and loading 312 support files with es-node-esm 41/312
 ```
 
-The spinner is the classic four-frame ASCII line spinner (`|`, `/`, `-`, `\`) in brackets, advanced every 130 ms, and its color walks a twelve-color wheel (blue, green, yellow, orange, red, purple, with a blend between each pair) one step every five frames. A new color enters at the left bracket and sweeps across the glyph and the right bracket over three frames, and because five is not a multiple of the four frames in a rotation the sweep starts one glyph later each time, drifting around the turn like an offbeat and coming back into step every twenty frames. It is drawn the moment the phase line is printed, so there is motion before the first file finishes loading, and it is driven by a small worker thread that writes directly to the terminal. That matters because the main thread spends most of a phase blocked in synchronous work: the first support file's `import()` runs its whole dependency graph through the transpiler before it returns, and the CommonJS transpilers load every file with a synchronous `require()`. A spinner on the main thread would freeze for that entire stretch; the worker has its own event loop and keeps turning. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, and widening the window shows the line as intended.
+The spinner is a small ASCII line spinner that cycles through a color wheel as it turns. It runs on its own worker thread, so it keeps animating even while the main thread is blocked transpiling and loading support files synchronously — motion starts the moment the phase line is printed, before the first file finishes loading. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, rather than being truncated.
 
 The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over. A phase that ends in failure (support code that did not load, a `BeforeAll` hook that threw) closes with `[ ✗ ]` instead of the check mark, and the error is reported once, after the line has closed.
 
-Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears; while nothing has completed yet it explains why (the first support file pulls in its whole import graph before it counts). When work has been quick again for a while after a stall that long — five files in a row, each within a second of the last, since the unit that ended the stall is often followed by another slow one — a relief message takes the slot instead:
+Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears, explaining why nothing has completed yet (usually that the first support file is still pulling in its whole import graph). Once work has been quick again for a few files in a row after a stall like that, a relief message takes the slot instead:
 
 ```text
 [ - ] Packing the jars — transpiling and loading 312 support files with es-node-esm (2/312)
@@ -38,17 +38,17 @@ Messages appear on their own line directly beneath the active phase, replace one
 
 The theme is chosen with `TSFLOW_THEME`:
 
-| Value         | Effect                                                                                                                              |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| unset / other | Default pickling theme shown above (labels and check mark in muted steel blue)                                                      |
-| `lotr`        | The Lord of the Rings: the Fellowship assembles, the beacons of Gondor are lit, the Rohirrim muster (labels and check mark in gold) |
-| `off`         | No startup progress output                                                                                                          |
+| Value         | Effect                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------------------------------ |
+| unset / other | Default pickling theme shown above (labels and check mark in muted steel blue)                               |
+| `lotr`        | For Lord of the Rings lovers, a change of pace: labels and check mark in gold, with Middle-earth flavor text |
+| `off`         | No startup progress output                                                                                   |
 
 ```bash
 TSFLOW_THEME=lotr npx cucumber-tsflow -p default
 ```
 
-All of it is written to stderr, like every other line cucumber-tsflow prints itself (the configuration and mode lines, deprecation notices, the watch-mode status lines), so stdout carries only formatter output and can be piped or redirected on its own. The spinner, counter and message line are only drawn when stderr is an interactive terminal. In CI logs and when stderr is redirected to a file the output is append-only: the phase line, any messages, and the summary. Nothing of it reaches formatter output or report files. Anything your support code prints while a phase is open (for example a `console.log` in a hook running inside a parallel worker) reaches the same terminal, so it can land inside that line and displace the spinner, exactly as it would land among the formatter's own progress dots.
+All of it is written to stderr, like every other line cucumber-tsflow prints itself (the configuration and mode lines, deprecation notices, the watch-mode status lines), so stdout carries only formatter output and can be piped or redirected on its own. The spinner, counter and message line are only drawn when stderr is an interactive terminal; in CI logs and when stderr is redirected to a file the output is append-only (the phase line, any messages, and the summary), and none of it reaches formatter output or report files. Anything your support code prints while a phase is open reaches the same terminal and can interleave with it, the same way it would with the formatter's own progress output.
 
 Before any of that, the `cucumber-tsflow` command prints a plain line to stderr as its very first action, `Bootstrapping cucumber-tsflow 8.0.0 on Node v24.16.0: loading the library and its dependencies...`, and a second one, `cucumber-tsflow loaded in 431ms.`, once the library has loaded and just before `Loading configuration`. That stretch is Node loading several hundred modules: normally under half a second, and nothing of cucumber-tsflow's runs during it, so there is no spinner or theme, only the two lines in the same dimmed gray as the phase details. They are skipped for `--version`, `--help`, `--i18n-languages` and `--i18n-keywords`, whose output a script may parse, and when `TSFLOW_THEME=off`.
 
@@ -90,7 +90,22 @@ Slowest 12 files (transpile = transpiler only, load = ESM load hook, evaluate = 
             28      0.0          223  main     src\step_definitions\basic-test.ts
 ```
 
-- **The phase table**, one per context. `bootstrap` is Node loading the library (the stretch the bootstrap notice covers), `config` the configuration, `gherkin` parsing the feature files, `support:require-modules` the `requireModule` entries (the CommonJS transpilers), `support:require` and `support:import` the support files themselves including everything they pull in, `support:register-loaders` attaching the ESM loaders, `support:finalize` and `registry:update` building the CucumberJS library and back-patching it with the decorator metadata, `formatters:init` the formatters, and `runtime:run` the test run itself. The rows for the caches count rather than time: `transpile-cache:hit` and `transpile-cache:miss` have the number of transpiles served from and written to the [transpile cache](#transpile-cache) in their `calls` column, `transpile-cache:prune` is the sweep that bounds it, and `selective-load:plan` and `selective-load:index` are the two halves of [selective loading](#selective-loading). Under the esbuild ESM loaders the `esm:hooks-init`, `esm:resolve` and `esm:load` rows are the loader's hooks, in the table of the context that registered them; a loader on Node's loader hooks thread gets a table of its own, `esm-hooks`.
+- **The phase table**, one per context:
+
+  - `bootstrap` — Node loading the library (the stretch the bootstrap notice covers)
+  - `config` — parsing the configuration
+  - `gherkin` — parsing the feature files
+  - `support:require-modules` — the `requireModule` entries (the CommonJS transpilers)
+  - `support:require` / `support:import` — the support files themselves, including everything they pull in
+  - `support:register-loaders` — attaching the ESM loaders
+  - `support:finalize` / `registry:update` — building the CucumberJS library and back-patching it with the decorator metadata
+  - `formatters:init` — the formatters
+  - `runtime:run` — the test run itself
+  - `transpile-cache:hit` / `transpile-cache:miss` — count rather than time: transpiles served from and written to the [transpile cache](#transpile-cache), in the `calls` column
+  - `transpile-cache:prune` — the sweep that bounds the transpile cache
+  - `selective-load:plan` / `selective-load:index` — the two halves of [selective loading](#selective-loading)
+  - `esm:hooks-init`, `esm:resolve`, `esm:load` — the esbuild ESM loader's hooks, in the table of the context that registered them (a loader on Node's loader hooks thread gets a table of its own, `esm-hooks`)
+
 - **File totals by context.** A parallel run has a `main` context and one `worker:<id>` per child process, and each child transpiles and evaluates every support file again. The `contexts` column says how many times, which is the N+1 multiplication a parallel run pays at startup and the reason the transpile cache is shared between them.
 - **The slowest files.** `transpile` is the transpiler alone (esbuild or the Vue SFC compiler; ts-node's TypeScript compile is not observable and shows as zero), `load` the ESM `load` hook, and `evaluate` the top-level `require` or `import` of the file including everything it imports, which is why the first support file loaded is often the slowest: it pays for the framework, jsdom and the component library that every later file finds already loaded. A cache hit still records a `transpile` entry, for the lookup time, so file counts are comparable between a cold and a warm run.
 
@@ -131,9 +146,9 @@ The point is what the process keeps between runs. A fresh process spends most of
 
 The load-phase progress line reports the decision: `transpiling and loading 216 support files with es-vue-esm (rerun 3: 24 evaluated again, 192 kept loaded, 2 other modules)`. Selective loading composes with it: with `selectiveLoad` on, a rerun evaluates only the files the selected scenarios need among those. Because a module that must load again cannot be removed from Node's ES module map, an ES module evaluated again is imported under a `?tsflow=<n>` query, which is what its URL looks like in a stack trace; reported step locations are unaffected.
 
-Watch mode changes nothing about how a run executes and each run writes its report files as usual. What it cannot undo is the resident state of the modules it keeps: module-level state in a kept module persists between runs, and a class re-evaluated in one run is not `instanceof`-compatible with an instance a module-level singleton kept from the previous one (scenarios create their instances afresh, so this only matters to code that caches instances across runs). Configuration read once at startup is kept too: a change to `cucumber.json` or to the tsconfig `paths` the loaders resolve with needs a restart. If a rerun behaves differently from a fresh run, quit and start again.
+Watch mode changes nothing about how a run executes, and each run writes its report files as usual. What it cannot undo is the resident state of the modules it keeps between runs: module-level state persists, so code that caches singletons across runs can behave oddly, and configuration read once at startup (`cucumber.json`, the tsconfig `paths` the loaders resolve with) needs a restart to take effect. If a rerun behaves differently from a fresh run, quit and start again.
 
-The same goes for memory. Whatever a run leaves behind in a kept module — components mounted into the jsdom `document` and never unmounted, spies and mocks registered with a test framework shim and never reset, caches in a store — is discarded when a fresh process exits but stays in a resident one, and the next run adds its own. The status line after each run shows the heap the next run starts from (`Run took 41.5s, heap 2.5 GB`; measured after a full collection when Node runs with `--expose-gc`, as it stands otherwise). If that figure climbs run after run, the suite is keeping state between scenarios: clean it up in an `@after` hook (for example `cleanup()` from a testing library, and whatever resets the mocks), or accept the growth and start with `NODE_OPTIONS=--max-old-space-size=8192`, or use watch mode for what it is meant for, a filtered inner loop, and run the whole suite in a fresh process. A suite whose scenarios clean up after themselves stays flat. Files in a directory that held no known file when the last run finished are not watched until a rerun picks them up: press Enter. With the `ts-node-esm` and `ts-vue-esm` transpilers, any third-party `loader`, or `TSFLOW_ESM_HOOKS=async`, the loader runs on Node's loader hooks thread, where modules cannot be reloaded in place, so watch mode still watches and reruns but each run is a fresh `cucumber-tsflow` process; the first line printed says so. `--exit`/`--force-exit` is ignored while watching.
+The same goes for memory. Anything a kept module leaves behind — unmounted components, un-reset mocks and spies, caches in a store — carries over into the next run instead of being discarded with the process. The status line after each run shows the heap the next run starts from (`Run took 41.5s, heap 2.5 GB`); if that figure climbs run after run, clean up in an `@after` hook, start with a larger `NODE_OPTIONS=--max-old-space-size`, or use watch mode only for a filtered inner loop and run the full suite in a fresh process for anything that matters. Files in a directory that held no known file when the last run finished are not watched until a rerun picks them up: press Enter. With the `ts-node-esm` and `ts-vue-esm` transpilers, any third-party `loader`, or `TSFLOW_ESM_HOOKS=async`, modules can't be reloaded in place, so each rerun is a fresh `cucumber-tsflow` process instead; the first line printed says so. `--exit`/`--force-exit` is ignored while watching.
 
 ## ESM loader hooks
 
@@ -145,10 +160,10 @@ cucumber-tsflow keeps two stores on disk. Neither changes what a run computes: a
 
 **Where the cache root is.** Both cucumber-tsflow stores live under one root, `.cache/cucumber-tsflow`, placed inside the nearest `node_modules` directory at or above the working directory the command runs in. When no directory on that walk has a `node_modules`, the root goes under the nearest directory with a `package.json` (as `node_modules/.cache/cucumber-tsflow`, created on first write); when there is neither, it is `cucumber-tsflow` under the OS temp directory. The root is resolved once per process. Run the command from the folder that holds the project's `cucumber.json`, as the README recommends, and the caches land in that project's `node_modules/.cache`, which package managers already ignore and CI systems can restore between builds.
 
-| Cache | Contents | Location | Turn off | Bounded | Clear |
-| --- | --- | --- | --- | --- | --- |
-| Transpile cache | esbuild output and compiled Vue SFCs, one JSON file per entry, content-addressed | `<root>/transpile`, or `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` | `--no-transpile-cache`, `transpileCache: false`, or `TSFLOW_TRANSPILE_CACHE=false` | Yes: 512 MB, least recently written entries deleted first, swept at the end of a run that wrote entries | Delete the directory |
-| Selective-load index | Step patterns, import graphs and file stamps per support file, one JSON file per configuration | `<root>/selective-load` | Leave `selectiveLoad` off (the default) | No; each file is small, and there is one per distinct configuration (working directory, support globs, decorator mode and library version) | Delete the directory |
+| Cache                | Contents                                                                                       | Location                                                  | Turn off                                                                           | Bounded                                                                                                                                    | Clear                |
+| -------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| Transpile cache      | esbuild output and compiled Vue SFCs, one JSON file per entry, content-addressed               | `<root>/transpile`, or `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` | `--no-transpile-cache`, `transpileCache: false`, or `TSFLOW_TRANSPILE_CACHE=false` | Yes: 512 MB, least recently written entries deleted first, swept at the end of a run that wrote entries                                    | Delete the directory |
+| Selective-load index | Step patterns, import graphs and file stamps per support file, one JSON file per configuration | `<root>/selective-load`                                   | Leave `selectiveLoad` off (the default)                                            | No; each file is small, and there is one per distinct configuration (working directory, support globs, decorator mode and library version) | Delete the directory |
 
 Clearing is never required for correctness. The transpile cache is keyed on everything that shapes its output (source, path, options, tool and library versions), so a stale entry cannot be served; the selective-load index validates every skipped file's import graph against the recorded modification times and sizes before trusting it, and loads the file when anything differs. Reasons to clear anyway: to reclaim disk space (the transpile cache bounds itself; the index does not, and an upgrade of cucumber-tsflow leaves the previous version's entries behind in both stores until the sweep or a delete removes them), or to rule a cache out while investigating a run that behaves unexpectedly, in which case `--no-transpile-cache` and `--no-selective-load` do the same for one run without deleting anything.
 
@@ -158,16 +173,16 @@ Clearing is never required for correctness. The transpile cache is keyed on ever
 
 Every variable cucumber-tsflow reads, in one place. The `TSFLOW_*` variables are cucumber-tsflow's; `NODE_OPTIONS` is Node's own, listed because it is the usual answer to a growing watch-mode heap.
 
-| Variable | Effect |
-| --- | --- |
-| `TSFLOW_TIMING=true` | Print the [startup timing report](#startup-timing-diagnostics) to stderr when the run ends |
-| `TSFLOW_VERBOSE=true` | Print internal checkpoint logging, including the per-file resolve, load and transpile checkpoints and the stacks of load errors |
-| `TSFLOW_THEME=<name>` | Choose the [startup progress](#startup-progress) theme: default pickling, `lotr`, or `off` for no startup output at all (also silences the bootstrap notice) |
-| `TSFLOW_TRANSPILE_CACHE=false` | Neither read nor write the [transpile cache](#transpile-cache); the environment form of `transpileCache: false` |
-| `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` | Where the transpile cache lives, instead of `node_modules/.cache/cucumber-tsflow/transpile` |
-| `TSFLOW_SELECTIVE_LOAD=true` | The environment form of `selectiveLoad: true` |
-| `TSFLOW_ESM_HOOKS=async` | Attach the esbuild ESM loaders with `module.register()` on Node's loader hooks thread instead of in-thread (see [ESM loader hooks](#esm-loader-hooks)) |
-| `NODE_OPTIONS=--max-old-space-size=<MB>` | Node's heap limit, the usual answer to a watch session whose heap grows because scenarios do not clean up after themselves |
+| Variable                                 | Effect                                                                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TSFLOW_TIMING=true`                     | Print the [startup timing report](#startup-timing-diagnostics) to stderr when the run ends                                                                   |
+| `TSFLOW_VERBOSE=true`                    | Print internal checkpoint logging, including the per-file resolve, load and transpile checkpoints and the stacks of load errors                              |
+| `TSFLOW_THEME=<name>`                    | Choose the [startup progress](#startup-progress) theme: default pickling, `lotr`, or `off` for no startup output at all (also silences the bootstrap notice) |
+| `TSFLOW_TRANSPILE_CACHE=false`           | Neither read nor write the [transpile cache](#transpile-cache); the environment form of `transpileCache: false`                                              |
+| `TSFLOW_TRANSPILE_CACHE_DIR=<dir>`       | Where the transpile cache lives, instead of `node_modules/.cache/cucumber-tsflow/transpile`                                                                  |
+| `TSFLOW_SELECTIVE_LOAD=true`             | The environment form of `selectiveLoad: true`                                                                                                                |
+| `TSFLOW_ESM_HOOKS=async`                 | Attach the esbuild ESM loaders with `module.register()` on Node's loader hooks thread instead of in-thread (see [ESM loader hooks](#esm-loader-hooks))       |
+| `NODE_OPTIONS=--max-old-space-size=<MB>` | Node's heap limit, the usual answer to a watch session whose heap grows because scenarios do not clean up after themselves                                   |
 
 ## Measuring startup on this repository
 
@@ -186,21 +201,21 @@ Reference numbers from the machine the branch was developed on are in the table 
 
 Taken on 2026-09-25, after the release review removed Node's compile cache, with `yarn bench --workspace <name> --cold --runs 3` on Windows 11 and Node 24.16.0, from a built tree, on a machine that was not idle (another session was working in a different repository), so treat differences under about 20% as noise. `total` is the time from process start to the end of the run as the report measures it; `support load` is the sum of the support-code phases (`support:require-modules`, `support:require`, `support:import`); `transpile cache` is the number of transpiles served from disk or written to it. Run 1 starts with an empty transpile cache. The Vue workspace's first run spent 29.5 s in `support:require-modules` loading jsdom and Vue, which runs 2 and 3 did in about 1.1 s with nothing but the transpile cache warm: that time is the operating system reading (and on this machine, scanning) files it had not read for hours, which is what the first run of a day can look like, not compilation. Runs 2 and 3 are the steady state.
 
-| Workspace | Transpiler | Run | total ms | bootstrap | support load | test run | transpile cache |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `node` | `es-node` | 1 (cold) | 1688 | 853 | 676 | 58 | 20 misses |
-| `node` | `es-node` | 2 | 1266 | 715 | 408 | 50 | 20 hits |
-| `node` | `es-node` | 3 | 1094 | 581 | 369 | 55 | 20 hits |
-| `node-esm` | `es-node-esm` | 1 (cold) | 1677 | 965 | 481 | 66 | 10 misses |
-| `node-esm` | `es-node-esm` | 2 | 964 | 637 | 138 | 63 | 10 hits |
-| `node-esm` | `es-node-esm` | 3 | 840 | 523 | 148 | 54 | 10 hits |
-| `vue` | `es-vue` | 1 (cold) | 31886 | 593 | 31003 | 170 | 23 misses |
-| `vue` | `es-vue` | 2 | 1997 | 541 | 1272 | 95 | 23 hits |
-| `vue` | `es-vue` | 3 | 2090 | 559 | 1355 | 91 | 23 hits |
-| `vue-esm` | `es-vue-esm` | 1 (cold) | 2523 | 637 | 1620 | 91 | 15 misses |
-| `vue-esm` | `es-vue-esm` | 2 | 2169 | 617 | 1297 | 94 | 15 hits |
-| `vue-esm` | `es-vue-esm` | 3 | 2012 | 729 | 1054 | 88 | 15 hits |
+| Workspace  | Transpiler    | Run      | total ms | bootstrap | support load | test run | transpile cache |
+| ---------- | ------------- | -------- | -------- | --------- | ------------ | -------- | --------------- |
+| `node`     | `es-node`     | 1 (cold) | 1688     | 853       | 676          | 58       | 20 misses       |
+| `node`     | `es-node`     | 2        | 1266     | 715       | 408          | 50       | 20 hits         |
+| `node`     | `es-node`     | 3        | 1094     | 581       | 369          | 55       | 20 hits         |
+| `node-esm` | `es-node-esm` | 1 (cold) | 1677     | 965       | 481          | 66       | 10 misses       |
+| `node-esm` | `es-node-esm` | 2        | 964      | 637       | 138          | 63       | 10 hits         |
+| `node-esm` | `es-node-esm` | 3        | 840      | 523       | 148          | 54       | 10 hits         |
+| `vue`      | `es-vue`      | 1 (cold) | 31886    | 593       | 31003        | 170      | 23 misses       |
+| `vue`      | `es-vue`      | 2        | 1997     | 541       | 1272         | 95       | 23 hits         |
+| `vue`      | `es-vue`      | 3        | 2090     | 559       | 1355         | 91       | 23 hits         |
+| `vue-esm`  | `es-vue-esm`  | 1 (cold) | 2523     | 637       | 1620         | 91       | 15 misses       |
+| `vue-esm`  | `es-vue-esm`  | 2        | 2169     | 617       | 1297         | 94       | 15 hits         |
+| `vue-esm`  | `es-vue-esm`  | 3        | 2012     | 729       | 1054         | 88       | 15 hits         |
 
 What the shape says: on suites this small the fixed costs dominate. `bootstrap`, Node loading the library and its dependencies, is about half of a warm run in the Node workspaces, and the transpile cache turns the support load of a cold run into a fraction of itself (`node`: 676 ms to about 390 ms; `node-esm`: 481 ms to about 140 ms). In the Vue workspaces most of the support load is jsdom and Vue themselves, which no cache of cucumber-tsflow's removes. The test run itself is under a tenth of a second in every workspace except the cold `vue` run. A change that moves `bootstrap` or the warm support load by more than the run-to-run noise is visible here; one that only matters at two hundred support files is not, and needs the real suite.
 
-For a real measurement, use a real suite: [research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md](../research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md) compares the full 1,624-scenario UIS Tools suite on 7.5.5 and 8.0.0, the notes in [research/speed-enhancements/testing/local-consumer-testing.md](../research/speed-enhancements/testing/local-consumer-testing.md) describe how the library is linked into such a project and timed, and the phase hand-offs under [research/speed-enhancements/hand-offs/](../research/speed-enhancements/hand-offs/) record what each change measured there.
+For a real measurement, use a real suite: [research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md](../research/speed-enhancements/measurements/uis-tools-7.5.5-vs-8.0.0.md) compares the full 1,624-scenario suite we benchmark against on 7.5.5 and 8.0.0, the notes in [research/speed-enhancements/testing/local-consumer-testing.md](../research/speed-enhancements/testing/local-consumer-testing.md) describe how the library is linked into such a project and timed, and the phase hand-offs under [research/speed-enhancements/hand-offs/](../research/speed-enhancements/hand-offs/) record what each change measured there.

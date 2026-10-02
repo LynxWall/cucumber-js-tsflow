@@ -268,7 +268,7 @@ long-time user would receive the upgrade. It found no correctness problem. What 
   suites growing fast), the LOTR theme, and the `./lib/*` wildcard export. The library resolves its own
   transpilers through `lib/*`, so closing it is a Phase 13 item for a later major.
 - **The first full-suite comparison with the version the team runs**, UIS Tools `develop` on 7.5.5 against this
-  build: [measurements/uis-tools-7.5.5-vs-8.0.0.md](../measurements/uis-tools-7.5.5-vs-8.0.0.md). On clean runs 7.5.5 took 15m 28s and 14m 59s, and this build 4m 35s on a warm transpile cache and 6m 12s on a cold one. The wait before the first scenario went from about 6 minutes to 15 to 24 s, and the test run from about 9½ minutes to 4½ to 6, since 7.5.5 spent about 2½ minutes of it on its own work between steps. A busy peer session disturbed about half of the fourteen runs, which are kept and marked; the four step timeouts in two of them were load, since the feature passes alone. The measurement also hit the undeclared-dependency bug 8.0 fixes: after a reinstall, 7.5.5 could not start under pnpm without the `@cucumber/messages` it imports but does not declare.
+  build: [measurements/uis-tools-7.5.5-vs-8.0.0.md](../measurements/uis-tools-7.5.5-vs-8.0.0.md). On clean runs 7.5.5 took 15m 28s and 14m 59s, and this build 4m 35s on a warm transpile cache and 6m 12s on a cold one. The wait before the first scenario went from about 6 minutes to 15 to 24 s, and the test run from about 9.5 minutes to 4.5 to 6, since 7.5.5 spent about 2.5 minutes of it on its own work between steps. A busy peer session disturbed about half of the fourteen runs, which are kept and marked; the four step timeouts in two of them were load, since the feature passes alone. The measurement also hit the undeclared-dependency bug 8.0 fixes: after a reinstall, 7.5.5 could not start under pnpm without the `@cucumber/messages` it imports but does not declare.
 
 **Verification on the reviewed tree** (2026-09-25, Windows, Node 24.16.0): `yarn build`, `yarn typecheck` and
 `yarn lint` clean; 262 of 262 unit tests; `yarn test:all` green on all sixteen variants (424 scenarios); `yarn
@@ -293,7 +293,7 @@ owner posts it as the description of pull request #68 and takes the pull request
 
 ---
 
-**8.0.0: a major release for speed.** On UIS Tools the full suite runs in 4½ to 6 minutes against about 15 on 7.5.5, the version the team uses, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes. Writing step definitions does not change.
+**8.0.0: a major release for speed.** On UIS Tools the full suite runs in 4.5 to 6 minutes against about 15 on 7.5.5, the version the team uses, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes. Writing step definitions does not change.
 
 This branch is the performance work planned in `research/speed-enhancements/performance-enhancement-execution-strategy.md`:
 eleven increments (Phases 1 to 11), a whole-product review with a test build-out (Phase 12) and a release review,

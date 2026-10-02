@@ -14,7 +14,7 @@ This fork has been drastically modified from the original and will eventually be
 
 ## Release Updates (8.0.0)
 
-A major release for speed. On a large suite most of a run used to be startup, and 8.0 makes it a small part of the run. On UIS Tools, a 1,624-scenario Vue 3 suite, the full run takes 4½ to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes. Writing step definitions does not change. The [CHANGELOG](CHANGELOG.md) lists every change, and the new [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide describes the new features.
+A major release for speed. On a large suite most of a run used to be startup, and 8.0 makes it a small part of the run. On the project we use to benchmark updates, a 1,624-scenario Vue 3 suite, the full run takes 4.5 to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes. Writing step definitions does not change. The [CHANGELOG](CHANGELOG.md) lists every change, and the new [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide describes the new features.
 
 ### Upgrading from 7.x
 

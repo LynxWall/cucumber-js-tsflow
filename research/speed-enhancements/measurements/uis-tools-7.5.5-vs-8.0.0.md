@@ -8,8 +8,8 @@ branch build with another; this is the first against the version in use.
 
 ## Result
 
-On a clean run, the full suite takes **about 15 minutes on 7.5.5 and 4½ to 6 minutes on 8.0.0**. The wait before
-the first scenario drops from about 5½ to 6 minutes to 15 to 25 seconds.
+On a clean run, the full suite takes **about 15 minutes on 7.5.5 and 4.5 to 6 minutes on 8.0.0**. The wait before
+the first scenario drops from about 5.5 to 6 minutes to 15 to 25 seconds.
 
 | | 7.5.5 | 8.0.0, warm transpile cache | 8.0.0, cold transpile cache |
 | --- | --- | --- | --- |
@@ -30,7 +30,7 @@ developer's second run.
   the loader runs in-thread and calls esbuild directly, callsite resolution avoids jsdom's request path, and a warm
   transpile cache serves all 971 transpiles from disk: support loading takes 6.4 s, assembling the 1,624 test cases
   5 s.
-- **The test run, 9½ minutes to 4½.** Cucumber reports two figures for a run: its duration, and the time spent
+- **The test run, 9.5 minutes to 4.5.** Cucumber reports two figures for a run: its duration, and the time spent
   executing steps. On 7.5.5 the gap between them was 2m 26s; on 8.0.0 it is 6 to 7 s. That gap is the runner's
   own work between steps. On 7.5.5 it included, for every one of the 7,305 steps, re-filtering the step hooks and
   scanning the definition lists; 8.0.0 selects the hooks once per scenario and looks definitions up through

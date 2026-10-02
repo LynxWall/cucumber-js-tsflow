@@ -1,12 +1,13 @@
-/* eslint-disable no-undef */
 import { IFormatterStream } from '@cucumber/cucumber/lib/formatter/index';
 import { runCucumber } from '../api/run-cucumber';
 import { loadConfiguration } from '../api/load-configuration';
 import { getKeywords, getLanguages } from '@cucumber/cucumber/lib/cli/i18n';
 import { validateInstall } from '@cucumber/cucumber/lib/cli/install_validator';
 import ArgvParser from './argv-parser';
+import { watchCucumber } from './watch';
 import debug from 'debug';
-import { createLogger } from '../utils/tsflow-logger';
+import { createLogger, messageOf } from '../utils/tsflow-logger';
+import { startTimer, recordPhase } from '../utils/tsflow-timing';
 
 const logger = createLogger('cli');
 
@@ -66,8 +67,7 @@ export default class Cli {
 			argvConfiguration = parsed.configuration;
 			logger.checkpoint('Argv parsed', { options });
 		} catch (error: any) {
-			logger.error('Argv parsing failed', error, { argv: this.argv });
-			throw new Error(`Failed to parse command line arguments: ${error.message}`, { cause: error });
+			throw new Error(`Failed to parse command line arguments: ${messageOf(error)}`, { cause: error });
 		}
 
 		if (options.i18nLanguages) {
@@ -103,6 +103,7 @@ export default class Cli {
 				configFile: options.config,
 				profiles: options.profile
 			});
+			const configStart = startTimer();
 			const loaded = await loadConfiguration(
 				{
 					file: options.config,
@@ -113,14 +114,21 @@ export default class Cli {
 			);
 			configuration = loaded.useConfiguration;
 			runConfiguration = loaded.runConfiguration;
+			recordPhase('config', configStart);
 			logger.checkpoint('Configuration loaded', {
 				transpiler: configuration.transpiler,
 				loaders: runConfiguration.support?.loaders,
 				parallel: runConfiguration.runtime?.parallel
 			});
 		} catch (error: any) {
-			logger.error('Configuration loading failed', error);
-			throw new Error(`Failed to load configuration: ${error.message}`, { cause: error });
+			throw new Error(`Failed to load configuration: ${messageOf(error)}`, { cause: error });
+		}
+
+		// Watch mode: run, then stay resident and rerun on changes until the user quits
+		if (configuration.watch) {
+			logger.checkpoint('Running cucumber in watch mode');
+			const success = await watchCucumber(runConfiguration, environment, { argv: this.argv });
+			return { shouldExitImmediately: false, success };
 		}
 
 		// Run cucumber
@@ -134,8 +142,7 @@ export default class Cli {
 				success
 			};
 		} catch (error: any) {
-			logger.error('Cucumber execution failed', error);
-			throw new Error(`Failed during cucumber execution: ${error.message}`, { cause: error });
+			throw new Error(`Failed during cucumber execution: ${messageOf(error)}`, { cause: error });
 		}
 	}
 }

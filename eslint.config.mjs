@@ -43,7 +43,10 @@ export default defineConfigWithVueTs([
 		'**/*.DotSettings.user',
 		'**/*.dotCover',
 		'**/*.[Cc]ache',
-		'!**/*.[Cc]ache/'
+		'!**/*.[Cc]ache/',
+		// CommonJS support files with ES import syntax that the unit tests feed to the library's own transpiler; they
+		// are excluded from test/tsconfig.json for the same reason and have no project for the TypeScript parser
+		'cucumber-tsflow/test/fixtures/**'
 	]),
 	{
 		extends: compat.extends('eslint:recommended', 'prettier'),
@@ -87,6 +90,14 @@ export default defineConfigWithVueTs([
 					asyncArrow: 'always'
 				}
 			]
+		}
+	},
+	{
+		// `no-undef` cannot see TypeScript's ambient and Node global types (`NodeJS.ProcessEnv`, `BufferEncoding`), so
+		// it reports them as undefined; the compiler owns that check for TypeScript files, as typescript-eslint advises
+		files: ['**/*.ts', '**/*.mts', '**/*.cts', '**/*.vue'],
+		rules: {
+			'no-undef': 'off'
 		}
 	}
 ]);

@@ -1,9 +1,6 @@
 import * as messages from '@cucumber/messages';
-import { doesHaveValue, doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
-import { StepBinding } from '../bindings/step-binding';
+import { doesNotHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import { ManagedScenarioContext } from './managed-scenario-context';
-import { hasMatchingStep, hasMatchingTags } from './utils';
-import { hasStringValue } from '../utils/helpers';
 import { TestStepResultStatus } from '@cucumber/messages';
 import EventEmitter from 'events';
 import { EndTestCaseInfo } from './test-case-info';
@@ -50,6 +47,12 @@ export default class MessageCollector {
 	private testCaseAttemptDataMap: Record<string, ITestCaseAttemptData> = {};
 	private undefinedParameterTypes: messages.UndefinedParameterType[] = [];
 	private testCaseRunningMap: Record<string, messages.TestCaseStarted> = {};
+	/**
+	 * The scenario context of the test case currently executing in this process.
+	 * Test cases run one at a time per process (each parallel child has its own
+	 * collector), so a single field is sufficient.
+	 */
+	private currentScenarioContext: ManagedScenarioContext | undefined;
 
 	constructor(eventBroadcaster: EventEmitter) {
 		eventBroadcaster.on('envelope', this.parseEnvelope.bind(this));
@@ -66,6 +69,7 @@ export default class MessageCollector {
 		this.testCaseAttemptDataMap = {};
 		this.undefinedParameterTypes = [];
 		this.testCaseRunningMap = {};
+		this.currentScenarioContext = undefined;
 	}
 
 	/**
@@ -128,22 +132,26 @@ export default class MessageCollector {
 	}
 
 	parseEnvelope(envelope: messages.Envelope): void {
-		if (doesHaveValue(envelope.gherkinDocument)) {
-			this.gherkinDocumentMap[envelope.gherkinDocument.uri] = envelope.gherkinDocument;
-		} else if (doesHaveValue(envelope.pickle)) {
+		if (envelope.gherkinDocument) {
+			// A document parsed from a feature file always names it; the map is keyed by that name
+			const { uri } = envelope.gherkinDocument;
+			if (uri !== undefined) {
+				this.gherkinDocumentMap[uri] = envelope.gherkinDocument;
+			}
+		} else if (envelope.pickle) {
 			this.pickleMap[envelope.pickle.id] = envelope.pickle;
-		} else if (doesHaveValue(envelope.undefinedParameterType)) {
+		} else if (envelope.undefinedParameterType) {
 			this.undefinedParameterTypes.push(envelope.undefinedParameterType);
-		} else if (doesHaveValue(envelope.testCase)) {
+		} else if (envelope.testCase) {
 			this.testCaseMap[envelope.testCase.id] = envelope.testCase;
-		} else if (doesHaveValue(envelope.testCaseStarted)) {
+		} else if (envelope.testCaseStarted) {
 			this.initTestCaseAttempt(envelope.testCaseStarted);
 			this.startTestCase(envelope.testCaseStarted);
-		} else if (doesHaveValue(envelope.attachment)) {
+		} else if (envelope.attachment) {
 			this.storeAttachment(envelope.attachment);
-		} else if (doesHaveValue(envelope.testStepFinished)) {
+		} else if (envelope.testStepFinished) {
 			this.storeTestStepResult(envelope.testStepFinished);
-		} else if (doesHaveValue(envelope.testCaseFinished)) {
+		} else if (envelope.testCaseFinished) {
 			this.storeTestCaseResult(envelope.testCaseFinished);
 		}
 	}
@@ -203,38 +211,13 @@ export default class MessageCollector {
 	}
 
 	/**
-	 * Uses StepPattern information to find a matching scenario
-	 * and return the ScenarioContext
-	 * @param stepBinding
+	 * Returns the ScenarioContext of the test case that is currently running.
+	 * Steps always execute inside the running test case, so this is the
+	 * context created by the most recent testCaseStarted message.
 	 * @returns
 	 */
-	getStepScenarioContext(stepBinding: StepBinding): ManagedScenarioContext | undefined {
-		let scenarioContext: ManagedScenarioContext | undefined;
-		for (const [, pickle] of Object.entries(this.pickleMap)) {
-			const scenario = pickle as IScenario;
-			for (const step of scenario.steps) {
-				if (hasMatchingStep(stepBinding.stepPattern.toString(), step.text)) {
-					// if we have tags on the step binding check to see if it matches one in the
-					// current scenario, which also includes tags associated with the feature
-					if (stepBinding.tags && this.stepHasTags(stepBinding.tags)) {
-						if (
-							scenario.tags.length > 0 &&
-							hasMatchingTags(
-								stepBinding.tags,
-								scenario.tags.map(x => x.name)
-							)
-						) {
-							scenarioContext = scenario.scenarioContext;
-						}
-					} else {
-						scenarioContext = scenario.scenarioContext;
-					}
-				}
-				if (scenarioContext) break;
-			}
-			if (scenarioContext) break;
-		}
-		return scenarioContext;
+	getStepScenarioContext(): ManagedScenarioContext | undefined {
+		return this.currentScenarioContext;
 	}
 	/**
 	 * Called when a test case (scenario) starts. Intercepting
@@ -247,6 +230,7 @@ export default class MessageCollector {
 		if (scenario) {
 			const tags = scenario.tags.map(t => t.name);
 			scenario.scenarioContext = new ManagedScenarioContext(scenario.name, tags);
+			this.currentScenarioContext = scenario.scenarioContext;
 		}
 	}
 
@@ -260,6 +244,9 @@ export default class MessageCollector {
 		if (testCase) {
 			const scenario = this.getScenarioForTest(testCase.testCaseId);
 			if (scenario && scenario.scenarioContext) {
+				if (this.currentScenarioContext === scenario.scenarioContext) {
+					this.currentScenarioContext = undefined;
+				}
 				await scenario.scenarioContext.dispose(endTestCase);
 				scenario.scenarioContext = undefined;
 			}
@@ -277,15 +264,5 @@ export default class MessageCollector {
 			return this.pickleMap[testCase.pickleId] as IScenario;
 		}
 		return undefined;
-	}
-
-	/**
-	 * StepBinding tags are initialized with an astrick when empty.
-	 * Need to make sure tags has a value and not an astrick
-	 * @param tags
-	 * @returns
-	 */
-	private stepHasTags(tags: string): boolean {
-		return hasStringValue(tags) && !tags?.includes('*');
 	}
 }

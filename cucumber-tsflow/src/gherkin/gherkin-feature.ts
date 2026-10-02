@@ -18,7 +18,7 @@ export default class GherkinFeature {
 			return this.parseFeature(featureText, featureFilePath, options);
 		} catch (err: any) {
 			if (err.code === 'ENOENT') {
-				throw new Error(`Feature file not found (${featureFilePath})`);
+				throw new Error(`Feature file not found (${featureFilePath})`, { cause: err });
 			} else {
 				throw err;
 			}
@@ -40,7 +40,7 @@ export default class GherkinFeature {
 			const matcher = new GherkinClassicTokenMatcher(); // or Gherkin.GherkinInMarkdownTokenMatcher()
 			ast = new Parser(builder, matcher).parse(featureText);
 		} catch (err: any) {
-			throw new Error(`Error parsing feature Gherkin: ${err.message}`);
+			throw new Error(`Error parsing feature Gherkin: ${err.message}`, { cause: err });
 		}
 
 		let astFeature = this.collapseRulesAndBackgrounds(ast.feature);

@@ -1,9 +1,24 @@
 import { parse, compileScript, compileTemplate, compileStyle } from 'vue/compiler-sfc';
 import hash from 'hash-sum';
-import { transformSync } from 'esbuild';
-import { createLogger } from '../utils/tsflow-logger';
+import { transformSync, version as esbuildVersion } from 'esbuild';
+import { experimentalDecorators } from '../utils/decorator-mode';
+import { createLogger, isVerbose } from '../utils/tsflow-logger';
+import { startTimer, recordFile } from '../utils/tsflow-timing';
+import { withTranspileCache } from './transpile-cache';
 
 const logger = createLogger('vue-sfc');
+// Per-file checkpoints are guarded so the detail objects are not built when verbose logging is off
+const verbose = isVerbose();
+
+// The Vue compiler is the consumer's `vue` (resolved from wherever this module was loaded); its version is
+// part of the transpile cache key so an upgrade invalidates every cached component.
+const vueVersion: string = (() => {
+	try {
+		return String(require('vue/package.json').version);
+	} catch {
+		return 'unknown';
+	}
+})();
 
 export type VueSFCFormat = 'cjs' | 'esm';
 
@@ -14,8 +29,30 @@ export type VueSFCOptions = {
 	format?: VueSFCFormat;
 };
 
+/** `VueSFCOptions` with the defaults applied and the decorator mode read: every input to the output but the source and file name. */
+export interface ResolvedVueSFCOptions {
+	enableStyle: boolean;
+	format: VueSFCFormat;
+	experimentalDecorators: boolean;
+}
+
+/** Apply the defaults to `options` and read the decorator mode. */
+export function resolveVueSFCOptions(options: VueSFCOptions = {}): ResolvedVueSFCOptions {
+	const { enableStyle = false, format = 'cjs' } = options;
+	return { enableStyle, format, experimentalDecorators: experimentalDecorators() };
+}
+
 /**
- * Compile a Vue Single File Component to JavaScript.
+ * The transpile-cache configuration for `options`: the style and format options, the decorator mode, and
+ * the Vue compiler and esbuild versions. The file name is in the key already (the component id is derived
+ * from it). The ESM loader appends what its import transform bakes into the output.
+ */
+export function vueSfcCacheKey(options: ResolvedVueSFCOptions): string {
+	return `vue@${vueVersion};esbuild@${esbuildVersion};` + JSON.stringify(options);
+}
+
+/**
+ * Compile a Vue Single File Component to JavaScript, through the transpile cache.
  *
  * For CJS format: assembles script + template + styles then runs a single
  * esbuild pass (format: 'cjs') over the complete output with TS stripping.
@@ -28,12 +65,36 @@ export type VueSFCOptions = {
  * @param options - Compilation options
  */
 export function compileVueSFC(source: string, filename: string, options: VueSFCOptions = {}): { code: string } {
-	const { enableStyle = false, format = 'cjs' } = options;
+	const resolved = resolveVueSFCOptions(options);
+	return withTranspileCache('vue-sfc', filename, source, vueSfcCacheKey(resolved), () =>
+		compileVueSFCUncached(source, filename, resolved)
+	);
+}
 
-	logger.checkpoint('compileVueSFC started', { filename, format, enableStyle });
-
+/**
+ * The compile itself, for a caller that caches the result together with a transform of its own (the ESM
+ * loader's `loadVue`, which rewrites the output's imports before caching it under its own key).
+ */
+export function compileVueSFCUncached(
+	source: string,
+	filename: string,
+	options: ResolvedVueSFCOptions
+): { code: string } {
 	if (!source) throw new Error(`Invalid source for ${filename}: source is ${typeof source}`);
 	if (!filename) throw new Error('Filename is required for Vue SFC compilation');
+	return compile(source, filename, options.enableStyle, options.format, options.experimentalDecorators);
+}
+
+function compile(
+	source: string,
+	filename: string,
+	enableStyle: boolean,
+	format: VueSFCFormat,
+	experimentalDecorators: boolean
+): { code: string } {
+	const compileStart = startTimer();
+
+	if (verbose) logger.checkpoint('compileVueSFC started', { filename, format, enableStyle });
 
 	// Parse the SFC
 	const { descriptor, errors: parseErrors } = parse(source, { filename, sourceMap: true });
@@ -48,18 +109,17 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 	const id = hash(filename);
 	const hasScoped = descriptor.styles.some(s => s.scoped);
 
-	logger.checkpoint('SFC parsed', {
-		hasScript: !!descriptor.script,
-		hasScriptSetup: !!descriptor.scriptSetup,
-		hasTemplate: !!descriptor.template,
-		styleCount: descriptor.styles?.length,
-		hasScoped
-	});
+	if (verbose)
+		logger.checkpoint('SFC parsed', {
+			hasScript: !!descriptor.script,
+			hasScriptSetup: !!descriptor.scriptSetup,
+			hasTemplate: !!descriptor.template,
+			styleCount: descriptor.styles?.length,
+			hasScoped
+		});
 
 	const isTS = descriptor.script?.lang === 'ts' || descriptor.scriptSetup?.lang === 'ts';
 
-	// Read experimentalDecorators from global (set by load-configuration before transpilers run)
-	const experimentalDecorators = !!(global as any).experimentalDecorators;
 	const tsconfigRaw = {
 		compilerOptions: {
 			experimentalDecorators,
@@ -104,7 +164,7 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 				templateOptions: { transformAssetUrls: false }
 			} as any);
 			rawScriptContent = compiledScript.content;
-			logger.checkpoint('Script compiled', { contentLength: rawScriptContent.length });
+			if (verbose) logger.checkpoint('Script compiled', { contentLength: rawScriptContent.length });
 		} catch (e: any) {
 			throw new Error(`Failed to compile script in ${filename}: ${e.message}`, { cause: e });
 		}
@@ -123,7 +183,7 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 				tsconfigRaw
 			});
 			scriptCode = result.code;
-			logger.checkpoint('Script transpiled (ESM)', { outputLength: scriptCode.length });
+			if (verbose) logger.checkpoint('Script transpiled (ESM)', { outputLength: scriptCode.length });
 		} catch (e: any) {
 			throw new Error(`Failed to transpile TypeScript in ${filename}: ${e.message}`, { cause: e });
 		}
@@ -156,7 +216,7 @@ export function compileVueSFC(source: string, filename: string, options: VueSFCO
 			}
 
 			templateCode = template.code;
-			logger.checkpoint('Template compiled', { outputLength: templateCode.length });
+			if (verbose) logger.checkpoint('Template compiled', { outputLength: templateCode.length });
 		} catch (e: any) {
 			throw new Error(`Failed to compile template in ${filename}: ${e.message}`, { cause: e });
 		}
@@ -262,13 +322,14 @@ if (typeof document !== 'undefined') {
 				tsconfigRaw
 			});
 			finalCode = result.code;
-			logger.checkpoint('CJS transpilation complete', { outputLength: finalCode.length });
+			if (verbose) logger.checkpoint('CJS transpilation complete', { outputLength: finalCode.length });
 		} catch (e: any) {
 			throw new Error(`Failed to transpile Vue SFC to CJS in ${filename}: ${e.message}`, { cause: e });
 		}
 	}
 
-	logger.checkpoint('compileVueSFC complete', { filename, outputLength: finalCode.length });
+	if (verbose) logger.checkpoint('compileVueSFC complete', { filename, outputLength: finalCode.length });
+	recordFile('transpile', filename, compileStart);
 
 	return { code: finalCode };
 }

@@ -9,7 +9,7 @@ import {
 	given,
 	then,
 	when
-} from '@lynxwall/cucumber-tsflow';
+} from '@lynxwall/cucumber-tsflow/bindings';
 import { expect } from 'chai';
 
 @binding()

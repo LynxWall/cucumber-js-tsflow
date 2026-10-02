@@ -9,7 +9,6 @@
 			"junitbamboo:../reports/esnode-exp.xml"
 		],
 		"parallel": 2,
-		"parallelLoad": true,
 		"experimentalDecorators": true,
 		"tags": "@node-exp"
 	},
@@ -23,7 +22,6 @@
 			"junitbamboo:../reports/tsnode-exp.xml"
 		],
 		"parallel": 1,
-		"parallelLoad": true,
 		"experimentalDecorators": true,
 		"tags": "@node-exp"
 	},
@@ -37,7 +35,6 @@
 			"junitbamboo:../reports/tsnodeesm.xml"
 		],
 		"parallel": 1,
-		"parallelLoad": true,
 		"experimentalDecorators": true,
 		"tags": "@node-exp"
 	},
@@ -51,7 +48,6 @@
 			"junitbamboo:../reports/tsnode-exp.xml"
 		],
 		"parallel": 0,
-		"parallelLoad": true,
 		"experimentalDecorators": true,
 		"tags": "@node-exp"
 	}

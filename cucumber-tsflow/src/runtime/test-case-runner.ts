@@ -39,6 +39,9 @@ export default class TestCaseRunner {
 	private readonly skip: boolean;
 	private readonly filterStackTraces: boolean;
 	private readonly supportCodeLibrary: SupportCodeLibrary;
+	private readonly definitionIndex: DefinitionIndex;
+	private readonly beforeStepHookDefinitions: TestStepHookDefinition[];
+	private readonly afterStepHookDefinitions: TestStepHookDefinition[];
 	private testStepResults?: messages.TestStepResult[];
 	private world: any;
 	private readonly worldParameters: any;
@@ -88,6 +91,16 @@ export default class TestCaseRunner {
 		this.worldParameters = worldParameters;
 		this.resetTestProgressData();
 		this.bindingRegistry = BindingRegistry.instance;
+		this.definitionIndex = getDefinitionIndex(supportCodeLibrary);
+		// The pickle is fixed for the runner's lifetime, so the step hooks that apply
+		// to it can be selected once here rather than on every step.
+		this.beforeStepHookDefinitions = supportCodeLibrary.beforeTestStepHookDefinitions.filter(hookDefinition =>
+			hookDefinition.appliesToTestCase(this.pickle)
+		);
+		this.afterStepHookDefinitions = supportCodeLibrary.afterTestStepHookDefinitions
+			.slice(0)
+			.reverse()
+			.filter(hookDefinition => hookDefinition.appliesToTestCase(this.pickle));
 	}
 
 	resetTestProgressData(): void {
@@ -101,16 +114,11 @@ export default class TestCaseRunner {
 	}
 
 	getBeforeStepHookDefinitions(): TestStepHookDefinition[] {
-		return this.supportCodeLibrary.beforeTestStepHookDefinitions.filter(hookDefinition =>
-			hookDefinition.appliesToTestCase(this.pickle)
-		);
+		return this.beforeStepHookDefinitions;
 	}
 
 	getAfterStepHookDefinitions(): TestStepHookDefinition[] {
-		return this.supportCodeLibrary.afterTestStepHookDefinitions
-			.slice(0)
-			.reverse()
-			.filter(hookDefinition => hookDefinition.appliesToTestCase(this.pickle));
+		return this.afterStepHookDefinitions;
 	}
 
 	getWorstStepResult(): messages.TestStepResult {
@@ -123,16 +131,21 @@ export default class TestCaseRunner {
 		return getWorstTestStepResult(this.testStepResults);
 	}
 
+	/**
+	 * Run a step or a hook through CucumberJS's `StepRunner`. Its options declare both `step` and `hookParameter`
+	 * as required, but a step definition reads only the step and a hook definition only the hook parameter, so a
+	 * hook passes `null` for the step and a step passes no hook parameter, as CucumberJS's own runner does.
+	 */
 	async invokeStep(
-		step: messages.PickleStep,
+		step: messages.PickleStep | null,
 		stepDefinition: IDefinition,
 		hookParameter?: ITestCaseHookParameter
 	): Promise<RunStepResult> {
 		return await StepRunner.run({
 			defaultTimeout: this.supportCodeLibrary.defaultTimeout,
 			filterStackTraces: this.filterStackTraces,
-			hookParameter,
-			step,
+			hookParameter: hookParameter as ITestCaseHookParameter,
+			step: step as messages.PickleStep,
 			stepDefinition,
 			world: this.world
 		});
@@ -157,7 +170,7 @@ export default class TestCaseRunner {
 		this.eventBroadcaster.emit('envelope', testStepStarted);
 		this.currentTestStepId = testStepId;
 		const testStepResult = await runStepFn();
-		this.currentTestStepId = null;
+		this.currentTestStepId = undefined;
 		this.testStepResults?.push(testStepResult);
 		const testStepFinished: messages.Envelope = {
 			testStepFinished: {
@@ -186,18 +199,17 @@ export default class TestCaseRunner {
 
 	async runAttempt(attempt: number, moreAttemptsRemaining: boolean): Promise<boolean> {
 		this.currentTestCaseStartedId = this.newId();
-		const testCaseStarted: messages.Envelope = {
-			testCaseStarted: {
-				attempt,
-				testCaseId: this.testCase.id,
-				id: this.currentTestCaseStartedId,
-				timestamp: timestamp()
-			}
+		const testCaseStarted: messages.TestCaseStarted = {
+			attempt,
+			testCaseId: this.testCase.id,
+			id: this.currentTestCaseStartedId,
+			timestamp: timestamp()
 		};
 		if (this.workerId) {
-			testCaseStarted.testCaseStarted.workerId = this.workerId;
+			testCaseStarted.workerId = this.workerId;
 		}
-		this.eventBroadcaster.emit('envelope', testCaseStarted);
+		const testCaseStartedEnvelope: messages.Envelope = { testCaseStarted };
+		this.eventBroadcaster.emit('envelope', testCaseStartedEnvelope);
 		// used to determine whether a hook is a Before or After
 		let didWeRunStepsYet = false;
 		for (const testStep of this.testCase.testSteps) {
@@ -214,7 +226,7 @@ export default class TestCaseRunner {
 							this.getWorstStepResult().status === messages.TestStepResultStatus.FAILED && moreAttemptsRemaining;
 					}
 					return await this.runHook(
-						findHookDefinition(testStep.hookId!, this.supportCodeLibrary),
+						this.definitionIndex.hooksById.get(testStep.hookId!)!,
 						hookParameter,
 						!didWeRunStepsYet
 					);
@@ -268,7 +280,7 @@ export default class TestCaseRunner {
 		// Get the step binding and scenario context so that we can
 		// initialize any context objects before hooks are executed
 		const stepBinding = this.bindingRegistry.getStepBindingByCucumberKey((hookDefinition.options as any).cucumberKey);
-		if (!stepBinding) throw new Error('===268 test-case-runner.ts Unable to find StepBinding!');
+		if (!stepBinding) throw new Error('Unable to find StepBinding!');
 		const scenarioContext = global.messageCollector.getHookScenarioContext(hookParameter);
 		if (!scenarioContext) throw new Error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
@@ -300,7 +312,7 @@ export default class TestCaseRunner {
 
 	async runStep(pickleStep: messages.PickleStep, testStep: messages.TestStep): Promise<messages.TestStepResult> {
 		const stepDefinitions = testStep.stepDefinitionIds?.map(stepDefinitionId => {
-			return findStepDefinition(stepDefinitionId, this.supportCodeLibrary);
+			return this.definitionIndex.stepsById.get(stepDefinitionId)!;
 		});
 
 		if (!stepDefinitions || stepDefinitions.length === 0) {
@@ -325,8 +337,8 @@ export default class TestCaseRunner {
 		const stepBinding = this.bindingRegistry.getStepBindingByCucumberKey(
 			(stepDefinitions[0].options as any).cucumberKey
 		);
-		if (!stepBinding) throw new Error('===323 test-case-runner.ts: Unable to find StepBinding!');
-		const scenarioContext = global.messageCollector.getStepScenarioContext(stepBinding);
+		if (!stepBinding) throw new Error('Unable to find StepBinding!');
+		const scenarioContext = global.messageCollector.getStepScenarioContext();
 		if (!scenarioContext) throw new Error('Unable to find the ManagedScenarioContext!');
 		await this.initializeContext(stepBinding, scenarioContext);
 
@@ -373,12 +385,41 @@ export default class TestCaseRunner {
 	}
 }
 
-function findHookDefinition(id: string, supportCodeLibrary: SupportCodeLibrary): TestCaseHookDefinition {
-	return [...supportCodeLibrary.beforeTestCaseHookDefinitions, ...supportCodeLibrary.afterTestCaseHookDefinitions].find(
-		definition => definition.id === id
-	)!;
+/**
+ * Per-library indexes of the definitions a test case runner looks up by id.
+ */
+interface DefinitionIndex {
+	hooksById: Map<string, TestCaseHookDefinition>;
+	stepsById: Map<string, StepDefinition>;
 }
 
-function findStepDefinition(id: string, supportCodeLibrary: SupportCodeLibrary): StepDefinition {
-	return supportCodeLibrary.stepDefinitions.find(definition => definition.id === id)!;
+/**
+ * Indexes built once per support code library object. A library comes out of
+ * `supportCodeLibraryBuilder.finalize()` with fresh definition arrays that are never
+ * mutated afterwards, so an index keyed on the library's identity stays valid for as
+ * long as that library is in use; a reload produces a new library and a new index.
+ */
+const definitionIndexes = new WeakMap<SupportCodeLibrary, DefinitionIndex>();
+
+function getDefinitionIndex(supportCodeLibrary: SupportCodeLibrary): DefinitionIndex {
+	let index = definitionIndexes.get(supportCodeLibrary);
+	if (!index) {
+		index = {
+			hooksById: indexById([
+				...supportCodeLibrary.beforeTestCaseHookDefinitions,
+				...supportCodeLibrary.afterTestCaseHookDefinitions
+			]),
+			stepsById: indexById(supportCodeLibrary.stepDefinitions)
+		};
+		definitionIndexes.set(supportCodeLibrary, index);
+	}
+	return index;
+}
+
+function indexById<T extends { id: string }>(definitions: T[]): Map<string, T> {
+	const index = new Map<string, T>();
+	for (const definition of definitions) {
+		index.set(definition.id, definition);
+	}
+	return index;
 }

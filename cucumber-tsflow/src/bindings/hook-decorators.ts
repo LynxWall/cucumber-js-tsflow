@@ -1,6 +1,6 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
-import shortUuid from 'short-uuid';
+import { randomUUID } from 'node:crypto';
 import { collectStepBinding, addStepBindingExp } from './binding-context';
 
 /**
@@ -89,7 +89,7 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 				tags: tag,
 				timeout: timeout,
 				callsite: callSite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 
 			if (tag) {
@@ -112,7 +112,7 @@ function createDecoratorFactory(flag: StepBindingFlags, callSite: Callsite, tag?
 				tags: tag,
 				timeout: timeout,
 				callsite: callSite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 
 			if (tag) {

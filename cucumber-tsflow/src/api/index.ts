@@ -16,4 +16,5 @@ export * from './load-configuration';
 export * from '@cucumber/cucumber/lib/api/load_sources';
 export * from './load-support';
 export * from './run-cucumber';
+export * from './support-reloader';
 export * from '@cucumber/cucumber/lib/api/types';

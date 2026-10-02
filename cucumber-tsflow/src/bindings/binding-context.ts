@@ -26,7 +26,7 @@ import { StepBinding } from './step-binding';
  * Used when global.experimentalDecorators = true.
  * These decorators don't have access to context.metadata, so we use a module-level array.
  */
-let stepBindings: Array<StepBinding> = null;
+let stepBindings: StepBinding[] | undefined;
 /**
  * Storage for standard decorators (TC39 Stage 3 decorators).
  * Used when global.experimentalDecorators = false.

@@ -1,0 +1,24 @@
+{
+	"compilerOptions": {
+		"target": "es2022",
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"lib": ["es2022", "esnext.decorators"],
+		"strict": true,
+		"noImplicitReturns": true,
+		"noEmit": true,
+		"allowJs": true,
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"erasableSyntaxOnly": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"types": ["node", "chai"],
+		"typeRoots": ["../../node_modules/@types"]
+	},
+	"include": ["./**/*.ts", "./**/*.mts"],
+	// CommonJS support files that the library's own transpiler loads during the tests; their ES import syntax
+	// in a CommonJS scope is what that transpiler exists to handle, not something for this configuration to judge.
+	"exclude": ["./fixtures/support"]
+}

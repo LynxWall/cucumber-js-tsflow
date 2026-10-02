@@ -357,7 +357,7 @@ export const loadConfiguration = async (
 };
 
 /**
- * The notice printed when a configuration still sets `parallelLoad`. Deliberately loud — a blank line, a row
+ * The notice printed when a configuration still sets `parallelLoad`, which has no effect. Deliberately loud — a blank line, a row
  * of stars, a blank line, then the notice — so it is not lost among the startup lines.
  */
 function parallelLoadDeprecationNotice(setBy: string): string {
@@ -365,7 +365,7 @@ function parallelLoadDeprecationNotice(setBy: string): string {
 		'',
 		'**********',
 		'',
-		`${ansis.bold('DEPRECATION NOTICE:')} the parallelLoad option is no longer used and has no effect. ` +
+		`${ansis.bold('NOTICE:')} the parallelLoad option no longer has any effect and goes away in the next major version. ` +
 			'Parallel preloading of support files was removed because it made every run slower; the on-disk ' +
 			'transpile cache now does the work it was meant to do, with nothing to configure. ' +
 			`Remove ${setBy} to clear this notice.`,

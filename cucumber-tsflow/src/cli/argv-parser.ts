@@ -20,7 +20,7 @@ export interface ITsflowConfiguration extends IConfiguration {
 	experimentalDecorators: boolean;
 	/**
 	 * @deprecated Parallel preloading was removed in 7.8; the value is accepted (the flag shipped in 7.7.0) and
-	 * read only by the deprecation notice in `loadConfiguration`. It goes with the next major version.
+	 * read only by the notice in `loadConfiguration`. It goes with the next major version.
 	 */
 	parallelLoad?: boolean | number;
 	transpileCache: boolean;
@@ -161,9 +161,9 @@ const ArgvParser = {
 				'only execute the features or scenarios with tags matching the expression (repeatable)',
 				ArgvParser.mergeTags
 			)
-			// Deprecated and ignored; still accepted so existing scripts keep working, and hidden from --help.
+			// No effect since 8.0.0; still accepted so existing scripts keep working, and hidden from --help.
 			.addOption(
-				new Option('--parallel-load [THREADS]', 'Deprecated and ignored: parallel preloading was removed.')
+				new Option('--parallel-load [THREADS]', 'No effect since 8.0.0: parallel preloading was removed.')
 					.argParser(() => true)
 					.hideHelp()
 			)

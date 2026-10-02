@@ -70,12 +70,12 @@ describe('loadConfiguration', () => {
 		}
 	});
 
-	it('prints the deprecation notice when parallelLoad comes from the command line', async () => {
+	it('prints the notice when parallelLoad comes from the command line', async () => {
 		const { stderr, stdout } = await load({ parallelLoad: true });
-		expect(stderr).to.include('DEPRECATION NOTICE');
+		expect(stderr).to.include('NOTICE: the parallelLoad option no longer has any effect');
 		expect(stderr).to.include('the --parallel-load flag from the command line');
 		expect(stdout, 'stdout carries only formatter output').to.equal('');
-		expect((await load({})).stderr).to.not.include('DEPRECATION NOTICE');
+		expect((await load({})).stderr).to.not.include('NOTICE:');
 	});
 
 	it('names the configuration file when parallelLoad comes from it', async () => {

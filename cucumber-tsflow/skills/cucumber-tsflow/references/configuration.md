@@ -16,7 +16,7 @@ profiles. `cucumber-tsflow -p <name>` selects a profile; without `-p` the `defau
 | `transpileCache` | `--no-transpile-cache` | `true` | Cache esbuild and Vue SFC output on disk between runs |
 | `selectiveLoad` | `--selective-load` | `false` | On a filtered run, load only the step files the selected scenarios use |
 | `watch` | `-w, --watch` | `false` | Stay running and rerun on file changes or Enter |
-| `parallelLoad` | `--parallel-load` | none | Deprecated and ignored; prints a notice. Remove it from configurations |
+| `parallelLoad` | `--parallel-load` | none | No effect since 8.0.0; still accepted, prints a notice, and goes away in the next major version. Remove it from configurations |
 
 The usual CucumberJS options still do the rest: `paths` (feature globs), `require` or `import` (support globs),
 `tags`, `name`, `format`, `formatOptions`, `parallel`, `retry`, `worldParameters`, `strict`.

@@ -52,7 +52,7 @@ Most suites upgrade without changes. These are the differences you may notice:
 
 ### Deprecated
 
-- `parallelLoad` / `--parallel-load` is accepted and ignored, with a notice naming where to remove it: the parallel preload it enabled cost more than it saved once the transpile cache existed.
+- `parallelLoad` / `--parallel-load` no longer has any effect. It is still accepted, and a run that sets it prints a notice naming where to remove it; the option goes away in the next major version. The parallel preload it enabled cost more than it saved once the transpile cache existed.
 
 ## [7.7.2]
 

@@ -335,7 +335,7 @@ The CLI entry point is `bin/cucumber-tsflow.js`. Before requiring the library it
 - `--transpile-cache` / `--no-transpile-cache` — read and write the on-disk transpile cache, default on (see [Transpile cache](#transpile-cache))
 - `--selective-load` / `--no-selective-load` — on a filtered run, load only the support files the selected scenarios need, default off (see [Selective loading](#selective-loading))
 - `--watch` / `--no-watch` — stay resident and rerun on changes (see [Watch mode](#watch-mode))
-- `--parallel-load` — deprecated: accepted, hidden from `--help`, and ignored with a notice that names where it was set; the preload it enabled was removed
+- `--parallel-load` — no effect since 8.0.0: accepted, hidden from `--help`, and ignored with a notice that names where it was set; the preload it enabled was removed, and the option goes away in the next major version
 
 After parsing, the CLI calls `loadConfiguration()` then `runCucumber()`, or `watchCucumber()` when `watch` is set.
 

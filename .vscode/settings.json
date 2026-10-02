@@ -104,7 +104,8 @@
 		"commandCenter.foreground": "#e7e7e7",
 		"statusBar.debuggingBackground": "#2e0b12",
 		"statusBar.debuggingForeground": "#e7e7e7",
-		"activityBarTop.activeBorder": "#e7e7e7"
+		"activityBarTop.activeBorder": "#e7e7e7",
+		"statusBar.inactiveBackground": "#2e0b12"
 	},
 	"peacock.color": "#2e0b12",
 	"cucumberautocomplete.steps": ["cucumber-tsflow-specs/**/step_definitions/**/*.ts"],

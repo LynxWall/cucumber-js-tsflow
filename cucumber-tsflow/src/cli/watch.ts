@@ -201,14 +201,20 @@ class WatchSession {
 			this.stderr.write(`${formatThrowable(error)}\n`);
 		}
 		const elapsed = formatDuration(performance.now() - start);
-		this.running = false;
-
 		if (this.quitting) {
+			this.running = false;
 			// An interrupt has already restored the terminal and announced the stop
 			if (!this.interrupted) this.finishQuit();
 			return;
 		}
+		// The run counts as in progress until the watchers are refreshed (real I/O in the child-process case), so
+		// a `q` or file event arriving meanwhile is deferred here rather than quitting or starting a run under it
 		await this.refreshWatchers();
+		this.running = false;
+		if (this.quitting) {
+			if (!this.interrupted) this.finishQuit();
+			return;
+		}
 		const directories = `${this.watchers.size} ${this.watchers.size === 1 ? 'directory' : 'directories'}`;
 		// The heap after a run is what the next run starts from: module state the process keeps on purpose,
 		// plus anything the suite left behind (a DOM it mounted into and never cleaned up, say)
@@ -240,7 +246,13 @@ class WatchSession {
 	/** The fallback: a fresh `cucumber-tsflow` with the same arguments, minus watch mode. */
 	private runInChild(): Promise<boolean> {
 		const [, script, ...rest] = this.options.argv;
-		const args = [script, ...rest.filter(arg => arg !== '--watch' && arg !== '-w'), '--no-watch'];
+		// Node's own flags (`--inspect`, `--expose-gc`, `--import`) carry over; NODE_OPTIONS does so through env
+		const args = [
+			...process.execArgv,
+			script,
+			...rest.filter(arg => arg !== '--watch' && arg !== '-w'),
+			'--no-watch'
+		];
 		logger.checkpoint('Starting a child run', { args });
 		return new Promise<boolean>(resolve => {
 			const child = spawn(process.execPath, args, {
@@ -277,6 +289,8 @@ class WatchSession {
 			);
 			files = [...sourcePaths, ...requirePaths, ...importPaths].map(canonicalPath);
 		}
+		// A quit that arrived during the resolution above has closed the watchers; do not create new ones
+		if (this.quitting) return;
 		this.known = new Set(files);
 
 		const directories = new Set(files.map(file => path.dirname(file)));

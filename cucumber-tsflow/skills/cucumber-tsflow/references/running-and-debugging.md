@@ -79,6 +79,8 @@ describes the caches, the timing report, selective loading and watch mode in ful
 | `TSFLOW_TIMING=true` | Print a startup timing report to stderr when the run ends: phases, parallel workers, slowest files |
 | `TSFLOW_VERBOSE=true` | Print internal checkpoint logging |
 | `TSFLOW_THEME=off` | No startup progress lines (also `lotr` for a different theme) |
+| `TSFLOW_TRANSPILE_CACHE=false` | Same as `--no-transpile-cache` when the option is not set |
+| `TSFLOW_TRANSPILE_CACHE_DIR=<dir>` | Put the transpile cache under `<dir>` (the selective-load index stays under `node_modules/.cache/cucumber-tsflow`) |
 | `TSFLOW_SELECTIVE_LOAD=true` | Same as `--selective-load` |
 | `TSFLOW_ESM_HOOKS=async` | Force the ESM loaders onto Node's loader hooks thread (`module.register()`) |
 

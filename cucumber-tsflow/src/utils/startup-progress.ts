@@ -242,8 +242,9 @@ function spinnerSlot(frame: number): string {
  * Resolve the theme selected by `TSFLOW_THEME`. Returns undefined when progress output is turned off.
  */
 export function resolveStartupTheme(value: string | undefined = process.env.TSFLOW_THEME): StartupTheme | undefined {
+	// `off` is the one documented switch; `bin/cucumber-tsflow.js` tests for the same value before the library loads
 	const normalized = (value ?? '').trim().toLowerCase();
-	if (normalized === 'off' || normalized === 'none' || normalized === 'false') {
+	if (normalized === 'off') {
 		return undefined;
 	}
 	if (normalized === 'lotr') {

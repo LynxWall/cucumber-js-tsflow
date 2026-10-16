@@ -70,8 +70,12 @@ let matchPath;
 // The `baseUrl` and `paths` behind `matchPath`, for cache keys: what `transformImports` writes into a module
 // depends on them. Empty until a tsconfig with paths has been loaded.
 let tsconfigPaths = {};
+// Set once `loadConfig` has run, whatever it found: a project without a tsconfig must not repeat the directory
+// walk for every bare specifier and every `.vue` file
+let tsconfigLoaded = false;
 export function initializeTsconfigPaths() {
-	if (matchPath) return matchPath;
+	if (tsconfigLoaded) return matchPath;
+	tsconfigLoaded = true;
 
 	loggerUtils.checkpoint('Initializing tsconfig paths');
 

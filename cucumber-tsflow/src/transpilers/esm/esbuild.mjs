@@ -66,7 +66,10 @@ function loadTsConfigPaths() {
 		logger.error('Failed to load tsconfig for aliases', error);
 	}
 
-	return tsconfigCache || { paths: {}, mappings: [] };
+	// A missing or unreadable tsconfig is remembered too: this runs per file, ahead of the transpile cache
+	// lookup, and the directory walk `loadConfig` does must not repeat for every module
+	tsconfigCache ??= { paths: {}, mappings: [] };
+	return tsconfigCache;
 }
 
 function rewritePathMappings(code, filename) {

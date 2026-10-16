@@ -9,7 +9,7 @@ import { resetStepPatternRegistrations } from '../bindings/binding-decorator';
 import { BindingRegistry } from '../bindings/binding-registry';
 import { startTimer, recordPhase, recordFile } from '../utils/tsflow-timing';
 import { bumpModuleVersions, evictRequiredModules, notifyReload, versionedUrl } from '../utils/module-graph';
-import { canonicalPath } from '../utils/paths';
+import { canonicalFromFrameFile, canonicalPath } from '../utils/paths';
 import { registerLoader } from './register-loaders';
 
 /** Support loads this process has begun. Every load after the first has to make its modules evaluate again. */
@@ -93,15 +93,25 @@ export async function getSupportCodeLibrary({
 }): Promise<SupportCodeLibrary> {
 	// Every load starts from nothing: the step pattern cache, the registry and the builder mirror what the
 	// files about to load register, and nothing from an earlier load can shadow a re-registered binding
-	resetStepPatternRegistrations();
-	BindingRegistry.instance.clear();
 	if (loads > 0) {
-		const files = reevaluate ?? new Set([...requirePaths, ...importPaths].map(canonicalPath));
+		let files = reevaluate;
+		if (!files) {
+			// A module outside the support files that applied decorators on the previous load (a helper a support
+			// file imports) holds bindings too; the registry is about to be cleared, so it must evaluate again
+			const set = new Set([...requirePaths, ...importPaths].map(canonicalPath));
+			for (const raw of BindingRegistry.instance.getBindingSourceFiles()) {
+				const key = canonicalFromFrameFile(raw);
+				if (key) set.add(key);
+			}
+			files = set;
+		}
 		evictRequiredModules(files);
 		bumpModuleVersions(files, loads);
 		notifyReload();
 	}
 	loads++;
+	resetStepPatternRegistrations();
+	BindingRegistry.instance.clear();
 
 	supportCodeLibraryBuilder.reset(cwd, newId, {
 		requireModules,

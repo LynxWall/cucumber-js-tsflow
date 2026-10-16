@@ -23,16 +23,16 @@ type LoadOptions = Parameters<typeof getSupportCodeLibrary>[0];
 const logger = { debug() {}, warn() {}, error() {} } as unknown as LoadOptions['logger'];
 let ids = 0;
 
-function load(options: Pick<LoadOptions, 'recorder' | 'reevaluate'> = {}) {
+function load(options: Pick<LoadOptions, 'recorder' | 'reevaluate'> & Partial<Pick<LoadOptions, 'requirePaths'>> = {}) {
 	return getSupportCodeLibrary({
 		logger,
 		cwd: fixtures,
 		newId: () => String(++ids),
 		requireModules: [],
-		requirePaths: files,
 		importPaths: [],
 		loaders: [],
-		...options
+		...options,
+		requirePaths: options.requirePaths ?? files
 	});
 }
 
@@ -131,6 +131,15 @@ describe('getSupportCodeLibrary', () => {
 			'begin require steps-b.ts',
 			'end require steps-b.ts'
 		]);
+	});
+
+	it('evaluates again a module outside the support files that applied decorators, so a later load keeps its bindings', async () => {
+		// steps-c.ts imports helper-bindings.ts, which is not a support file; its bindings register only while it evaluates
+		const stepsC = [path.join(fixtures, 'steps-c.ts')];
+		const first = await load({ requirePaths: stepsC });
+		expect(patterns(first)).to.include('a step from the helper module');
+		const second = await load({ requirePaths: stepsC });
+		expect(patterns(second)).to.deep.equal(patterns(first));
 	});
 });
 

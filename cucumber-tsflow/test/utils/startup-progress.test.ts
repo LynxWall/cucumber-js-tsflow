@@ -450,8 +450,9 @@ describe('themes and words', () => {
 		expect(resolveStartupTheme('')?.name).to.equal('pickle');
 		expect(resolveStartupTheme('anything')?.name).to.equal('pickle');
 		expect(resolveStartupTheme(' LOTR ')?.name).to.equal('lotr');
-		for (const off of ['off', 'OFF', 'none', 'false', ' Off '])
-			expect(resolveStartupTheme(off), off).to.equal(undefined);
+		for (const off of ['off', 'OFF', ' Off ']) expect(resolveStartupTheme(off), off).to.equal(undefined);
+		// Only `off` turns it off, the value the bin script also tests for before the library loads
+		for (const other of ['none', 'false']) expect(resolveStartupTheme(other)?.name, other).to.equal('pickle');
 	});
 
 	it('pluralizes', () => {

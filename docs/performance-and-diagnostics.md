@@ -27,7 +27,7 @@ Between `Running Cucumber-TsFlow in Serial mode.` and the first formatter output
 
 The spinner is a small ASCII line spinner that cycles through a color wheel as it turns. It runs on its own worker thread, so it keeps animating even while the main thread is blocked transpiling and loading support files synchronously — motion starts the moment the phase line is printed, before the first file finishes loading. Phase lines are never shortened to fit the terminal: in a narrow window the text wraps onto as many rows as it needs and is redrawn there, rather than being truncated.
 
-The last phase covers `BeforeAll` hooks in serial mode and, in parallel mode, every child process loading the support code again; it ends when the first scenario starts and the formatter takes over. A phase that ends in failure (support code that did not load, a `BeforeAll` hook that threw) closes with `[ ✗ ]` instead of the check mark, and the error is reported once, after the line has closed.
+The last phase covers assembling the test cases in serial mode and, in parallel mode, every child process loading the support code again and running its `BeforeAll` hooks. In serial mode it closes just before the first `BeforeAll` hook runs, so whatever a hook prints starts on its own line; in parallel mode it ends when the first scenario starts and the formatter takes over. A phase that ends in failure (support code that did not load, or a `BeforeAll` hook that threw in a parallel child) closes with `[ ✗ ]` instead of the check mark, and the error is reported once, after the line has closed. A serial `BeforeAll` failure is reported after the phase has already closed with its check mark.
 
 Messages appear on their own line directly beneath the active phase, replace one another in place, and clear themselves after about eight seconds. If a phase goes thirty seconds without a message, a themed remark with the running count appears, explaining why nothing has completed yet (usually that the first support file is still pulling in its whole import graph). Once work has been quick again for a few files in a row after a stall like that, a relief message takes the slot instead:
 
@@ -100,6 +100,7 @@ Slowest 12 files (transpile = transpiler only, load = ESM load hook, evaluate = 
   - `support:register-loaders` — attaching the ESM loaders
   - `support:finalize` / `registry:update` — building the CucumberJS library and back-patching it with the decorator metadata
   - `formatters:init` — the formatters
+  - `hooks:before-all` — the `BeforeAll` hooks of a parallel child process, in its `worker:<id>` table
   - `runtime:run` — the test run itself
   - `transpile-cache:hit` / `transpile-cache:miss` — count rather than time: transpiles served from and written to the [transpile cache](#transpile-cache), in the `calls` column
   - `transpile-cache:prune` — the sweep that bounds the transpile cache

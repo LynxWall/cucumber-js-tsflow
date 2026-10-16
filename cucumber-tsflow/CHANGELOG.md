@@ -1,0 +1,606 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](http://keepachangelog.com/)
+and this project adheres to [Semantic Versioning](http://semver.org/).
+
+Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
+
+## [8.0.0]
+
+A major release for speed. On a large suite most of a run used to be startup: transpiling and loading the support code before the first scenario. 8.0 makes that a small part of the run, adds opt-in features that shorten the inner loop further, and fixes several long-standing bugs along the way. Writing step definitions does not change. On the project we use to benchmark updates, the largest suite we test against (1,624 scenarios, Vue 3, `es-vue-esm`), the full run takes 4.5 to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes.
+
+How to use the new features: [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md). Every change at the level of modules and functions: [Detailed changes in 8.0.0](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/research/speed-enhancements/detailed-changes.md).
+
+### Breaking changes
+
+Most suites upgrade without changes. These are the differences you may notice:
+
+- **A `BeforeAll` or `AfterAll` hook that throws fails the run**, as in CucumberJS: the error is reported with the hook's location and the run exits with code 1 in serial mode (2 in parallel mode, where the worker that ran the hook reports it). Before, the error was swallowed and every scenario ran under a passing summary. These hooks also run under the default timeout now (5 seconds, or what `setDefaultTimeout` sets), where before they ran unbounded; a hook that needs longer passes its own, `@beforeAll(60000)`. If a pipeline turns red after upgrading, check these hooks first.
+- **cucumber-tsflow's own output goes to stderr**: the configuration and mode lines, the new startup progress, deprecation notices and watch-mode status lines. stdout carries only formatter output, so it can be piped or parsed.
+- **Step-definition locations are relative to the working directory on every platform** with the CommonJS transpilers and the esbuild ESM loaders. On Linux and macOS they were absolute paths in reports and messages. Under `ts-node-esm` and `ts-vue-esm` locations are unchanged: `file:` URLs with the lines of the compiled output.
+- **Steps always receive the running scenario's context.** The previous lookup could hand a step another scenario's context, or none, when a step pattern also matched text in another scenario.
+- **`loadSupport()` and `reloadSupport()` start from an empty registry and evaluate every support file again on each call**, so each returns a complete library, the bindings of modules the support files import included; calling them from inside a running suite is not supported. The VS Code extension (`cucumber-tsflow-vscode`) has not been updated for this; if you rely on it, stay on 7.x until it is.
+- **Removed:** the `lib/transpilers/esm/esbuild-transpiler` export (use the `es-node-esm` or `es-vue-esm` transpiler), the internal `BindingRegistry.removeBindingsForFile()`, `hasBindingForKey()`, `toDescriptors()` and `getDescriptorSourceFiles()` together with `serializeBinding()` and the `SerializableBindingDescriptor` type from `lib/bindings/step-binding`, the runtime values of the `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext` interfaces in the ES module entry points (they were always `undefined`; the types are unchanged), and the extensionless `bin/cucumber-tsflow` file (the command is `bin/cucumber-tsflow.js`). The deprecated `Cli` export is now created on first use, so `instanceof Cli` no longer matches.
+- **`ts-node-esm` ignores the tsconfig `ts-node.files` setting**, which only added startup time under transpile-only compilation.
+
+### Added
+
+- **On-disk transpile cache** for the esbuild transpilers and the Vue SFC compiler, on by default, in `node_modules/.cache/cucumber-tsflow` (`transpileCache`, `--no-transpile-cache`).
+- **Watch mode** (`--watch`): stays running and reruns on file changes or Enter, keeping the loaded modules between runs. `q` quits after the current run; Ctrl-C stops a run in progress at once.
+- **Selective loading** (`selectiveLoad`, off by default): a filtered run loads only the support files its scenarios use.
+- **Startup progress**: a bootstrap notice and one line per startup phase with a spinner. `TSFLOW_THEME=lotr` picks another theme; `TSFLOW_THEME=off` turns it off.
+- **Startup timing report** with `TSFLOW_TIMING=true`.
+- **`@lynxwall/cucumber-tsflow/bindings`** entry point: the decorators, the context types and the CucumberJS helpers, without the formatters and the CLI.
+- **An agent skill** in `skills/cucumber-tsflow/`, following the [skills-npm](https://github.com/antfu/skills-npm) convention.
+- **The [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide**: every performance feature, cache and environment variable.
+
+### Changed
+
+- **Faster startup.** Resolving step locations no longer issues a synchronous XMLHttpRequest per support file under jsdom (the largest single cost in Vue suites) and happens only when a location is needed. The esbuild ESM loaders run in-thread with `module.registerHooks()` on Node 22.15 or later and call esbuild directly. Feature files are parsed before the support code loads, parallel workers receive the resolved file lists instead of expanding the globs again, and step, hook and binding lookups no longer scan lists.
+- **Every package the library imports is declared**, so pnpm's strict layout resolves them: `@cucumber/messages`, `@cucumber/gherkin`, `@cucumber/cucumber-expressions` and `xmlbuilder` as dependencies, `vue` as an optional peer. `short-uuid`, `import-sync` and `tslib` are no longer dependencies.
+- **esbuild's warnings print only under `TSFLOW_VERBOSE=true`.** The esbuild transpilers run silent so that a diagnostic never lands on the startup progress line; errors are reported once by the CLI, and warnings (a duplicate object key, an ignored tsconfig field) are kept for the verbose log.
+
+### Fixed
+
+- Step locations under the esbuild ESM loaders map to the TypeScript line, and a support file evaluated again (by `reloadSupport()` or watch mode) reports its current lines.
+- A configuration error, or a support file that fails to load, is reported once instead of up to five times.
+- Load errors under `ts-node-esm` name the file again instead of `undefined: undefined`.
+- `es-node-esm` starts in a project that does not have `vue` installed.
+- The package ships `CHANGELOG.md` and `LICENSE`.
+- The `--transpiler` help text lists every transpiler and no longer claims a default.
+
+### Deprecated
+
+- `parallelLoad` / `--parallel-load` no longer has any effect. It is still accepted, and a run that sets it prints a notice naming where to remove it; the option goes away in the next major version. The parallel preload it enabled cost more than it saved once the transpile cache existed.
+
+## [7.7.2]
+
+### Fixed
+
+- **Comprehensive browser shims in parallel loader worker** — replaced the minimal `window = globalThis` shim with full stubs for `location`, `document`, `navigator`, `localStorage`, `matchMedia`, `XMLSerializer`, `HTMLElement`, `Element`, and other browser globals. Aligned with the environment setup used by `@uis/testing-bdd` (uis-jest). Prevents `Cannot read properties of undefined (reading 'prototype')`, `Cannot read properties of undefined (reading 'href')`, and similar errors when libraries probe for browser APIs during module evaluation in worker threads.
+- **Getter-only global properties** — `globalThis.navigator` (and other properties) are getter-only in modern Node.js (v21+). Replaced direct assignment with `Object.defineProperty` via a `safeDefine` helper to avoid `Cannot set property navigator of #<Object> which has only a getter` errors.
+- **Per-file error isolation in loader worker** — each support-code file is now loaded inside its own `try/catch`. A single file failing no longer kills the entire worker; other files still warm the transpiler cache successfully. Failed files are reported as non-fatal `fileErrors` and loaded by the main thread as a fallback.
+- **ESM loader registration order** — moved `register()` calls for ESM loaders before the ESM file import phase (was previously after CJS loads), ensuring loaders are active when `import()` is called.
+
+### Changed
+
+- **`LoaderWorkerResponse` type** — added optional `fileErrors` field to report per-file load failures without treating the entire worker as failed.
+- **Parallel loader result reporting** — workers that complete with some file errors now report `LOADED` (not `ERROR`). Per-file errors are logged as informational checkpoints, not `ERROR` level. Added summary message for skipped files.
+
+## [7.7.1]
+
+### Fixed
+
+- **`window` shim in parallel loader worker** — worker threads now shim `globalThis.window` before loading any support-code files, preventing `window is not defined` errors thrown by libraries that assume a browser environment at import time.
+
+### Removed
+
+- Unused imports: `defineParameterType` from `binding-decorator.ts`, `supportCodeLibraryBuilder` from `run-cucumber.ts`, `addStepBinding` from `step-decorators.ts`, `timestamp` from `worker.ts`.
+
+## [7.7.0]
+
+### Added
+
+- **Parallel preload** (`parallelLoad` configuration option) — warms transpiler on-disk caches in parallel `worker_threads` before the main support-code load phase. Each worker loads a subset of support files (round-robin distribution), triggering transpilation and populating the filesystem cache. The main thread's subsequent load (and any parallel child processes) then hit warm caches, significantly reducing startup time for large projects. Set `parallelLoad: true` for automatic thread count or provide an explicit number.
+- `Architecture.md` document describing the project's architectural design, execution flow, and component relationships.
+
+### Fixed
+
+- **`throw error()` bug in `test-case-runner.ts`** — four instances used `console.error()` (which returns `void`) instead of `new Error()`, meaning thrown errors were always `undefined`.
+- **Broken `escapeRegExp` in `runtime/utils.ts`** — the function was a no-op (`'$&'` preserves the original character) and double-processed intentionally constructed regex syntax from `getRegTextForStep`. Removed entirely.
+- **Missing hook failure checks in serial adapter** — `runBeforeAllHooks()` and `runAfterAllHooks()` return values were ignored. Added `hasHookFailure()` helper and failure propagation.
+- **Package exports typo** — trailing apostrophe on the `esbuild-transpiler` export key.
+- **Misspelled folder name** — renamed `step-definition-snippit-syntax` to `step-definition-snippet-syntax` (source and compiled output) and updated all import references.
+
+### Changed
+
+- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in `binding-registry.ts`, `binding-decorator.ts`, and `managed-scenario-context.ts` in favor of native `Array.prototype` equivalents (`map`, `flatMap`, `filter`).
+- **O(1) binding lookup** — added `_cucumberKeyIndex` Map to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
+- **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` statement with a lookup map that maps `StepBindingFlags` values to their corresponding `SupportCodeLibrary` array names.
+- **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext.invokeBindingConstructor()` with a single spread call (`new ctor(...args)`).
+- **Extracted `replaceFormatAlias` helper** — deduplicated two identical format-replacement loops in `load-configuration.ts` into one shared function.
+
+### Removed
+
+- `underscore` runtime dependency and `@types/underscore` dev dependency.
+- Empty `src/support_code_library_builder/` directory (dead scaffolding; all imports reference the `@cucumber/cucumber` vendor package).
+- Legacy `tslint:disable` comments in `binding-registry.ts` and `types.ts`.
+
+## [7.6.0]
+
+### Added
+
+- New `reloadSupport` API function that performs an incremental reload of the `ISupportCodeLibrary`. Evicts only the changed files (and their dependents) from Node's `require.cache`, then re-requires all support files. Unchanged files resolve instantly from cache; only changed files pay the transpilation and evaluation cost. This is intended for use by persistent worker processes (e.g. the `cucumber-tsflow-vscode` VS Code extension) to keep workers warm between test runs.
+
+### Changed
+
+- Consolidated the Vue SFC compiler into a single shared implementation (`vue-sfc-compiler.ts`). The previous CJS path used a Vite-plugin-derived implementation spread across 9 files (`vue-sfc/` directory); it is now replaced by one shared function that both the CJS transpilers and ESM loaders delegate to. The `format` option (`'cjs' | 'esm'`) controls the esbuild output format, keeping identical runtime behavior across all transpiler configurations.
+- Disabled `transformAssetUrls` in `compileTemplate` and `compileScript` to prevent binary asset files (e.g. `.jpg`) from being rewritten into `import`/`require` calls. Unit tests do not need asset URL resolution; leaving asset `src` attributes as literal strings is the correct behavior when mounting components with `@vue/test-utils`.
+
+### Fixed
+
+- **Duplicate "Using Experimental Decorators." console message** — the message was logged once in `load-configuration.ts` and again in `run-cucumber.ts`. The duplicate in `load-configuration.ts` has been removed.
+
+### Removed
+
+- `rollup` runtime dependency — was only used by the now-deleted `vue-sfc/types.ts` for `RollupError`/`RollupLog` types.
+- `@rollup/pluginutils` dev dependency — was only used by the now-deleted `vue-sfc/index.ts` for `createFilter`.
+
+## [7.5.5]
+
+### Fixed
+
+- Copilot fixed package.json URL to match repo so that publishing checks would pass.
+
+## [7.5.4]
+
+### Fixed
+
+- Added --province flag and NPM Token based on copilot feedback.
+
+## [7.5.3]
+
+### Fixed
+
+- Updated publish.yml because Trusted publisher only works with Node 24+.
+
+## [7.5.2]
+
+### Added
+
+- Added publish.yml GitHub workflow action, which was required by deprecation of token keys.
+
+## [7.5.1]
+
+### Changed
+
+- Add conditionally logging via ENV var TSFLOW_VERBOSE=true
+
+## [7.5.0]
+
+### Changed
+
+- Switched @cucumber/cucumber back to a dependency since Cucumber-TsFlow includes most of the same exports as @cucumber/cucumber with many of them overridden.
+
+### Fixed
+
+- Add format: module to all load paths for esm loaders to resolve an issue where the loaders would default back to cjs.
+
+## [7.4.1]
+
+### Fixed
+
+- Moved initialization of the Boolean parameter type from the binding decorator to support code library initialization code. Attempting to resolve context issues when running in the VS Code extension.
+
+## [7.4.0]
+
+### Changed
+
+- Switched @cucumber/cucumber to a peerDependency to avoid runtime instance conflicts when using cucumber-tsflow from the companion VS Code extension.
+
+## [7.3.4]
+
+### Fixed
+
+- Fix calling defineParameterType to use supportCodeLibraryBuilder instance instead of the exported defineParameterType function. The exported function can be bound to a different supportCodeLibraryBuilder instance and causes errors when used.
+
+## [7.3.3]
+
+### Fixed
+
+- Fix reference to defineParameterType import in binding-decorator.ts. Needs to use supportCodeLibrary instance that's exported from index.ts.
+
+## [7.3.2]
+
+### Fixed
+
+- Fix ESM loaders to properly handle JSON imports with required import attributes
+
+## [7.3.1]
+
+### Fixed
+
+- Fix ESM loader to properly resolve TypeScript path aliases (e.g., `@fixtures/*`) in Vue Single File Components and add automatic extension resolution (.ts, .js, .mjs, .vue)
+
+## [7.3.0]
+
+### Added
+
+- Transpilers for ESM projects. Read more about the [cucumber-tsflow ESM implementation](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/cucumber-tsflow/src/transpilers/esm/README.md).
+
+### Changed
+
+- Upgraded to Cucumber-JS 12.2.0
+- Upgraded to Typescript 5.9.2
+
+### Fixed
+
+- Deprecated warnings with Node 22+ and ts-node 10.9.2. Upgraded to [ts-node-maintained](https://github.com/thetutlage/ts-node-maintained) v10.9.6, which resolves the fs.Stats warning and fixes a couple of other bugs.
+
+## [7.2.0]
+
+### Fixed
+
+- Issue with passing a test file on command line throwing invalid args error. Was caused by upgrading Commander. Backed down to version used by Cucumber-JS.
+
+### Changed
+
+- Upgraded to Cucumber-JS 11.3.0
+- Implemented support for Experimental Decorators using a new configuration flag named experimentalDecorators. When true Experimental Decorators will be supported. When false TypeScript 5.x Official Decorators will be used.
+- Added class-validator tests. Class-validator is a decorator based validation utility that uses experimental decorators and the main reason for adding support for them.
+- Doubled the number of tests to cover Official and Experimental Decorators with all tests.
+
+## [7.1.2]
+
+### Fixed
+
+- Removed unused packages from the library.
+
+## [7.1.1]
+
+### Changed
+
+- Moved ts-node dependencies: @types/node and typescript from devDependencies to dependencies. These are used by the transpilers when running tests.
+
+## [7.1.0]
+
+### Changed
+
+- Removed peerDependency on cucumber-js. Emphasizing that cucumber-tsflow extends cucumber-js and would be used in-place-of, not along-side cucumber-js.
+- Updated exports to include most of the User exports from cucumber-js along with cucumber-tsflow exports that extend or override cucumber-js.
+- Code Refactoring: Moved non-d.ts types closer to usage, some reorganization of code.
+
+## [7.0.0]
+
+### Added
+
+- API Support that implements and extends the cucumber-js API to support cucumber-tsflow bindings.
+
+### Changed
+
+- Upgraded to cucumber.js 11.2.0, which has several [breaking changes](https://github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md) since the last tsflow release.
+- Update to latest Node 22 LTS release
+- Switched from experimental decorators in Typescript to official decorators published in Typescript 5.2.
+- Upgraded packages to latest stable versions
+- Updated transpiler configurations.
+- Added exports to package.json.
+
+## [6.5.7]
+
+### Fixed
+
+- Added StartTestCaseInfo and EndTestCaseInfo back to main exports.
+
+## [6.5.6]
+
+### Fixed
+
+- Another move of TestCaseInfo exports to attempt fixing issues with imports into other projects.
+
+## [6.5.5]
+
+### Fixed
+
+- Moved StartTestCaseInfo and EndTestCaseInfo to a separate type file with limited message imports. Attempting to mitigate type issues during test run that uses new interface types.
+
+## [6.5.4]
+
+### Fixed
+
+- Moved StartTestCaseInfo and EndTestCaseInfo to the message-collector due to type import issues.
+
+## [6.5.3]
+
+### Fixed
+
+- Moved ContextType back into types.ts to fix type declaration issues.
+
+## [6.5.2]
+
+### Added
+
+- New argument: { pickle, gherkinDocument, testCaseStartedId } : StartTestCaseInfo is now passed to the initialize function of an injected context.
+- New argument: { pickle, gherkinDocument, result, willBeRetried, testCaseStartedId } : EndTestCaseInfo is now passed to the dispose function of an injected context.
+- StartTestCaseInfo and EndTestCaseInfo interfaces are exported from @lynxwall/cucumber-tsflow
+
+## [6.5.1]
+
+### Fixed
+
+- Fixed support for Context initialization when not using parallel configuration settings.
+
+## [6.5.0]
+
+### Changed
+
+- Added initialization support for Context types injected into a binding using Context Injection.
+
+## [6.4.0]
+
+### Changed
+
+- Context objects used with Context Injection can now define a constructor that takes a World object parameter. ex: `constructor(worldObj: World)`
+
+## [6.3.0]
+
+### Changed
+
+- Disabled the loading of `<style>` blocks when compiling Vue SFC components.
+
+### Added
+
+- New configuration setting named `enableVueStyle` that allows users to enable the loading of Vue `<style>` blocks when testing against compiled library components.
+
+## [6.2.4]
+
+### Fixed
+
+- Updated JSDom which removes deprecation warnings for abab and domexception packages
+
+## [6.2.3]
+
+### Fixed
+
+- Junit bamboo formatter putting failure nodes in pending and undefined tests
+
+## [6.2.2]
+
+### Added
+
+- Junit bamboo formatter to output junit xml test results that categorize pending and undefined tests as skipped instead of failing
+
+## [6.2.1]
+
+### Fixed
+
+- Added commander@10.0.1 as a dependency to resolve issues with older versions being used based on other dependencies.
+
+## [6.2.0]
+
+### Changed
+
+- Exit code changes: 1=invalid configuration or unhandled exception when executing tests, 2=implemented tests passing but there are pending, undefined or unknown scenario steps, 3=implemented tests failing.
+- Upgraded to cucumber.js 9.6.0, which is the last 9.x version before version 10.x.
+- Upgraded to Typescript 5.2.x
+- Removed deprecated shouldAdvertisePublish config setting and cli return value.
+
+## [6.1.1]
+
+### Fixed
+
+- Execution and debugging of step files associated with multiple feature files.
+
+### Changed
+
+- Upgraded to cucumber.js 9.1.2.
+- Performance improvements when matching a step file to features.
+
+## [6.1.0]
+
+### Fixed
+
+- Execution and debugging of individual feature files that only contained Scenario Outlines.
+
+### Added
+
+- Scenario Outline tests.
+
+## [6.0.2]
+
+### Fixed
+
+- Tagged wrong branch
+
+## [6.0.1]
+
+### Changed
+
+- Upgraded yarn package manager to version 3.5.0
+
+## [6.0.0]
+
+### Added
+
+- New exit code to differentiate between a test run that has failures and one that just has pending or undefined scenario steps. The original implementation only had two exit codes: 0 and 1. This update adds an extra exit code and changes the meaning of exit code 1. New exit codes are: 0 = all scenarios passing, 1 = implemented scenarios are passing but there are pending, undefined or unknown scenario steps, 2 = one or more scenario steps have failed.
+- Background test example.
+- Tests using all four transpires
+
+### Changed
+
+- Upgraded to cucumber.js 9.1.0, which has [breaking changes](https://github.com/cucumber/cucumber-js/blob/main/CHANGELOG.md#900---2023-02-27) that were implemented in version 9.0.0.
+- Upgraded packages to latest stable versions
+- Locked package versions being used to Major/Minor
+- Updated esvue and esnode transpiler configurations to use es module (es2022) for transpilation instead of CommonJS.
+
+## [5.1.3]
+
+### Fixed
+
+- Asset handling in Vue components causing transform failures. Since this is only used for Vue components loaded in Vue/test-utils, the **_transformAssetUrls_** option will be set to **false** by default. As a result, any Vue components with media assets will load without attempting to transform the asset.
+
+## [5.1.2]
+
+### Fixed
+
+- Update to command line execution in README to use npx command.
+
+## [5.1.1]
+
+### Fixed
+
+- Bug loading configuration files that was introduced with the latest update of Cucumber.js to version 8.6.0. Underlying cucumber libraries added a logging parameter to the beginning of several functions
+  used by cucumber-tsflow.
+
+### Changed
+
+- Upgraded to Cucumber.js 8.6.0 and locked the reference to the current major.minor version. This should prevent breaking changes from Cucumber.js breaking cucumber-tsflow.
+- Upgraded other packages to latest stable versions
+- Updated tests to add the Cucumber.js World object to an injected context object.
+
+### Added
+
+- Example on how to access the Cucumber.js World object to README
+
+## [5.1.0]
+
+### Fixed
+
+- Fixed support for Parallel execution of tests.
+
+### Changed
+
+- Upgraded to cucumber.js 8.5.0
+- Upgraded jsdom to latest version
+- Upgraded other packages to latest stable versions
+
+## [5.0.8]
+
+### Fixed
+
+- Removed slash import because some packages (Histoire) install latest esm only version. Replaced with code from slash package and added original author to MIT License.
+
+## [5.0.7]
+
+### Changed
+
+- Switched to commonjs build instead of umd
+- Package updates to latest version
+- Removed callsites and implemented internally. Latest version of callsites is esm only, which doesn't work with tests.
+
+### Fixed
+
+- Hook examples in README
+
+## [5.0.6]
+
+### Changed
+
+- README updates to specify that cucumber-tsflow command should be used for test execution.
+
+### Added
+
+- Examples and information to README
+
+## [5.0.5]
+
+### Fixed
+
+- Issue with boolean parameter being added too early. Needs to be added once when code is transpiled.
+
+### Added
+
+- Boolean type tests
+
+## [5.0.4]
+
+### Fixed
+
+- missing dependency short-uuid (had been added as devDependency)
+
+### Added
+
+- Note about only needing @cucumber/cucumber installed if using cucumber-js to execute tests instead of cucumber-tsflow
+
+## [5.0.3]
+
+### Fixed
+
+- Line endings in bin/cucumber-tsflow to fix test issue in GitHub
+
+## [5.0.2]
+
+### Fixed
+
+- README links
+- Removed Vue dependency
+
+## [5.0.1]
+
+### Changed
+
+- Removed ManagedScenarioContext from World object along with Before and After hooks used to manage it.
+
+### Added
+
+- Transpiler support using typescript or esbuild
+- Vue transform support based on the vite/vue-plugin
+- Cucumber message collector to manage the ManagedScenarioContext object
+- RegEx matcher to match step expressions with feature step text. Supports all cucumber expressions along with regular expressions.
+- BeforeStep and AfterStep hooks from cucumber with tests
+
+### Fixed
+
+- Parameter definitions for different hook functions to be consistent with cucumber
+- Step tags to support same functionality as Cucumber hook tags
+
+## [5.0.0]
+
+### Changed
+
+- BREAKING CHANGE! Renamed JavaScript components used for ts-node and Vue initialization along with snippet and behave formatters.
+- Updated to @cucumber/cucumber version 8.0.0
+
+### Added
+
+- Implemented CLI and Cucumber Test runner in cucumber-tsflow using cucumber API and libraries
+- Extended cucumber options to add environment (node or vue) and debugFile support
+- Cucumber code library update so that summary and reports provide file name and line number of actual test and not location of binding in cucumber-tsflow
+- Added support to dubg individual features associated with step file open in editor
+- Boolean type for cucumber expressions
+- behave tag support for formatter options used to generate json report compatible with Behave-Pro
+
+### Fixed
+
+- various Bugs
+
+## [4.1.7]
+
+### Changed
+
+- Switched from happy-dom to jsdom because emitted events weren't bubbling up from dependent Vue components. Switching to jsdom fixed the issue.
+
+## [4.1.5]
+
+### Changed
+
+- Vue transpiler updates
+
+## [4.1.3]
+
+### Changed
+
+- Workflow and config updates
+
+## [4.1.2]
+
+### Added
+
+- Support for transpiling Vue3 files in cucumber tests
+- JavaScript scripts to initialize ts-node for stand-alone node execution or Vue3 execution with happy-dom
+- Tests for Vue3 support
+- Initial stub for cucumber-tsflow execution from node_modules/.bin
+
+## [4.1.0]
+
+### Added
+
+- behave-json-formatter that fixes json so it can be used with Behave Pro
+- tsflow-snippet-syntax used to format snippet examples
+- BeforeAll and AfterAll Hooks
+- WrapperOptions in step definitions
+- Timeout in step definition and hooks
+
+### Changed
+
+- project restructure
+- using version 8.0.0-rc.3 of @cucumber/cucumber
+
+### Fixed
+
+- Bugs related to tags
+
+## [4.0.0]
+
+Initial fork from [cucumber-tsflow](https://github.com/timjroberts/cucumber-js-tsflow)

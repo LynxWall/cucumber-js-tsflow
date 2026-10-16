@@ -2,9 +2,10 @@
 /* eslint-disable no-undef */
 
 import { createRequire } from 'module';
-import { createLogger } from '../../utils/tsflow-logger.mjs';
+import { createLogger, describeThrowable, isVerbose } from '../../utils/tsflow-logger.mjs';
 
 const logger = createLogger('jsdom-setup');
+const verbose = isVerbose();
 
 logger.checkpoint('Initializing JSDOM environment');
 
@@ -15,7 +16,7 @@ try {
 	require('jsdom-global')();
 	logger.checkpoint('jsdom-global loaded and executed');
 } catch (error) {
-	logger.error('Failed to initialize jsdom-global', error);
+	if (verbose) logger.checkpoint('Failed to initialize jsdom-global', { error: describeThrowable(error) });
 	throw new Error(`Failed to initialize JSDOM: ${error.message}`, { cause: error });
 }
 
@@ -36,7 +37,7 @@ if (typeof window !== 'undefined') {
 			hasHTMLDivElement: !!globalThis.HTMLDivElement
 		});
 	} catch (error) {
-		logger.error('Failed to set Vue-specific globals', error);
+		if (verbose) logger.checkpoint('Failed to set Vue-specific globals', { error: describeThrowable(error) });
 		throw new Error(`Failed to set Vue globals: ${error.message}`, { cause: error });
 	}
 } else {

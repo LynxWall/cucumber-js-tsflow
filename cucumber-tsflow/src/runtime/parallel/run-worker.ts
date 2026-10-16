@@ -1,5 +1,6 @@
 import { doesHaveValue } from '@cucumber/cucumber/lib/value_checker';
 import { ChildProcessWorker } from './worker';
+import { experimentalDecorators } from '../../utils/decorator-mode';
 import 'polyfill-symbol-metadata';
 
 function run(): void {
@@ -14,7 +15,7 @@ function run(): void {
 		exit,
 		id: process.env.CUCUMBER_WORKER_ID!,
 		sendMessage: (message: any) => process.send!(message),
-		experimentalDecorators: process.env.EXPERIMENTAL_DECORATORS === 'true'
+		experimentalDecorators: experimentalDecorators()
 	});
 	process.on('message', (m: any): void => {
 		worker.receiveMessage(m).catch((error: Error) => exit(1, error, 'Unexpected error on worker.receiveMessage'));

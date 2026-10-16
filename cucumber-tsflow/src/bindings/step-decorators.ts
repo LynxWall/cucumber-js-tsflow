@@ -1,6 +1,6 @@
 import { Callsite } from '../utils/our-callsite';
 import { StepBinding, StepBindingFlags } from './step-binding';
-import shortUuid from 'short-uuid';
+import { randomUUID } from 'node:crypto';
 import { addStepBindingExp, collectStepBinding } from './binding-context';
 
 /**
@@ -28,7 +28,7 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 				timeout: timeout,
 				wrapperOption: wrapperOption,
 				callsite: callsite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 			addStepBindingExp(stepBinding);
 
@@ -48,7 +48,7 @@ export function given(stepPattern: RegExp | string, tag?: string, timeout?: numb
 				timeout: timeout,
 				wrapperOption: wrapperOption,
 				callsite: callsite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 
 			collectStepBinding(stepBinding);
@@ -84,7 +84,7 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				timeout: timeout,
 				wrapperOption: wrapperOption,
 				callsite: callsite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 			addStepBindingExp(stepBinding);
 
@@ -104,7 +104,7 @@ export function when(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				timeout: timeout,
 				wrapperOption: wrapperOption,
 				callsite: callsite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 
 			collectStepBinding(stepBinding);
@@ -140,7 +140,7 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				timeout: timeout,
 				wrapperOption: wrapperOption,
 				callsite: callsite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 			addStepBindingExp(stepBinding);
 
@@ -160,7 +160,7 @@ export function then(stepPattern: RegExp | string, tag?: string, timeout?: numbe
 				timeout: timeout,
 				wrapperOption: wrapperOption,
 				callsite: callsite,
-				cucumberKey: shortUuid().new()
+				cucumberKey: randomUUID()
 			};
 
 			collectStepBinding(stepBinding);

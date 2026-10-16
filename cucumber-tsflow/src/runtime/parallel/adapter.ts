@@ -5,10 +5,12 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import { AssembledTestCase } from '@cucumber/cucumber/lib/assemble/index';
 import { ILogger, IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
 import { RuntimeAdapter } from '@cucumber/cucumber/lib/runtime/types';
-import { ISourcesCoordinates } from '@cucumber/cucumber/lib/api/index';
-import { FinalizeCommand, RunCommand, WorkerToCoordinatorEvent } from '@cucumber/cucumber/lib/runtime/parallel/types';
+import { IResolvedPaths } from '@cucumber/cucumber/lib/paths/index';
+import { FinalizeCommand, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import type { FormatOptions } from '@cucumber/cucumber/lib/formatter/index';
-import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime } from '../types';
+import { InitializeTsflowCommand, ITsFlowRunOptionsRuntime, TsFlowWorkerToCoordinatorEvent } from '../types';
+import { mergeTimingSnapshot } from '../../utils/tsflow-timing';
+import { EXPERIMENTAL_DECORATORS_VARIABLE } from '../../utils/decorator-mode';
 
 const runWorkerPath = path.resolve(__dirname, 'run-worker');
 
@@ -48,13 +50,18 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		private readonly options: ITsFlowRunOptionsRuntime,
 		private readonly snippetOptions: Pick<FormatOptions, 'snippetInterface' | 'snippetSyntax'>,
 		private readonly supportCodeLibrary: SupportCodeLibrary,
-		private readonly coordinates: ISourcesCoordinates
+		private readonly resolvedSupportPaths: Pick<IResolvedPaths, 'requirePaths' | 'importPaths'>,
+		private readonly onWorkerReady?: (workerId: string) => void
 	) {}
 
-	parseWorkerMessage(worker: ManagedWorker, message: WorkerToCoordinatorEvent): void {
+	parseWorkerMessage(worker: ManagedWorker, message: TsFlowWorkerToCoordinatorEvent): void {
 		switch (message.type) {
+			case 'TIMING':
+				mergeTimingSnapshot(`worker:${message.workerId}`, message.snapshot);
+				break;
 			case 'READY':
 				worker.state = WorkerState.idle;
+				this.onWorkerReady?.(worker.id);
 				this.awakenWorkers(worker);
 				break;
 			case 'ENVELOPE':
@@ -95,13 +102,15 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				CUCUMBER_PARALLEL: 'true',
 				CUCUMBER_TOTAL_WORKERS: total.toString(),
 				CUCUMBER_WORKER_ID: id,
-				EXPERIMENTAL_DECORATORS: this.options.experimentalDecorators.toString()
+				// The variable `setExperimentalDecorators` wrote for this process, set again here because the run
+				// environment's `env` need not be `process.env`
+				[EXPERIMENTAL_DECORATORS_VARIABLE]: String(this.options.experimentalDecorators)
 			},
 			stdio: ['inherit', 'inherit', 'inherit', 'ipc']
 		});
 		const worker = { state: WorkerState.new, process: workerProcess, id };
 		this.workers[id] = worker;
-		worker.process.on('message', (message: WorkerToCoordinatorEvent) => {
+		worker.process.on('message', (message: TsFlowWorkerToCoordinatorEvent) => {
 			this.parseWorkerMessage(worker, message);
 		});
 		worker.process.on('close', exitCode => {
@@ -110,7 +119,6 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 		});
 
 		const messageData = global.messageCollector.getMessageData();
-		messageData.coordinates = this.coordinates;
 
 		worker.process.send({
 			type: 'INITIALIZE',
@@ -125,7 +133,8 @@ export class ChildProcessAdapter implements RuntimeAdapter {
 				afterTestRunHookDefinitionIds: this.supportCodeLibrary.afterTestRunHookDefinitions.map(h => h.id)
 			},
 			options: this.options,
-			messageData: messageData
+			messageData: messageData,
+			resolvedSupportPaths: this.resolvedSupportPaths
 		} satisfies InitializeTsflowCommand);
 	}
 

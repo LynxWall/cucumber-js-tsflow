@@ -3,9 +3,8 @@
 		"esModuleInterop": true,
 		"lib": ["es2022", "esnext.decorators"],
 		"module": "node18",
-		"noImplicitAny": true,
+		"strict": true,
 		"noImplicitReturns": true,
-		"noImplicitThis": true,
 		"resolveJsonModule": true,
 		"sourceMap": true,
 		"inlineSources": true,
@@ -13,5 +12,5 @@
 		"target": "es2022",
 		"typeRoots": ["../node_modules/@types", "./src/types"],
 	},
-	"exclude": ["./src/transpilers/esm/*"]
+	"exclude": ["./src/transpilers/esm/*", "./test"]
 }

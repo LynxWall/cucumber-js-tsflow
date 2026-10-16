@@ -34,9 +34,6 @@ export const given = cucumberTsflow.given;
 export const when = cucumberTsflow.when;
 export const then = cucumberTsflow.then;
 
-export const StartTestCaseInfo = cucumberTsflow.StartTestCaseInfo;
-export const EndTestCaseInfo = cucumberTsflow.EndTestCaseInfo;
-export const ScenarioContext = cucumberTsflow.ScenarioContext;
 export const ScenarioInfo = cucumberTsflow.ScenarioInfo;
 
 export const defineParameterType = cucumberTsflow.defineParameterType;

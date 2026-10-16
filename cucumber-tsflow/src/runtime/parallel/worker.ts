@@ -1,22 +1,24 @@
 import { EventEmitter } from 'node:events';
-import { pathToFileURL } from 'node:url';
-import { register } from 'node:module';
+import { getSupportCodeLibrary } from '../../api/support';
+import { setExperimentalDecorators } from '../../utils/decorator-mode';
 import { Envelope, IdGenerator } from '@cucumber/messages';
-import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import tryRequire from '@cucumber/cucumber/lib/try_require';
 import { Worker } from '../worker';
-import { WorkerToCoordinatorEvent, RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
-import logger from '../../utils/logger';
-import { resolvePaths } from '@cucumber/cucumber/lib/paths/paths';
+import { RunCommand } from '@cucumber/cucumber/lib/runtime/parallel/types';
 import { BindingRegistry } from '../../bindings/binding-registry';
-import { InitializeTsflowCommand, CoordinatorToWorkerCommand, TsFlowRuntimeOptions } from '../types';
+import {
+	InitializeTsflowCommand,
+	CoordinatorToWorkerCommand,
+	TsFlowRuntimeOptions,
+	TsFlowWorkerToCoordinatorEvent
+} from '../types';
 import MessageCollector from '../message-collector';
+import { startTimer, recordPhase, collectLoaderTimings, getTimingSnapshot } from '../../utils/tsflow-timing';
 
 const { uuid } = IdGenerator;
 
 type IExitFunction = (exitCode: number, error?: Error, message?: string) => void;
-type IMessageSender = (command: WorkerToCoordinatorEvent) => void;
+type IMessageSender = (command: TsFlowWorkerToCoordinatorEvent) => void;
 
 /**
  * Represents a child process running in parallel executions
@@ -57,8 +59,8 @@ export class ChildProcessWorker {
 		// integration with event data
 		global.messageCollector = new MessageCollector(this.eventBroadcaster);
 
-		// initialize the global experimentalDecorators setting
-		global.experimentalDecorators = experimentalDecorators;
+		// record the decorator mode the coordinator chose, for this process's decorators and transpilers
+		setExperimentalDecorators(experimentalDecorators);
 
 		// pass any envelope messages up to the parent process to keep our main
 		// message collector in sync with this one.
@@ -69,49 +71,55 @@ export class ChildProcessWorker {
 	 * Initialize this child process worker
 	 */
 	async initialize({
+		testRunStartedId,
 		supportCodeCoordinates,
 		supportCodeIds,
 		options,
-		messageData
+		messageData,
+		resolvedSupportPaths
 	}: InitializeTsflowCommand): Promise<void> {
 		// reset the message collector with message data passed in
 		global.messageCollector.reset(messageData);
 
-		// Get correct paths and reset the support code library
-		const resolvedPaths = await resolvePaths(logger, this.cwd, messageData.coordinates, supportCodeCoordinates);
-		const { requirePaths, importPaths } = resolvedPaths;
-		supportCodeLibraryBuilder.reset(this.cwd, this.newId, {
-			requirePaths,
+		// Load the support code with the paths the coordinator already resolved (the globs are not expanded
+		// again in this process) and the ids its definitions must carry to match the coordinator's library
+		const { requirePaths, importPaths } = resolvedSupportPaths;
+		this.supportCodeLibrary = await getSupportCodeLibrary({
+			cwd: this.cwd,
+			newId: this.newId,
 			requireModules: supportCodeCoordinates.requireModules,
+			requirePaths,
 			importPaths,
-			loaders: supportCodeCoordinates.loaders
+			loaders: supportCodeCoordinates.loaders,
+			supportCodeIds
 		});
 
-		// Define the boolean type before loading any support code
-		supportCodeLibraryBuilder.defineParameterType({
-			name: 'boolean',
-			regexp: /true|false/,
-			transformer: s => (s === 'true' ? true : false)
-		});
-
-		// Load any require modules for CommonJS or loaders and imports for ESM
-		supportCodeCoordinates.requireModules.map(module => tryRequire(module));
-		requirePaths.map(module => tryRequire(module));
-		for (const specifier of supportCodeCoordinates.loaders) {
-			register(specifier, pathToFileURL('./'));
-		}
-		for (const path of importPaths) {
-			await import(pathToFileURL(path).toString());
-		}
-		// Finalize the support code library with IDs passed in and
-		// update entries in the library with info from our binding registry.
-		this.supportCodeLibrary = supportCodeLibraryBuilder.finalize(supportCodeIds);
+		// Update entries in the library with info from our binding registry
+		let phaseStart = startTimer();
 		this.supportCodeLibrary = BindingRegistry.instance.updateSupportCodeLibrary(this.supportCodeLibrary);
+		recordPhase('registry:update', phaseStart);
 
-		// Initialize a worker and run BeforeAll hooks
+		// Initialize a worker and run the BeforeAll hooks; one that throws rejects this command, and run-worker.ts
+		// reports the error and exits 1, which the coordinator counts as a failed run
 		this.options = options;
-		this.worker = new Worker(this.id, this.eventBroadcaster, this.newId, this.options, this.supportCodeLibrary);
+		this.worker = new Worker(
+			testRunStartedId,
+			this.id,
+			this.eventBroadcaster,
+			this.newId,
+			this.options,
+			this.supportCodeLibrary
+		);
+		phaseStart = startTimer();
 		await this.worker.runBeforeAllHooks();
+		recordPhase('hooks:before-all', phaseStart);
+
+		// Report this process's startup timings to the coordinator (no-op unless TSFLOW_TIMING=true)
+		await collectLoaderTimings();
+		const snapshot = getTimingSnapshot();
+		if (snapshot) {
+			this.sendMessage({ type: 'TIMING', workerId: this.id, snapshot });
+		}
 		this.sendMessage({ type: 'READY' });
 	}
 

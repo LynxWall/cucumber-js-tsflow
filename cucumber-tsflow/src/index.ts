@@ -7,20 +7,16 @@
  * These docs cover the functions and helpers for user code registration and test setup. The entry point is `@lynxwall/cucumber-tsflow`.
  */
 import { deprecate } from 'node:util';
-import * as messages from '@cucumber/messages';
-import { default as _Cli } from './cli';
+import type { default as CliClass } from './cli';
 import * as formatterHelpers from '@cucumber/cucumber/lib/formatter/helpers/index';
-import * as parallelCanAssignHelpers from '@cucumber/cucumber/lib/support_code_library_builder/parallel_can_assign_helpers';
-import supportCodeLibraryBuilder from '@cucumber/cucumber/lib/support_code_library_builder/index';
 import { version as _version } from './version';
 
 // type version as string
 export const version = _version as string;
 
-// Top level
-export { default as supportCodeLibraryBuilder } from '@cucumber/cucumber/lib/support_code_library_builder/index';
-export { default as DataTable } from '@cucumber/cucumber/lib/models/data_table';
-export { default as TestCaseHookDefinition } from '@cucumber/cucumber/lib/models/test_case_hook_definition';
+// Decorators, context classes and CucumberJS support-code helpers. Support files that need nothing else
+// can import them from `@lynxwall/cucumber-tsflow/bindings` and skip loading the formatters below.
+export * from './bindings';
 
 // TsFlow Snippet Syntax and Formatters
 export { default as TsflowSnippet } from './formatter/step-definition-snippet-syntax/tsflow-snippet-syntax';
@@ -39,40 +35,20 @@ export { default as UsageFormatter } from '@cucumber/cucumber/lib/formatter/usag
 export { default as UsageJsonFormatter } from '@cucumber/cucumber/lib/formatter/usage_json_formatter';
 export { formatterHelpers };
 
-// Tsflow Support Code Functions - replaces CucumberJS hook and step functions
-export { binding } from './bindings/binding-decorator';
-export { beforeAll, before, beforeStep, afterAll, after, afterStep } from './bindings/hook-decorators';
-export { given, when, then } from './bindings/step-decorators';
-export { StartTestCaseInfo, EndTestCaseInfo } from './runtime/test-case-info';
-export { ScenarioContext, ScenarioInfo } from './runtime/scenario-context';
-
-// Support Code Functions
-const { methods } = supportCodeLibraryBuilder;
-export const defineParameterType = methods.defineParameterType;
-export const setDefaultTimeout = methods.setDefaultTimeout;
-export const setDefinitionFunctionWrapper = methods.setDefinitionFunctionWrapper;
-export const setWorldConstructor = methods.setWorldConstructor;
-export const setParallelCanAssign = methods.setParallelCanAssign;
-
-export { default as World, IWorld, IWorldOptions } from '@cucumber/cucumber/lib/support_code_library_builder/world';
-export { IContext } from '@cucumber/cucumber/lib/support_code_library_builder/context';
-export { worldProxy as world, contextProxy as context } from '@cucumber/cucumber/lib/runtime/scope/index';
-export { parallelCanAssignHelpers };
-
-export {
-	ITestCaseHookParameter,
-	ITestStepHookParameter
-} from '@cucumber/cucumber/lib/support_code_library_builder/types';
-export const Status = messages.TestStepResultStatus;
-
-// Time helpers
-export { wrapPromiseWithTimeout } from '@cucumber/cucumber/lib/time';
-
 // Deprecated
+/**
+ * Constructs the CLI, requiring it on first use so that importing decorators from the package root does not
+ * load the CLI, the runtime and everything they pull in.
+ */
+function constructCli(this: unknown, ...args: ConstructorParameters<typeof CliClass>): CliClass {
+	const LoadedCli = (require('./cli') as typeof import('./cli')).default;
+	return new LoadedCli(...args);
+}
+
 /**
  * @deprecated use `runCucumber` instead; see https://github.com/cucumber/cucumber-js/blob/main/docs/deprecations.md
  */
 export const Cli = deprecate(
-	_Cli,
+	constructCli as unknown as typeof CliClass,
 	'`Cli` is deprecated, use `runCucumber` instead; see https://github.com/cucumber/cucumber-js/blob/main/docs/deprecations.md'
 );

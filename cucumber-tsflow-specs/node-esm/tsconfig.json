@@ -16,6 +16,8 @@
 		"typeRoots": ["../../node_modules/@types"]
 	},
 	"include": ["./src/**/*.ts", "./src/**/*.vue"],
+	// Written and removed by the syntax-error spec while it runs; never something for the editor to judge
+	"exclude": ["./src/fixtures/failing/generated"],
 	"ts-node": {
 		"esm": true,
 		"experimentalSpecifierResolution": "node", // This is the key!

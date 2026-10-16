@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [8.0.0]
+
+A major release for speed. On a large suite most of a run used to be startup: transpiling and loading the support code before the first scenario. 8.0 makes that a small part of the run, adds opt-in features that shorten the inner loop further, and fixes several long-standing bugs along the way. Writing step definitions does not change. On the project we use to benchmark updates, the largest suite we test against (1,624 scenarios, Vue 3, `es-vue-esm`), the full run takes 4.5 to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes.
+
+How to use the new features: [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md). Every change at the level of modules and functions: [Detailed changes in 8.0.0](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/research/speed-enhancements/detailed-changes.md).
+
+### Breaking changes
+
+Most suites upgrade without changes. These are the differences you may notice:
+
+- **A `BeforeAll` or `AfterAll` hook that throws fails the run**, as in CucumberJS: the error is reported with the hook's location and the run exits with code 1 in serial mode (2 in parallel mode, where the worker that ran the hook reports it). Before, the error was swallowed and every scenario ran under a passing summary. These hooks also run under the default timeout now (5 seconds, or what `setDefaultTimeout` sets), where before they ran unbounded; a hook that needs longer passes its own, `@beforeAll(60000)`. If a pipeline turns red after upgrading, check these hooks first.
+- **cucumber-tsflow's own output goes to stderr**: the configuration and mode lines, the new startup progress, deprecation notices and watch-mode status lines. stdout carries only formatter output, so it can be piped or parsed.
+- **Step-definition locations are relative to the working directory on every platform** with the CommonJS transpilers and the esbuild ESM loaders. On Linux and macOS they were absolute paths in reports and messages. Under `ts-node-esm` and `ts-vue-esm` locations are unchanged: `file:` URLs with the lines of the compiled output.
+- **Steps always receive the running scenario's context.** The previous lookup could hand a step another scenario's context, or none, when a step pattern also matched text in another scenario.
+- **`loadSupport()` and `reloadSupport()` start from an empty registry and evaluate every support file again on each call**, so each returns a complete library, the bindings of modules the support files import included; calling them from inside a running suite is not supported. The VS Code extension (`cucumber-tsflow-vscode`) has not been updated for this; if you rely on it, stay on 7.x until it is.
+- **Removed:** the `lib/transpilers/esm/esbuild-transpiler` export (use the `es-node-esm` or `es-vue-esm` transpiler), the internal `BindingRegistry.removeBindingsForFile()`, `hasBindingForKey()`, `toDescriptors()` and `getDescriptorSourceFiles()` together with `serializeBinding()` and the `SerializableBindingDescriptor` type from `lib/bindings/step-binding`, the runtime values of the `StartTestCaseInfo`, `EndTestCaseInfo` and `ScenarioContext` interfaces in the ES module entry points (they were always `undefined`; the types are unchanged), and the extensionless `bin/cucumber-tsflow` file (the command is `bin/cucumber-tsflow.js`). The deprecated `Cli` export is now created on first use, so `instanceof Cli` no longer matches.
+- **`ts-node-esm` ignores the tsconfig `ts-node.files` setting**, which only added startup time under transpile-only compilation.
+
+### Added
+
+- **On-disk transpile cache** for the esbuild transpilers and the Vue SFC compiler, on by default, in `node_modules/.cache/cucumber-tsflow` (`transpileCache`, `--no-transpile-cache`).
+- **Watch mode** (`--watch`): stays running and reruns on file changes or Enter, keeping the loaded modules between runs. `q` quits after the current run; Ctrl-C stops a run in progress at once.
+- **Selective loading** (`selectiveLoad`, off by default): a filtered run loads only the support files its scenarios use.
+- **Startup progress**: a bootstrap notice and one line per startup phase with a spinner. `TSFLOW_THEME=lotr` picks another theme; `TSFLOW_THEME=off` turns it off.
+- **Startup timing report** with `TSFLOW_TIMING=true`.
+- **`@lynxwall/cucumber-tsflow/bindings`** entry point: the decorators, the context types and the CucumberJS helpers, without the formatters and the CLI.
+- **An agent skill** in `skills/cucumber-tsflow/`, following the [skills-npm](https://github.com/antfu/skills-npm) convention.
+- **The [Performance and diagnostics](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/docs/performance-and-diagnostics.md) guide**: every performance feature, cache and environment variable.
+
+### Changed
+
+- **Faster startup.** Resolving step locations no longer issues a synchronous XMLHttpRequest per support file under jsdom (the largest single cost in Vue suites) and happens only when a location is needed. The esbuild ESM loaders run in-thread with `module.registerHooks()` on Node 22.15 or later and call esbuild directly. Feature files are parsed before the support code loads, parallel workers receive the resolved file lists instead of expanding the globs again, and step, hook and binding lookups no longer scan lists.
+- **Every package the library imports is declared**, so pnpm's strict layout resolves them: `@cucumber/messages`, `@cucumber/gherkin`, `@cucumber/cucumber-expressions` and `xmlbuilder` as dependencies, `vue` as an optional peer. `short-uuid`, `import-sync` and `tslib` are no longer dependencies.
+- **esbuild's warnings print only under `TSFLOW_VERBOSE=true`.** The esbuild transpilers run silent so that a diagnostic never lands on the startup progress line; errors are reported once by the CLI, and warnings (a duplicate object key, an ignored tsconfig field) are kept for the verbose log.
+
+### Fixed
+
+- Step locations under the esbuild ESM loaders map to the TypeScript line, and a support file evaluated again (by `reloadSupport()` or watch mode) reports its current lines.
+- A configuration error, or a support file that fails to load, is reported once instead of up to five times.
+- Load errors under `ts-node-esm` name the file again instead of `undefined: undefined`.
+- `es-node-esm` starts in a project that does not have `vue` installed.
+- The package ships `CHANGELOG.md` and `LICENSE`.
+- The `--transpiler` help text lists every transpiler and no longer claims a default.
+
+### Deprecated
+
+- `parallelLoad` / `--parallel-load` no longer has any effect. It is still accepted, and a run that sets it prints a notice naming where to remove it; the option goes away in the next major version. The parallel preload it enabled cost more than it saved once the transpile cache existed.
+
 ## [7.7.2]
 
 ### Fixed
@@ -48,7 +96,7 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Changed
 
-- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in `binding-registry.ts`, `binding-decorator.ts`, and `managed-scenario-context.ts` in favour of native `Array.prototype` equivalents (`map`, `flatMap`, `filter`).
+- **Replaced `underscore` with native methods** — removed all `_.map()`, `_.flatten()`, and `_.filter()` calls in `binding-registry.ts`, `binding-decorator.ts`, and `managed-scenario-context.ts` in favor of native `Array.prototype` equivalents (`map`, `flatMap`, `filter`).
 - **O(1) binding lookup** — added `_cucumberKeyIndex` Map to `BindingRegistry` for constant-time `getStepBindingByCucumberKey()` and `hasBindingForKey()` lookups, replacing linear scans.
 - **Collapsed `updateSupportCodeLibrary` switch** — replaced a 9-case `switch` statement with a lookup map that maps `StepBindingFlags` values to their corresponding `SupportCodeLibrary` array names.
 - **Simplified constructor injection** — replaced a 10-case `switch` in `ManagedScenarioContext.invokeBindingConstructor()` with a single spread call (`new ctor(...args)`).
@@ -68,8 +116,8 @@ Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob
 
 ### Changed
 
-- Consolidated the Vue SFC compiler into a single shared implementation (`vue-sfc-compiler.ts`). The previous CJS path used a Vite-plugin-derived implementation spread across 9 files (`vue-sfc/` directory); it is now replaced by one shared function that both the CJS transpilers and ESM loaders delegate to. The `format` option (`'cjs' | 'esm'`) controls the esbuild output format, keeping identical runtime behaviour across all transpiler configurations.
-- Disabled `transformAssetUrls` in `compileTemplate` and `compileScript` to prevent binary asset files (e.g. `.jpg`) from being rewritten into `import`/`require` calls. Unit tests do not need asset URL resolution; leaving asset `src` attributes as literal strings is the correct behaviour when mounting components with `@vue/test-utils`.
+- Consolidated the Vue SFC compiler into a single shared implementation (`vue-sfc-compiler.ts`). The previous CJS path used a Vite-plugin-derived implementation spread across 9 files (`vue-sfc/` directory); it is now replaced by one shared function that both the CJS transpilers and ESM loaders delegate to. The `format` option (`'cjs' | 'esm'`) controls the esbuild output format, keeping identical runtime behavior across all transpiler configurations.
+- Disabled `transformAssetUrls` in `compileTemplate` and `compileScript` to prevent binary asset files (e.g. `.jpg`) from being rewritten into `import`/`require` calls. Unit tests do not need asset URL resolution; leaving asset `src` attributes as literal strings is the correct behavior when mounting components with `@vue/test-utils`.
 
 ### Fixed
 

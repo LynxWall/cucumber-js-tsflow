@@ -1,5 +1,5 @@
 import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_builder/types';
-import { StepBinding, StepBindingFlags, SerializableBindingDescriptor, serializeBinding } from './step-binding';
+import { StepBinding, StepBindingFlags } from './step-binding';
 import { ContextType, StepPattern, TagName } from './types';
 import logger from '../utils/logger';
 
@@ -11,6 +11,12 @@ interface ClassBinding {
 	 * A reference to the step bindings that are associated with the binding class.
 	 */
 	stepBindings: StepBinding[];
+
+	/**
+	 * The identity keys (see `stepBindingKey`) of every entry in `stepBindings`, so that
+	 * registering a binding does not have to scan the array for a duplicate.
+	 */
+	stepBindingKeys: Set<string>;
 
 	/**
 	 * The context types that are to be injected into the binding class during execution.
@@ -35,6 +41,7 @@ export class BindingRegistry {
 	private _stepBindings = new Map<StepPattern, Map<TagName, StepBinding[]>>();
 	private _classBindings = new Map<any, ClassBinding>();
 	private _cucumberKeyIndex = new Map<string, StepBinding>();
+	private readonly _registrationListeners = new Set<(stepBinding: StepBinding) => void>();
 
 	/**
 	 * Gets the binding registry singleton.
@@ -71,6 +78,7 @@ export class BindingRegistry {
 		if (!targetDecorations) {
 			targetDecorations = {
 				stepBindings: [],
+				stepBindingKeys: new Set<string>(),
 				contextTypes: []
 			};
 
@@ -130,7 +138,10 @@ export class BindingRegistry {
 			tagMap.set(stepBinding.tags, stepBindings);
 		}
 
-		if (!stepBindings.some(b => isSameStepBinding(stepBinding, b))) {
+		const bindingKey = stepBindingKey(stepBinding);
+
+		// A pattern-and-tag group normally holds a single binding, so this scan is O(1) in practice.
+		if (!stepBindings.some(b => stepBindingKey(b) === bindingKey)) {
 			stepBindings.push(stepBinding);
 		}
 
@@ -140,40 +151,61 @@ export class BindingRegistry {
 		if (!targetBinding) {
 			targetBinding = {
 				stepBindings: [],
+				stepBindingKeys: new Set<string>(),
 				contextTypes: []
 			};
 
 			this._classBindings.set(stepBinding.classPrototype, targetBinding);
 		}
 
-		if (!targetBinding.stepBindings.some(b => isSameStepBinding(stepBinding, b))) {
+		if (!targetBinding.stepBindingKeys.has(bindingKey)) {
 			targetBinding.stepBindings.push(stepBinding);
+			targetBinding.stepBindingKeys.add(bindingKey);
 		}
 
 		// Index by cucumberKey for O(1) lookup
 		this._cucumberKeyIndex.set(stepBinding.cucumberKey, stepBinding);
 
-		function isSameStepBinding(a: StepBinding, b: StepBinding) {
-			// For hooks, we need to check the binding type and method name too
-			if (a.bindingType & StepBindingFlags.Hooks) {
-				return (
-					a.callsite.filename === b.callsite.filename &&
-					a.callsite.lineNumber === b.callsite.lineNumber &&
-					String(a.tags) === String(b.tags) &&
-					String(a.stepPattern) === String(b.stepPattern) &&
-					a.bindingType === b.bindingType &&
-					a.classPropertyKey === b.classPropertyKey
-				);
-			}
+		for (const listener of this._registrationListeners) listener(stepBinding);
+	}
 
-			// For step definitions, the existing check is fine
-			return (
-				a.callsite.filename === b.callsite.filename &&
-				a.callsite.lineNumber === b.callsite.lineNumber &&
-				String(a.tags) === String(b.tags) &&
-				String(a.stepPattern) === String(b.stepPattern)
-			);
+	/**
+	 * Observe every step binding as it is registered. Support code registers its bindings synchronously
+	 * while its module evaluates, so a listener added around a `require`/`import` sees exactly the bindings
+	 * that file (and the modules it pulled in for the first time) contributed. Selective loading records
+	 * the step patterns per support file this way, and watch mode learns which files register anything.
+	 *
+	 * @param listener Called after each binding has been indexed, duplicates included.
+	 * @returns A function that removes the listener.
+	 */
+	public addRegistrationListener(listener: (stepBinding: StepBinding) => void): () => void {
+		this._registrationListeners.add(listener);
+		return () => this._registrationListeners.delete(listener);
+	}
+
+	/**
+	 * Forget every registered binding and context type, keeping the registration listeners. A resident
+	 * process (watch mode) calls this before it evaluates the support code again, so that bindings from the
+	 * previous run cannot shadow or duplicate the ones about to be registered.
+	 */
+	public clear(): void {
+		this._stepBindings.clear();
+		this._classBindings.clear();
+		this._cucumberKeyIndex.clear();
+	}
+
+	/**
+	 * The file of every registered binding's callsite as V8 reported it (a `file:` URL for an ES module, a
+	 * path otherwise), without source-map resolution. Watch mode uses it to find modules that apply
+	 * decorators without being support files themselves, which must be evaluated again on every run.
+	 */
+	public getBindingSourceFiles(): Set<string> {
+		const files = new Set<string>();
+		for (const binding of this._cucumberKeyIndex.values()) {
+			const file = binding.callsite.rawFile;
+			if (file) files.add(file);
 		}
+		return files;
 	}
 
 	/**
@@ -229,25 +261,35 @@ export class BindingRegistry {
 	 * @returns
 	 */
 	public updateSupportCodeLibrary = (library: SupportCodeLibrary): SupportCodeLibrary => {
-		const findByKey = (definitions: any[]) => (cucumberKey: string) =>
-			definitions.find(s => (s.options as any).cucumberKey === cucumberKey);
+		// Index each definition array by cucumberKey once, keeping the first definition per key
+		// (the same result a linear `find` would give), so the loop below is a map read per binding.
+		const indexByKey = (definitions: any[]): Map<string, any> => {
+			const index = new Map<string, any>();
+			for (const definition of definitions) {
+				const cucumberKey = (definition.options as any).cucumberKey;
+				if (!index.has(cucumberKey)) {
+					index.set(cucumberKey, definition);
+				}
+			}
+			return index;
+		};
+		const stepDefinitionIndex = indexByKey(library.stepDefinitions);
 
-		const lookupMap: Record<number, (key: string) => any> = {
-			[StepBindingFlags.beforeAll]: findByKey(library.beforeTestRunHookDefinitions),
-			[StepBindingFlags.before]: findByKey(library.beforeTestCaseHookDefinitions),
-			[StepBindingFlags.beforeStep]: findByKey(library.beforeTestStepHookDefinitions),
-			[StepBindingFlags.given]: findByKey(library.stepDefinitions),
-			[StepBindingFlags.when]: findByKey(library.stepDefinitions),
-			[StepBindingFlags.then]: findByKey(library.stepDefinitions),
-			[StepBindingFlags.afterStep]: findByKey(library.afterTestStepHookDefinitions),
-			[StepBindingFlags.after]: findByKey(library.afterTestCaseHookDefinitions),
-			[StepBindingFlags.afterAll]: findByKey(library.afterTestRunHookDefinitions)
+		const lookupMap: Record<number, Map<string, any>> = {
+			[StepBindingFlags.beforeAll]: indexByKey(library.beforeTestRunHookDefinitions),
+			[StepBindingFlags.before]: indexByKey(library.beforeTestCaseHookDefinitions),
+			[StepBindingFlags.beforeStep]: indexByKey(library.beforeTestStepHookDefinitions),
+			[StepBindingFlags.given]: stepDefinitionIndex,
+			[StepBindingFlags.when]: stepDefinitionIndex,
+			[StepBindingFlags.then]: stepDefinitionIndex,
+			[StepBindingFlags.afterStep]: indexByKey(library.afterTestStepHookDefinitions),
+			[StepBindingFlags.after]: indexByKey(library.afterTestCaseHookDefinitions),
+			[StepBindingFlags.afterAll]: indexByKey(library.afterTestRunHookDefinitions)
 		};
 
 		this._classBindings.forEach(binding => {
 			binding.stepBindings.forEach(stepBinding => {
-				const lookup = lookupMap[stepBinding.bindingType];
-				const cucumberDefinition = lookup?.(stepBinding.cucumberKey);
+				const cucumberDefinition = lookupMap[stepBinding.bindingType]?.get(stepBinding.cucumberKey);
 				if (cucumberDefinition) {
 					cucumberDefinition.line = stepBinding.callsite.lineNumber;
 					cucumberDefinition.uri = stepBinding.callsite.filename;
@@ -256,87 +298,6 @@ export class BindingRegistry {
 		});
 		return library;
 	};
-
-	/**
-	 * Export all registered step bindings as structured-clone-safe descriptors.
-	 * Used by loader-workers to send binding metadata back to the main thread.
-	 *
-	 * @returns An array of [[SerializableBindingDescriptor]].
-	 */
-	public toDescriptors(): SerializableBindingDescriptor[] {
-		const descriptors: SerializableBindingDescriptor[] = [];
-		for (const [, binding] of this._classBindings) {
-			for (const stepBinding of binding.stepBindings) {
-				descriptors.push(serializeBinding(stepBinding));
-			}
-		}
-		return descriptors;
-	}
-
-	/**
-	 * Remove all step bindings that originated from a given source file.
-	 * This supports delta-aware reload — bindings from changed files are purged
-	 * before re-loading so stale entries don't accumulate.
-	 *
-	 * @param filename Absolute path to the source file whose bindings should be removed.
-	 */
-	public removeBindingsForFile(filename: string): void {
-		// Remove from _stepBindings index
-		for (const [pattern, tagMap] of this._stepBindings) {
-			for (const [tag, bindings] of tagMap) {
-				const filtered = bindings.filter(b => b.callsite.filename !== filename);
-				if (filtered.length === 0) {
-					tagMap.delete(tag);
-				} else {
-					tagMap.set(tag, filtered);
-				}
-			}
-			if (tagMap.size === 0) {
-				this._stepBindings.delete(pattern);
-			}
-		}
-
-		// Remove from _cucumberKeyIndex
-		for (const [key, binding] of this._cucumberKeyIndex) {
-			if (binding.callsite.filename === filename) {
-				this._cucumberKeyIndex.delete(key);
-			}
-		}
-
-		// Remove from _classBindings index
-		for (const [proto, classBinding] of this._classBindings) {
-			classBinding.stepBindings = classBinding.stepBindings.filter(b => b.callsite.filename !== filename);
-			if (classBinding.stepBindings.length === 0 && classBinding.contextTypes.length === 0) {
-				this._classBindings.delete(proto);
-			}
-		}
-	}
-
-	/**
-	 * Check whether a binding with the given cucumberKey is already registered.
-	 *
-	 * @param cucumberKey The unique key to check.
-	 * @returns true if a binding with that key exists.
-	 */
-	public hasBindingForKey(cucumberKey: string): boolean {
-		return this._cucumberKeyIndex.has(cucumberKey);
-	}
-
-	/**
-	 * Collect the unique set of source filenames from all registered bindings.
-	 * Useful for comparing what was loaded in a worker versus what exists on the main thread.
-	 *
-	 * @returns A Set of absolute file paths.
-	 */
-	public getDescriptorSourceFiles(): Set<string> {
-		const files = new Set<string>();
-		for (const [, binding] of this._classBindings) {
-			for (const stepBinding of binding.stepBindings) {
-				files.add(stepBinding.callsite.filename);
-			}
-		}
-		return files;
-	}
 
 	/**
 	 * Maps an array of tag names to an array of associated step bindings.
@@ -349,4 +310,24 @@ export class BindingRegistry {
 	private mapTagNamesToStepBindings(tags: TagName[], tagMap: Map<TagName, StepBinding[]>): StepBinding[] {
 		return tags.flatMap(tag => tagMap.get(tag) ?? []);
 	}
+}
+
+/**
+ * Builds the identity key used to detect duplicate registrations of a step binding.
+ * Step definitions are identified by the raw callsite position, tags and pattern; hooks additionally by
+ * binding type and method name, since several hooks can share a callsite. The raw position is used rather
+ * than the source-mapped filename and line so that building the key does not force source-map resolution
+ * while support code is still loading.
+ *
+ * @param binding The step binding to key.
+ * @returns A string that is equal for two bindings exactly when they are the same registration.
+ */
+function stepBindingKey(binding: StepBinding): string {
+	const key = `${binding.callsite.rawPosition}\n${String(binding.tags)}\n${String(binding.stepPattern)}`;
+
+	if (binding.bindingType & StepBindingFlags.Hooks) {
+		return `${key}\n${binding.bindingType}\n${String(binding.classPropertyKey)}`;
+	}
+
+	return key;
 }

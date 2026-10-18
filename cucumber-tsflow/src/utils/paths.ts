@@ -54,3 +54,21 @@ export function relativeToCwd(file: string): string {
 	}
 	return relative;
 }
+
+/**
+ * `file` with its drive letter spelled as in `reference`, when both are Windows paths on the same drive; otherwise
+ * `file` as given. Node keys a loaded module by its path and keeps a drive letter in the case it was given (the
+ * script path as typed on the command line, `process.cwd()` always uppercase), so one module reached through two
+ * spellings of its drive letter is loaded twice: the library and CucumberJS once from the script's path, and again
+ * from the support files, which import them from paths resolved against the working directory. The bin requires
+ * the library through its own path spelled like the working directory, and the API entry points spell a working
+ * directory they are given like the library's own location, so both sides agree. Unlike `canonicalPath` this makes a
+ * path to load from, not a key: everything after the drive letter is kept as given.
+ */
+export function withDriveLetterOf(file: string, reference: string): string {
+	if (process.platform !== 'win32') return file;
+	const drive = /^[A-Za-z]:/.exec(file)?.[0];
+	const wanted = /^[A-Za-z]:/.exec(reference)?.[0];
+	if (!drive || !wanted || drive === wanted || drive.toLowerCase() !== wanted.toLowerCase()) return file;
+	return wanted + file.slice(2);
+}

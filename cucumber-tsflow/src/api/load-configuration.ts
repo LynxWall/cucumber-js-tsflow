@@ -9,7 +9,8 @@ import {
 } from '@cucumber/cucumber/lib/configuration/index';
 import { validateConfiguration } from '@cucumber/cucumber/lib/configuration/validate_configuration';
 import { convertConfiguration } from './convert-configuration';
-import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
+import { IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
+import { makeEnvironment } from './environment';
 import { ITsflowConfiguration } from '../cli/argv-parser';
 import { setExperimentalDecorators } from '../utils/decorator-mode';
 import { hasStringValue } from '../utils/helpers';

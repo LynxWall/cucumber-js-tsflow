@@ -8,7 +8,8 @@ import { SupportCodeLibrary } from '@cucumber/cucumber/lib/support_code_library_
 import { makeRuntime } from '../runtime/make-runtime';
 import { initializeFormatters } from '@cucumber/cucumber/lib/api/formatters';
 import { composeRecorders, getSupportCodeLibrary } from './support';
-import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
+import { IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
+import { makeEnvironment } from './environment';
 import { getPicklesAndErrors } from '@cucumber/cucumber/lib/api/gherkin';
 import MessageCollector from '../runtime/message-collector';
 import { version } from '../version';

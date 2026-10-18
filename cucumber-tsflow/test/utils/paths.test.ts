@@ -4,7 +4,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import paths from '../../lib/utils/paths.js';
 
-const { canonicalPath, canonicalFromUrl, canonicalFromFrameFile, toPosixPath, relativeToCwd } = paths;
+const { canonicalPath, canonicalFromUrl, canonicalFromFrameFile, toPosixPath, relativeToCwd, withDriveLetterOf } =
+	paths;
 
 const windows = process.platform === 'win32';
 const libraryRoot = path.resolve(import.meta.dirname, '..', '..');
@@ -96,4 +97,27 @@ describe('relativeToCwd', () => {
 			expect(relativeToCwd(file.replace(/\\/g, '/'))).to.equal(path.join('src', 'steps.ts'));
 		}
 	);
+});
+
+describe('withDriveLetterOf', () => {
+	it(
+		'spells the drive letter of a path on the same drive as the reference does, on Windows',
+		{ skip: !windows },
+		() => {
+			expect(withDriveLetterOf('c:\\project\\test', 'C:\\project\\node_modules\\lib')).to.equal('C:\\project\\test');
+			expect(withDriveLetterOf('C:\\project\\test', 'c:\\elsewhere')).to.equal('c:\\project\\test');
+			expect(withDriveLetterOf('C:\\Project\\Test', 'C:\\elsewhere')).to.equal('C:\\Project\\Test');
+		}
+	);
+
+	it('leaves a path on another drive, or without a drive letter, as given', () => {
+		expect(withDriveLetterOf('d:\\project', 'C:\\elsewhere')).to.equal('d:\\project');
+		expect(withDriveLetterOf('\\\\server\\share\\project', 'C:\\elsewhere')).to.equal('\\\\server\\share\\project');
+		expect(withDriveLetterOf('/project', '/elsewhere')).to.equal('/project');
+		expect(withDriveLetterOf('c:\\project', '/elsewhere')).to.equal('c:\\project');
+	});
+
+	it('changes nothing off Windows', { skip: windows }, () => {
+		expect(withDriveLetterOf('c:\\project', 'C:\\elsewhere')).to.equal('c:\\project');
+	});
 });

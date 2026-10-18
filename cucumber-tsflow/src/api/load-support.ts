@@ -1,6 +1,7 @@
 import { IdGenerator } from '@cucumber/messages';
 import { resolvePaths } from '@cucumber/cucumber/lib/paths/index';
-import { IRunEnvironment, makeEnvironment } from '@cucumber/cucumber/lib/environment/index';
+import { IRunEnvironment } from '@cucumber/cucumber/lib/environment/index';
+import { makeEnvironment } from './environment';
 import { ILoadSupportOptions, ISupportCodeLibrary } from '@cucumber/cucumber/lib/api/types';
 import { getSupportCodeLibrary } from './support';
 import { initializeForLoadSupport } from '@cucumber/cucumber/lib/api/plugins';

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Please see [CONTRIBUTING.md](https://github.com/LynxWall/cucumber-js-tsflow/blob/master/CONTRIBUTE.md) on how to contribute to cucumber-tsflow.
 
+## [Unreleased]
+
+### Fixed
+
+- **One copy of the library whatever the case of the drive letter, on Windows.** Node keeps a module per path and leaves the drive letter of the script it was started with as typed, while the working directory always has an uppercase one. Started as `node c:\...\bin\cucumber-tsflow.js` (a VS Code `Uri.fsPath`, a shell that spells the drive in lowercase) the CLI loaded itself and CucumberJS under `c:`, the support files imported them again under `C:`, and the run failed with `You're calling functions (e.g. "Given") on an instance of Cucumber that isn't running (status: PENDING)`; a pnpm layout, whose `node_modules` links are relative, showed it on every such run. The bin now requires the library through its own path spelled with the working directory's drive letter, and the API entry points (`loadConfiguration`, `loadSupport`, `runCucumber`, watch mode) spell a working directory they are given with the drive letter of the library's own location.
+
 ## [8.0.0]
 
 A major release for speed. On a large suite most of a run used to be startup: transpiling and loading the support code before the first scenario. 8.0 makes that a small part of the run, adds opt-in features that shorten the inner loop further, and fixes several long-standing bugs along the way. Writing step definitions does not change. On the project we use to benchmark updates, the largest suite we test against (1,624 scenarios, Vue 3, `es-vue-esm`), the full run takes 4.5 to 6 minutes against about 15 on 7.5.5, and the wait before the first scenario is 15 to 25 seconds instead of about 6 minutes.
